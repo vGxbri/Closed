@@ -25,15 +25,22 @@ jobs:
 
       - name: Build IPA (Unsigned)
         run: |
-          xcodebuild -workspace ios/*.xcworkspace \
-                     -scheme $(ls ios/*.xcodeproj | xcode-select -p | xargs basename -s .xcodeproj) \
+          # 1. Detectar el nombre del proyecto automáticamente
+          PROJECT_NAME=$(basename ios/*.xcodeproj .xcodeproj)
+          echo "Detectado proyecto: $PROJECT_NAME"
+
+          # 2. Ejecutar el build usando el nombre detectado
+          xcodebuild -workspace ios/$PROJECT_NAME.xcworkspace \
+                     -scheme "$PROJECT_NAME" \
                      -configuration Release \
                      -sdk iphoneos \
-                     -archivePath $PWD/build/Podium.xcarchive \
-                     clean archive
+                     -archivePath $PWD/build/$PROJECT_NAME.xcarchive \
+                     clean archive \
+                     CODE_SIGNING_ALLOWED=NO
 
+          # 3. Empaquetar el .app en un .ipa
           mkdir -p $PWD/build/Payload
-          cp -r $PWD/build/Podium.xcarchive/Products/Applications/*.app $PWD/build/Payload
+          cp -r $PWD/build/$PROJECT_NAME.xcarchive/Products/Applications/*.app $PWD/build/Payload
           cd build && zip -r Podium.ipa Payload
 
       - name: Upload IPA
