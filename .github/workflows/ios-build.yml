@@ -25,22 +25,25 @@ jobs:
 
       - name: Build IPA (Unsigned)
         run: |
-          # 1. Detectar el nombre del proyecto automáticamente
-          PROJECT_NAME=$(basename ios/*.xcodeproj .xcodeproj)
-          echo "Detectado proyecto: $PROJECT_NAME"
+          # 1. Crear carpeta de salida
+          mkdir -p build
 
-          # 2. Ejecutar el build usando el nombre detectado
-          xcodebuild -workspace ios/$PROJECT_NAME.xcworkspace \
-                     -scheme "$PROJECT_NAME" \
+          # 2. Ejecutar el build forzando el esquema "Podium"
+          # Usamos CODE_SIGNING_ALLOWED=NO porque Sideloadly firmará la app después
+          xcodebuild -workspace ios/Podium.xcworkspace \
+                     -scheme "Podium" \
                      -configuration Release \
                      -sdk iphoneos \
-                     -archivePath $PWD/build/$PROJECT_NAME.xcarchive \
+                     -archivePath $PWD/build/Podium.xcarchive \
                      clean archive \
-                     CODE_SIGNING_ALLOWED=NO
+                     CODE_SIGNING_ALLOWED=NO \
+                     CODE_SIGNING_REQUIRED=NO \
+                     CODE_SIGN_ENTITLEMENTS="" \
+                     CODE_SIGNING_IDENTITY=""
 
-          # 3. Empaquetar el .app en un .ipa
+          # 3. Empaquetar el contenido del .app en un archivo .ipa
           mkdir -p $PWD/build/Payload
-          cp -r $PWD/build/$PROJECT_NAME.xcarchive/Products/Applications/*.app $PWD/build/Payload
+          cp -r $PWD/build/Podium.xcarchive/Products/Applications/*.app $PWD/build/Payload
           cd build && zip -r Podium.ipa Payload
 
       - name: Upload IPA
