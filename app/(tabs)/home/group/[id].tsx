@@ -3,20 +3,20 @@ import { useFocusEffect } from "@react-navigation/native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-  Platform,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  View
+    Platform,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    TouchableOpacity,
+    View
 } from "react-native";
 import {
-  ActivityIndicator,
-  Button,
-  FAB,
-  Surface,
-  Text,
-  useTheme
+    ActivityIndicator,
+    Button,
+    FAB,
+    Surface,
+    Text,
+    useTheme
 } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AwardCard } from "../../../../components/AwardCard";
@@ -26,6 +26,7 @@ import { defaultGroupIcon, getIconComponent, IconName } from "../../../../consta
 import { useAuth, useGroup } from "../../../../hooks";
 
 import { ConfirmDialog, DialogType } from "../../../../components/ui/ConfirmDialog";
+import { CustomHeader } from "../../../../components/ui/CustomHeader";
 import { MenuOption, OptionsMenu } from "../../../../components/ui/OptionsMenu";
 import { useSnackbar } from "../../../../components/ui/SnackbarContext";
 
@@ -130,26 +131,30 @@ export default function GroupDetailScreen() {
     <>
       <Stack.Screen
         options={{
-          title: group.name,
-          headerRight: () =>
-            isAdmin ? (
-              <TouchableOpacity 
-                style={styles.headerButton}
-                onPress={() => router.push({
-                  pathname: "/home/group/settings",
-                  params: { id }
-                })}
-              >
-                <Ionicons name="settings-outline" size={24} color={theme.colors.onSurface} />
-              </TouchableOpacity>
-            ) : null,
+          headerShown: false,
         }}
+      />
+
+      <CustomHeader 
+        title={group.name} 
+        showBackButton={true}
+        rightAction={isAdmin ? (
+          <TouchableOpacity 
+            onPress={() => router.push({
+              pathname: "/home/group/settings",
+              params: { id }
+            })}
+          >
+            <Ionicons name="settings-outline" size={24} color={theme.colors.onSurface} />
+          </TouchableOpacity>
+        ) : undefined}
       />
 
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={[
+            styles.content,
             styles.content,
             { paddingBottom: 100 + insets.bottom }
           ]}
@@ -521,7 +526,7 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: 20,
-    paddingTop: 16,
+    paddingTop: 0, // Header handles top
     paddingBottom: 100,
   },
   centerContent: {

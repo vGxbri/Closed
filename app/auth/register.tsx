@@ -2,15 +2,16 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  View,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { Button, HelperText, Text, TextInput, useTheme } from "react-native-paper";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { CustomHeader } from "../../components/ui/CustomHeader";
 import { useSnackbar } from "../../components/ui/SnackbarContext";
 import { theme as appTheme } from "../../constants/theme";
 import { useAuth } from "../../hooks";
@@ -89,6 +90,7 @@ export default function RegisterScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={["left", "right"]}>
+      <CustomHeader title="Crear Cuenta" />
       <KeyboardAvoidingView
         style={styles.keyboardView}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -97,12 +99,12 @@ export default function RegisterScreen() {
           style={styles.scrollView}
           contentContainerStyle={[
             styles.content,
-            { paddingTop: insets.top + 32, paddingBottom: 32, justifyContent: 'center', flexGrow: 1 }
+            { paddingTop: 24, paddingBottom: 32, justifyContent: 'center', flexGrow: 1 }
           ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Header */}
+          {/* Header Content */}
           <View style={styles.header}>
             <View style={styles.logoContainer}>
               <Image 
@@ -111,8 +113,7 @@ export default function RegisterScreen() {
                 contentFit="contain"
               />
             </View>
-            <Text variant="headlineLarge" style={[styles.title, { color: theme.colors.primary }]}>Crear Cuenta
-            </Text>
+            {/* Title moved to CustomHeader */}
             <Text variant="bodyLarge" style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }]}>
               Únete a nuestra familia
             </Text>

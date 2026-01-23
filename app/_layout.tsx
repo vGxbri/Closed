@@ -1,7 +1,7 @@
 import { DarkTheme as NavigationDarkTheme, DefaultTheme as NavigationDefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Slot } from "expo-router";
+import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useColorScheme, View } from "react-native";
+import { useColorScheme } from "react-native";
 import { MD3DarkTheme, MD3LightTheme, PaperProvider } from "react-native-paper";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { SnackbarProvider } from "../components/ui/SnackbarContext";
@@ -50,9 +50,14 @@ export default function RootLayout() {
           <PaperProvider theme={paperTheme}>
             <SnackbarProvider>
               <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
-              <View style={{ flex: 1, backgroundColor: paperTheme.colors.background }}>
-                <Slot />
-              </View>
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                  animation: 'default',
+                  fullScreenGestureEnabled: true,
+                  contentStyle: { backgroundColor: paperTheme.colors.background }, // Ensures no black void on resize
+                }}
+              />
             </SnackbarProvider>
           </PaperProvider>
         </ThemeProvider>

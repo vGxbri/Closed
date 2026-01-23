@@ -2,23 +2,24 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React from "react";
 import {
-  Platform,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  View
+    Platform,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    TouchableOpacity,
+    View
 } from "react-native";
 import {
-  ActivityIndicator,
-  Button,
-  FAB,
-  Surface,
-  Text,
-  useTheme
+    ActivityIndicator,
+    Button,
+    FAB,
+    Surface,
+    Text,
+    useTheme
 } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { GroupCard } from "../../../components/GroupCard";
+import { CustomHeader } from "../../../components/ui/CustomHeader";
 import { useAuth, useGroups } from "../../../hooks";
 
 export default function HomeScreen() {
@@ -68,12 +69,13 @@ export default function HomeScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <CustomHeader title="Podium" showBackButton={false} />
 
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={[
           styles.content,
-          { paddingBottom: 100 + insets.bottom, paddingTop: insets.top + 16 }
+          { paddingBottom: 100 + insets.bottom, paddingTop: 16 }
         ]}
         showsVerticalScrollIndicator={false}
         refreshControl={

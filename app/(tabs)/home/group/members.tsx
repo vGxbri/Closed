@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Stack, useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import React from "react";
 import {
   ScrollView,
@@ -16,6 +16,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MemberAvatar } from "../../../../components/MemberAvatar";
 import { ConfirmDialog, DialogType } from "../../../../components/ui/ConfirmDialog";
+import { CustomHeader } from "../../../../components/ui/CustomHeader";
 import { MenuOption, OptionsMenu } from "../../../../components/ui/OptionsMenu";
 import { useSnackbar } from "../../../../components/ui/SnackbarContext";
 import { useAuth, useGroup } from "../../../../hooks";
@@ -79,11 +80,7 @@ export default function GroupMembersScreen() {
 
   return (
     <>
-      <Stack.Screen
-        options={{
-          title: `Miembros (${group.members.length})`,
-        }}
-      />
+      <CustomHeader title={`Miembros (${group.members.length})`} showBackButton={true} />
 
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <ScrollView
@@ -254,7 +251,7 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: 20,
-    paddingTop: 16,
+    paddingTop: 0,
   },
   centerContent: {
     flex: 1,

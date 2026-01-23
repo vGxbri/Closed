@@ -18,6 +18,7 @@ import {
 } from "react-native-paper";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { MemberAvatar } from "../../components/MemberAvatar";
+import { CustomHeader } from "../../components/ui/CustomHeader";
 import { useSnackbar } from "../../components/ui/SnackbarContext";
 import { theme as appTheme } from "../../constants/theme";
 import { useAuth, useGroups } from "../../hooks";
@@ -190,6 +191,7 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={["left", "right"]}>
+      <CustomHeader title="Perfil" showBackButton={false} />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={[
@@ -197,7 +199,7 @@ export default function ProfileScreen() {
           { 
             flexGrow: 1, 
             justifyContent: 'center',
-            paddingTop: insets.top,
+            paddingTop: 0, // CustomHeader handles top spacing
             paddingBottom: insets.bottom 
           }
         ]}

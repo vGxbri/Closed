@@ -1,0 +1,43 @@
+name: Build iOS IPA (Sideloadly version)
+on:
+  workflow_dispatch: # Esto activa un botón para darle a "Play" manualmente
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install Expo and EAS
+        run: npm install -g expo-cli eas-cli
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build Project (Prebuild)
+        run: npx expo prebuild --platform ios
+
+      - name: Build IPA (Unsigned)
+        run: |
+          xcodebuild -workspace ios/*.xcworkspace \
+                     -scheme $(ls ios/*.xcodeproj | xcode-select -p | xargs basename -s .xcodeproj) \
+                     -configuration Release \
+                     -sdk iphoneos \
+                     -archivePath $PWD/build/Podium.xcarchive \
+                     clean archive
+
+          mkdir -p $PWD/build/Payload
+          cp -r $PWD/build/Podium.xcarchive/Products/Applications/*.app $PWD/build/Payload
+          cd build && zip -r Podium.ipa Payload
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: Podium-IPA
+          path: build/Podium.ipa

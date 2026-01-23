@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
     KeyboardAvoidingView,
@@ -23,6 +23,7 @@ import { defaultGroupIcon, getIconComponent, groupIconOptions, IconName } from "
 import { useGroup } from "../../../../hooks";
 
 import { ConfirmDialog, DialogType } from "../../../../components/ui/ConfirmDialog";
+import { CustomHeader } from "../../../../components/ui/CustomHeader";
 import { useSnackbar } from "../../../../components/ui/SnackbarContext";
 
 export default function GroupSettingsScreen() {
@@ -176,7 +177,7 @@ export default function GroupSettingsScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: "Ajustes del Grupo" }} />
+      <CustomHeader title="Ajustes del Grupo" showBackButton={true} />
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <KeyboardAvoidingView
           style={styles.keyboardView}

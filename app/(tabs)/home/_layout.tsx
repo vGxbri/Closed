@@ -16,7 +16,8 @@ export default function HomeStackLayout() {
           fontSize: 20,
         },
         headerShadowVisible: true,
-        animation: "fade",
+        animation: 'default', // Use slide for predictive back feel
+        fullScreenGestureEnabled: true, // Enable gesture
         contentStyle: {
           backgroundColor: theme.colors.background,
         },

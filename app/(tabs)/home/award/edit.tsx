@@ -18,6 +18,7 @@ import {
     useTheme,
 } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { CustomHeader } from "../../../../components/ui/CustomHeader";
 import { useSnackbar } from "../../../../components/ui/SnackbarContext";
 import { awardIconOptions, defaultAwardIcon, getIconComponent, IconName } from "../../../../constants/icons";
 import { awardsService } from "../../../../services";
@@ -133,6 +134,7 @@ export default function EditAwardScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <CustomHeader title="Editar Premio" showBackButton={true} />
       <KeyboardAvoidingView
         style={styles.keyboardView}
         behavior={Platform.OS === "ios" ? "padding" : "height"}

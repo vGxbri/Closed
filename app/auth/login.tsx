@@ -3,15 +3,16 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    View,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { Button, Text, TextInput, useTheme } from "react-native-paper";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { CustomHeader } from "../../components/ui/CustomHeader";
 import { useSnackbar } from "../../components/ui/SnackbarContext";
 import { theme as appTheme } from "../../constants/theme";
 import { useAuth } from "../../hooks";
@@ -110,6 +111,7 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={["left", "right"]}>
+      <CustomHeader title="Iniciar Sesión" showBackButton={false} />
       <KeyboardAvoidingView
         style={styles.keyboardView}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -118,12 +120,12 @@ export default function LoginScreen() {
           style={styles.scrollView}
           contentContainerStyle={[
             styles.content,
-            { paddingTop: insets.top + 32, paddingBottom: 32, justifyContent: 'center', flexGrow: 1 }
+            { paddingTop: 24, paddingBottom: 32, justifyContent: 'center', flexGrow: 1 }
           ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Header */}
+          {/* Header Content */}
           <View style={styles.header}>
             <View style={styles.logoContainer}>
               <Image
@@ -135,6 +137,7 @@ export default function LoginScreen() {
             <Text variant="headlineLarge" style={[styles.title, { color: theme.colors.primary }]}>
               ¡Hola de nuevo!
             </Text>
+            {/* Subtitle moved/removed or kept */}
             <Text variant="bodyLarge" style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }]}>
               Inicia sesión para continuar
             </Text>

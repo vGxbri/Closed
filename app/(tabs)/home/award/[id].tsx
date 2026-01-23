@@ -5,30 +5,31 @@ import { BlurView } from 'expo-blur';
 import * as DocumentPicker from 'expo-document-picker';
 import { Image } from 'expo-image';
 import * as ImagePicker from "expo-image-picker";
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useVideoPlayer, VideoView } from 'expo-video';
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Animated,
-  Modal,
-  Pressable,
-  TextInput as RNTextInput,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  View
+    Animated,
+    Modal,
+    Pressable,
+    TextInput as RNTextInput,
+    ScrollView,
+    StyleSheet,
+    TouchableOpacity,
+    View
 } from "react-native";
 import {
-  ActivityIndicator,
-  Button,
-  Portal,
-  Surface,
-  Text,
-  useTheme
+    ActivityIndicator,
+    Button,
+    Portal,
+    Surface,
+    Text,
+    useTheme
 } from "react-native-paper";
 
 import { MemberAvatar } from "../../../../components/MemberAvatar";
 import { ConfirmDialog, DialogType } from "../../../../components/ui/ConfirmDialog";
+import { CustomHeader } from "../../../../components/ui/CustomHeader";
 import { MemberSelectMenu } from "../../../../components/ui/MemberSelectMenu";
 import { useSnackbar } from "../../../../components/ui/SnackbarContext";
 import { defaultAwardIcon, getIconComponent, IconName } from "../../../../constants/icons";
@@ -555,7 +556,7 @@ export default function AwardDetailScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: award.name }} />
+      <CustomHeader title={award.name} showBackButton={true} />
       <ScrollView style={[styles.container, { backgroundColor: theme.colors.background }]}>
         {/* Header */}
         <View style={styles.headerWrapper}>
