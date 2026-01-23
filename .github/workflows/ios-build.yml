@@ -1,4 +1,4 @@
-name: Build iOS IPA (Sideloadly version)
+name: Build iOS IPA (Fixed)
 on:
   workflow_dispatch:
 
@@ -12,16 +12,17 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20 # Actualizado a Node 20 para Expo SDK 54
+          node-version: 20
 
-      - name: Install EAS CLI
-        run: npm install -g eas-cli
+      - name: Install EAS CLI and Expo CLI
+        run: npm install -g eas-cli expo-cli
 
       - name: Install dependencies
         run: npm install
 
-      - name: Prebuild iOS
-        run: npx expo prebuild --platform ios
+      # Limpiamos cualquier rastro anterior para asegurar un build limpio
+      - name: Prebuild iOS (Clean)
+        run: npx expo prebuild --platform ios --clean
 
       - name: Install CocoaPods
         run: |
@@ -29,34 +30,45 @@ jobs:
           pod install
           cd ..
 
+      # ESTE ES EL PASO CRÍTICO CORREGIDO
       - name: Build IPA (Unsigned)
         run: |
-          # 1. Encontrar el Workspace y el Esquema real
-          WORKSPACE=$(ls ios/*.xcworkspace | head -n 1)
-          SCHEME=$(xcodebuild -workspace "$WORKSPACE" -list | grep -A 1 "Schemes:" | tail -n 1 | xargs)
+          # Usamos find con maxdepth 1 para que NO entre dentro de las carpetas
+          # Esto garantiza que coja "Podium.xcworkspace" y no el archivo de dentro
+          WORKSPACE_PATH=$(find ios -maxdepth 1 -name "*.xcworkspace" | head -n 1)
 
-          echo "-----------------------------------------------"
-          echo "Workspace detectado: $WORKSPACE"
-          echo "Esquema detectado: $SCHEME"
-          echo "-----------------------------------------------"
+          # Sacamos el nombre del proyecto quitando la extensión
+          SCHEME_NAME=$(basename "$WORKSPACE_PATH" .xcworkspace)
+
+          echo "========================================"
+          echo "✅ RUTA WORKSPACE: $WORKSPACE_PATH"
+          echo "✅ NOMBRE ESQUEMA: $SCHEME_NAME"
+          echo "========================================"
+
+          # Verificación de seguridad
+          if [ -z "$WORKSPACE_PATH" ]; then
+            echo "❌ ERROR FATAL: No se encontró ningún .xcworkspace en la carpeta ios/"
+            ls -la ios/
+            exit 1
+          fi
 
           mkdir -p build
 
-          # 2. Compilar usando las variables detectadas
-          xcodebuild -workspace "$WORKSPACE" \
-                     -scheme "$SCHEME" \
+          # Ejecutamos xcodebuild con las rutas exactas encontradas
+          xcodebuild -workspace "$WORKSPACE_PATH" \
+                     -scheme "$SCHEME_NAME" \
                      -configuration Release \
                      -sdk iphoneos \
-                     -archivePath $PWD/build/Podium.xcarchive \
+                     -archivePath "$PWD/build/$SCHEME_NAME.xcarchive" \
                      clean archive \
                      CODE_SIGNING_ALLOWED=NO \
                      CODE_SIGNING_REQUIRED=NO \
                      CODE_SIGN_ENTITLEMENTS="" \
                      CODE_SIGNING_IDENTITY=""
 
-          # 3. Crear el Payload para el IPA
-          mkdir -p $PWD/build/Payload
-          cp -r $PWD/build/Podium.xcarchive/Products/Applications/*.app $PWD/build/Payload
+          # Empaquetamos el IPA
+          mkdir -p "$PWD/build/Payload"
+          cp -r "$PWD/build/$SCHEME_NAME.xcarchive/Products/Applications/"*.app "$PWD/build/Payload/"
           cd build && zip -r Podium.ipa Payload
 
       - name: Upload IPA
