@@ -1,6 +1,6 @@
 name: Build iOS IPA (Sideloadly version)
 on:
-  workflow_dispatch: # Esto activa un botón para darle a "Play" manualmente
+  workflow_dispatch:
 
 jobs:
   build:
@@ -12,26 +12,39 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20 # Actualizado a Node 20 para Expo SDK 54
 
-      - name: Install Expo and EAS
-        run: npm install -g expo-cli eas-cli
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
 
       - name: Install dependencies
         run: npm install
 
-      - name: Build Project (Prebuild)
+      - name: Prebuild iOS
         run: npx expo prebuild --platform ios
+
+      - name: Install CocoaPods
+        run: |
+          cd ios
+          pod install
+          cd ..
 
       - name: Build IPA (Unsigned)
         run: |
-          # 1. Crear carpeta de salida
+          # 1. Encontrar el Workspace y el Esquema real
+          WORKSPACE=$(ls ios/*.xcworkspace | head -n 1)
+          SCHEME=$(xcodebuild -workspace "$WORKSPACE" -list | grep -A 1 "Schemes:" | tail -n 1 | xargs)
+
+          echo "-----------------------------------------------"
+          echo "Workspace detectado: $WORKSPACE"
+          echo "Esquema detectado: $SCHEME"
+          echo "-----------------------------------------------"
+
           mkdir -p build
 
-          # 2. Ejecutar el build forzando el esquema "Podium"
-          # Usamos CODE_SIGNING_ALLOWED=NO porque Sideloadly firmará la app después
-          xcodebuild -workspace ios/Podium.xcworkspace \
-                     -scheme "Podium" \
+          # 2. Compilar usando las variables detectadas
+          xcodebuild -workspace "$WORKSPACE" \
+                     -scheme "$SCHEME" \
                      -configuration Release \
                      -sdk iphoneos \
                      -archivePath $PWD/build/Podium.xcarchive \
@@ -41,7 +54,7 @@ jobs:
                      CODE_SIGN_ENTITLEMENTS="" \
                      CODE_SIGNING_IDENTITY=""
 
-          # 3. Empaquetar el contenido del .app en un archivo .ipa
+          # 3. Crear el Payload para el IPA
           mkdir -p $PWD/build/Payload
           cp -r $PWD/build/Podium.xcarchive/Products/Applications/*.app $PWD/build/Payload
           cd build && zip -r Podium.ipa Payload
