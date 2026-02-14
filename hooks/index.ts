@@ -1,9 +1,9 @@
 // Auth
-export { AuthProvider, useAuth, useRequireAuth } from './useAuth';
+export { AuthProvider, useAuth, useRequireAuth } from "./useAuth";
 
 // Groups
-export { useGroup, useGroups, useJoinGroup } from './useGroups';
+export { useGroup, useGroups, useJoinGroup } from "./useGroups";
 
 // Awards
-export { useAward, useAwardCategories, useGroupAwards } from './useAwards';
+export { useAward, useAwardCategories, useGroupAwards } from "./useAwards";
 

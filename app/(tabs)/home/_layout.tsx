@@ -3,7 +3,7 @@ import { useTheme } from "react-native-paper";
 
 export default function HomeStackLayout() {
   const theme = useTheme();
-  
+
   return (
     <Stack
       screenOptions={{
@@ -16,8 +16,8 @@ export default function HomeStackLayout() {
           fontSize: 20,
         },
         headerShadowVisible: true,
-        animation: 'default', // Use slide for predictive back feel
-        fullScreenGestureEnabled: true, // Enable gesture
+        animation: "default", // Vuelvo a default para asegurar soporte de predictive back nativo
+        gestureEnabled: true, // Habilitar gestos explícitamente para hijas
         contentStyle: {
           backgroundColor: theme.colors.background,
         },
@@ -27,6 +27,7 @@ export default function HomeStackLayout() {
         name="index"
         options={{
           headerShown: false, // No navbar on main home page
+          gestureEnabled: false, // Prevent back gesture from Home root exiting app or doing nothing
         }}
       />
       <Stack.Screen

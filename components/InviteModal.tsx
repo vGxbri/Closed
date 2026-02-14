@@ -29,7 +29,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({
   const { showSnackbar } = useSnackbar();
   
   // App link for sharing and copying
-  const appLink = `podium://join/${inviteCode}`;
+  const appLink = `closed://join/${inviteCode}`;
 
   const handleCopyCode = async () => {
     await Clipboard.setStringAsync(inviteCode);
@@ -44,8 +44,8 @@ export const InviteModal: React.FC<InviteModalProps> = ({
   const handleShare = async () => {
     try {
       await Share.share({
-        message: `¡Únete a mi grupo "${groupName}" en Podium! 🏆\n\nUsa el código: ${inviteCode}\n\nO abre este enlace:\n${appLink}`,
-        title: `Únete a ${groupName} en Podium`,
+        message: `¡Únete a mi grupo "${groupName}" en Closed! 🏆\n\nUsa el código: ${inviteCode}\n\nO abre este enlace:\n${appLink}`,
+        title: `Únete a ${groupName} en Closed`,
       });
     } catch (error) {
       console.error(error);

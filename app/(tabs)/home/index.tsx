@@ -69,7 +69,7 @@ export default function HomeScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <CustomHeader title="Podium" showBackButton={false} />
+      <CustomHeader title="Closed" showBackButton={false} />
 
       <ScrollView
         style={styles.scrollView}
@@ -141,7 +141,7 @@ export default function HomeScreen() {
             <View style={styles.loadingState}>
               <ActivityIndicator size="large" color={theme.colors.primary} />
               <Text variant="bodyMedium" style={{ marginTop: 16, color: theme.colors.onSurfaceVariant }}>
-                Sincronizando podios...
+                Sincronizando grupos...
               </Text>
             </View>
           ) : groups.length === 0 ? (

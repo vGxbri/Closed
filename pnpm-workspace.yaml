@@ -1,0 +1,3 @@
+ignoredBuiltDependencies:
+  - '@shopify/react-native-skia'
+  - unrs-resolver

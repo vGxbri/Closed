@@ -1,5 +1,5 @@
 -- =========================================================
--- PODIUM - Database Schema for Supabase (PostgreSQL)
+-- CLOSED - Database Schema for Supabase (PostgreSQL)
 -- =========================================================
 -- Version: 1.0.0
 -- Created: 2024-12-11

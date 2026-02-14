@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
   const theme = useTheme();
-  
+
   return (
     <Tabs
       screenOptions={{
@@ -70,4 +70,3 @@ export default function TabLayout() {
     </Tabs>
   );
 }
-

@@ -1,9 +1,16 @@
-import { Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
-import React from 'react';
-import { Animated, Pressable, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
-import { ActivityIndicator, Portal, Text, useTheme } from 'react-native-paper';
-import { MemberAvatar } from '../MemberAvatar';
+import { Ionicons } from "@expo/vector-icons";
+import { BlurView } from "expo-blur";
+import React from "react";
+import {
+    Animated,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    TouchableOpacity,
+    View,
+} from "react-native";
+import { ActivityIndicator, Portal, Text, useTheme } from "react-native-paper";
+import { MemberAvatar } from "../MemberAvatar";
 
 export interface SelectableMember {
   id?: string; // for MemberAvatar compatibility
@@ -35,7 +42,7 @@ export const MemberSelectMenu: React.FC<MemberSelectMenuProps> = ({
   onSelectionChange,
   onConfirm,
   onDismiss,
-  confirmText = 'Guardar',
+  confirmText = "Guardar",
   loading = false,
   minSelection = 0,
 }) => {
@@ -49,7 +56,7 @@ export const MemberSelectMenu: React.FC<MemberSelectMenuProps> = ({
       setShouldRender(true);
       opacityAnim.setValue(0);
       translateYAnim.setValue(600);
-      
+
       Animated.parallel([
         Animated.timing(opacityAnim, {
           toValue: 1,
@@ -83,7 +90,7 @@ export const MemberSelectMenu: React.FC<MemberSelectMenuProps> = ({
 
   const toggleMember = (userId: string) => {
     if (selectedIds.includes(userId)) {
-      onSelectionChange(selectedIds.filter(id => id !== userId));
+      onSelectionChange(selectedIds.filter((id) => id !== userId));
     } else {
       onSelectionChange([...selectedIds, userId]);
     }
@@ -98,16 +105,18 @@ export const MemberSelectMenu: React.FC<MemberSelectMenuProps> = ({
       <View style={styles.container}>
         {/* Backdrop */}
         <Pressable style={styles.backdrop} onPress={onDismiss}>
-          <Animated.View style={[StyleSheet.absoluteFill, { opacity: opacityAnim }]}>
-            <BlurView 
-              intensity={25} 
+          <Animated.View
+            style={[StyleSheet.absoluteFill, { opacity: opacityAnim }]}
+          >
+            <BlurView
+              intensity={25}
               tint="dark"
               style={StyleSheet.absoluteFill}
-              experimentalBlurMethod="dimezisBlurView" 
+              blurMethod="dimezisBlurView"
             />
           </Animated.View>
         </Pressable>
-        
+
         {/* Menu */}
         <Animated.View
           style={[
@@ -121,20 +130,42 @@ export const MemberSelectMenu: React.FC<MemberSelectMenuProps> = ({
           ]}
         >
           {/* Handle bar */}
-          <View style={[styles.handleBar, { backgroundColor: theme.colors.surfaceVariant }]} />
-          
+          <View
+            style={[
+              styles.handleBar,
+              { backgroundColor: theme.colors.surfaceVariant },
+            ]}
+          />
+
           {/* Header */}
           <View style={styles.header}>
-            <Text variant="titleMedium" style={[styles.title, { color: theme.colors.onSurface }]}>
+            <Text
+              variant="titleMedium"
+              style={[styles.title, { color: theme.colors.onSurface }]}
+            >
               {title}
             </Text>
             {subtitle && (
-              <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+              <Text
+                variant="bodySmall"
+                style={{ color: theme.colors.onSurfaceVariant }}
+              >
                 {subtitle}
               </Text>
             )}
-            <View style={[styles.countBadge, { backgroundColor: theme.colors.primaryContainer }]}>
-              <Text variant="labelSmall" style={{ color: theme.colors.onPrimaryContainer, fontWeight: '700' }}>
+            <View
+              style={[
+                styles.countBadge,
+                { backgroundColor: theme.colors.primaryContainer },
+              ]}
+            >
+              <Text
+                variant="labelSmall"
+                style={{
+                  color: theme.colors.onPrimaryContainer,
+                  fontWeight: "700",
+                }}
+              >
                 {selectedIds.length} seleccionados
               </Text>
             </View>
@@ -142,74 +173,121 @@ export const MemberSelectMenu: React.FC<MemberSelectMenuProps> = ({
 
           {/* Members List */}
           {members.length === 0 ? (
-            <View style={[styles.listContainer, { borderColor: theme.colors.surfaceVariant, padding: 32, alignItems: 'center' }]}>
-              <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, textAlign: 'center' }}>
+            <View
+              style={[
+                styles.listContainer,
+                {
+                  borderColor: theme.colors.surfaceVariant,
+                  padding: 32,
+                  alignItems: "center",
+                },
+              ]}
+            >
+              <Text
+                variant="bodyMedium"
+                style={{
+                  color: theme.colors.onSurfaceVariant,
+                  textAlign: "center",
+                }}
+              >
                 No hay miembros disponibles para seleccionar.
               </Text>
             </View>
           ) : (
-            <ScrollView 
-              style={[styles.listContainer, { borderColor: theme.colors.surfaceVariant }]}
+            <ScrollView
+              style={[
+                styles.listContainer,
+                { borderColor: theme.colors.surfaceVariant },
+              ]}
               contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={false}
             >
-            {members.map((member, index) => {
-              const isSelected = selectedIds.includes(member.user_id);
-              const isLast = index === members.length - 1;
-              return (
-                <TouchableOpacity
-                  key={member.user_id}
-                  style={[
-                    styles.memberRow,
-                    isSelected && { backgroundColor: theme.colors.primaryContainer },
-                    !isSelected && { backgroundColor: theme.colors.surface },
-                    !isLast && { borderBottomWidth: 1, borderBottomColor: theme.colors.surfaceVariant }
-                  ]}
-                  onPress={() => toggleMember(member.user_id)}
-                  activeOpacity={0.7}
-                >
-                  <MemberAvatar user={{ id: member.user_id, display_name: member.display_name, avatar_url: member.avatar_url }} size="sm" />
-                  <Text 
-                    variant="bodyMedium" 
-                    style={{ 
-                      flex: 1, 
-                      marginLeft: 12, 
-                      fontWeight: isSelected ? '600' : '400',
-                      color: theme.colors.onSurface 
-                    }}
+              {members.map((member, index) => {
+                const isSelected = selectedIds.includes(member.user_id);
+                const isLast = index === members.length - 1;
+                return (
+                  <TouchableOpacity
+                    key={member.user_id}
+                    style={[
+                      styles.memberRow,
+                      isSelected && {
+                        backgroundColor: theme.colors.primaryContainer,
+                      },
+                      !isSelected && { backgroundColor: theme.colors.surface },
+                      !isLast && {
+                        borderBottomWidth: 1,
+                        borderBottomColor: theme.colors.surfaceVariant,
+                      },
+                    ]}
+                    onPress={() => toggleMember(member.user_id)}
+                    activeOpacity={0.7}
                   >
-                    {member.display_name}
-                  </Text>
-                  <Ionicons 
-                    name={isSelected ? "checkmark-circle" : "ellipse-outline"} 
-                    size={24} 
-                    color={isSelected ? theme.colors.onPrimaryContainer : theme.colors.outline} 
-                  />
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
+                    <MemberAvatar
+                      user={{
+                        id: member.user_id,
+                        display_name: member.display_name,
+                        avatar_url: member.avatar_url,
+                      }}
+                      size="sm"
+                    />
+                    <Text
+                      variant="bodyMedium"
+                      style={{
+                        flex: 1,
+                        marginLeft: 12,
+                        fontWeight: isSelected ? "600" : "400",
+                        color: theme.colors.onSurface,
+                      }}
+                    >
+                      {member.display_name}
+                    </Text>
+                    <Ionicons
+                      name={isSelected ? "checkmark-circle" : "ellipse-outline"}
+                      size={24}
+                      color={
+                        isSelected
+                          ? theme.colors.onPrimaryContainer
+                          : theme.colors.outline
+                      }
+                    />
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
           )}
 
           {/* Actions */}
           <View style={styles.actions}>
             <TouchableOpacity
-              style={[styles.cancelButton, { borderColor: theme.colors.surfaceVariant }]}
+              style={[
+                styles.cancelButton,
+                { borderColor: theme.colors.surfaceVariant },
+              ]}
               onPress={onDismiss}
               activeOpacity={0.7}
             >
-              <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant, fontWeight: '600' }}>
+              <Text
+                variant="labelLarge"
+                style={{
+                  color: theme.colors.onSurfaceVariant,
+                  fontWeight: "600",
+                }}
+              >
                 Cancelar
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[
-                styles.confirmButton, 
-                { 
-                  backgroundColor: canConfirm ? theme.colors.primaryContainer : theme.colors.surfaceVariant,
-                  borderColor: canConfirm ? theme.colors.primary : theme.colors.outline,
+                styles.confirmButton,
+                {
+                  backgroundColor: canConfirm
+                    ? theme.colors.primaryContainer
+                    : theme.colors.surfaceVariant,
+                  borderColor: canConfirm
+                    ? theme.colors.primary
+                    : theme.colors.outline,
                   opacity: canConfirm ? 1 : 0.6,
-                }
+                },
               ]}
               onPress={onConfirm}
               disabled={!canConfirm}
@@ -218,7 +296,10 @@ export const MemberSelectMenu: React.FC<MemberSelectMenuProps> = ({
               {loading ? (
                 <ActivityIndicator size="small" color={theme.colors.primary} />
               ) : (
-                <Text variant="labelLarge" style={{ color: theme.colors.onSurface, fontWeight: '700' }}>
+                <Text
+                  variant="labelLarge"
+                  style={{ color: theme.colors.onSurface, fontWeight: "700" }}
+                >
                   {confirmText}
                 </Text>
               )}
@@ -233,24 +314,24 @@ export const MemberSelectMenu: React.FC<MemberSelectMenuProps> = ({
 const styles = StyleSheet.create({
   container: {
     ...StyleSheet.absoluteFillObject,
-    justifyContent: 'flex-end',
-    alignItems: 'center',
+    justifyContent: "flex-end",
+    alignItems: "center",
     zIndex: 1000,
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
   },
   menuContainer: {
-    width: '100%',
+    width: "100%",
     maxWidth: 500,
-    maxHeight: '75%',
+    maxHeight: "75%",
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     paddingTop: 12,
     paddingHorizontal: 20, // Add padding to sides
     borderWidth: 1,
     borderBottomWidth: 0,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
@@ -260,17 +341,17 @@ const styles = StyleSheet.create({
     width: 36,
     height: 4,
     borderRadius: 2,
-    alignSelf: 'center',
+    alignSelf: "center",
     marginBottom: 16,
   },
   header: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingBottom: 16,
     // Remove border from header since list will be card
-    borderBottomWidth: 0, 
+    borderBottomWidth: 0,
   },
   title: {
-    fontWeight: '700',
+    fontWeight: "700",
     marginBottom: 4,
   },
   countBadge: {
@@ -280,42 +361,42 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   listContainer: {
-    width: '100%',
+    width: "100%",
     maxHeight: 400,
     borderRadius: 16, // Rounded corners for list
-    borderWidth: 1,   // Border for list
-    overflow: 'hidden', // Clip content
+    borderWidth: 1, // Border for list
+    overflow: "hidden", // Clip content
     marginBottom: 16, // Space before buttons
   },
   listContent: {
     paddingHorizontal: 0,
   },
   memberRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 12,
     paddingHorizontal: 16,
   },
   actions: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
     paddingVertical: 16,
     paddingBottom: 34,
     // Remove top border since list is separated
-    borderTopWidth: 0, 
+    borderTopWidth: 0,
   },
   cancelButton: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 14,
     borderRadius: 14,
     borderWidth: 1,
   },
   confirmButton: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 14,
     borderRadius: 14,
     borderWidth: 1.5,

@@ -1,5 +1,5 @@
 /**
- * Podium Color Palette
+ * Closed Color Palette
  * Based on Material Design 3
  */
 
@@ -8,7 +8,7 @@
 // =====================================================
 
 // =====================================================
-// PODIUM COLOR PALETTE - Neutral Theme with Green Accents
+// CLOSED COLOR PALETTE - Neutral Theme with Green Accents
 // =====================================================
 
 // Base Palette
