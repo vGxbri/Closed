@@ -1,5 +1,5 @@
-import { supabase } from '../lib/supabase';
-import { Profile } from '../types/database';
+import { supabase } from "../lib/supabase";
+import { Profile } from "../types/database";
 
 export interface SignUpCredentials {
   email: string;
@@ -65,7 +65,10 @@ export const authService = {
    * Get the current user
    */
   async getCurrentUser() {
-    const { data: { user }, error } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
     if (error) throw error;
     return user;
   },
@@ -78,9 +81,9 @@ export const authService = {
     if (!user) return null;
 
     const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
       .single();
 
     if (error) throw error;
@@ -90,17 +93,17 @@ export const authService = {
   /**
    * Update the current user's profile
    */
-  async updateProfile(updates: Partial<Omit<Profile, 'id' | 'created_at'>>) {
+  async updateProfile(updates: Partial<Omit<Profile, "id" | "created_at">>) {
     const user = await this.getCurrentUser();
-    if (!user) throw new Error('Not authenticated');
+    if (!user) throw new Error("Not authenticated");
 
     const { data, error } = await supabase
-      .from('profiles')
-      .update({
+      .from("profiles")
+      .upsert({
+        id: user.id,
         ...updates,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', user.id)
       .select()
       .single();
 
@@ -112,27 +115,27 @@ export const authService = {
    * Upload avatar image and return public URL
    */
   async uploadAvatar(uri: string): Promise<string> {
-    const { decode } = await import('base64-arraybuffer');
-    const FileSystem = await import('expo-file-system/legacy');
-    
-    const user = await this.getCurrentUser();
-    if (!user) throw new Error('Not authenticated');
+    const { decode } = await import("base64-arraybuffer");
+    const FileSystem = await import("expo-file-system/legacy");
 
-    const fileExt = uri.split('.').pop()?.toLowerCase() || 'jpg';
+    const user = await this.getCurrentUser();
+    if (!user) throw new Error("Not authenticated");
+
+    const fileExt = uri.split(".").pop()?.toLowerCase() || "jpg";
     const fileName = `${user.id}/${Date.now()}.${fileExt}`;
-    const contentType = fileExt === 'png' ? 'image/png' : 'image/jpeg';
+    const contentType = fileExt === "png" ? "image/png" : "image/jpeg";
 
     const base64 = await FileSystem.readAsStringAsync(uri, {
-      encoding: 'base64',
+      encoding: "base64",
     });
 
     const { error } = await supabase.storage
-      .from('avatars')
+      .from("avatars")
       .upload(fileName, decode(base64), { contentType, upsert: true });
 
     if (error) throw error;
 
-    const { data } = supabase.storage.from('avatars').getPublicUrl(fileName);
+    const { data } = supabase.storage.from("avatars").getPublicUrl(fileName);
     return data.publicUrl;
   },
 

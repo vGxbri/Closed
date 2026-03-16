@@ -1,4 +1,7 @@
-import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
+import {
+  GoogleSignin,
+  statusCodes,
+} from "@react-native-google-signin/google-signin";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
@@ -11,7 +14,9 @@ import {
   View,
 } from "react-native";
 import { Button, Text, TextInput, useTheme } from "react-native-paper";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  SafeAreaView
+} from "react-native-safe-area-context";
 import { CustomHeader } from "../../components/ui/CustomHeader";
 import { useSnackbar } from "../../components/ui/SnackbarContext";
 import { theme as appTheme } from "../../constants/theme";
@@ -21,10 +26,9 @@ import { supabase } from "../../lib/supabase";
 export default function LoginScreen() {
   const router = useRouter();
   const theme = useTheme();
-  const insets = useSafeAreaInsets();
   const { signIn } = useAuth();
   const { showSnackbar } = useSnackbar();
-  
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -34,10 +38,10 @@ export default function LoginScreen() {
     try {
       GoogleSignin.configure({
         webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-        scopes: ['email', 'profile'],
+        scopes: ["email", "profile"],
       });
     } catch (e) {
-      console.error('GS Configure Error', e);
+      console.error("GS Configure Error", e);
     }
   }, []);
 
@@ -46,17 +50,22 @@ export default function LoginScreen() {
       setLoading(true);
       await GoogleSignin.hasPlayServices();
       const userInfo: any = await GoogleSignin.signIn();
+
+      if (userInfo.type === "cancelled") {
+        return;
+      }
+
       const idToken = userInfo.data?.idToken || userInfo.idToken;
 
       if (idToken) {
         const { error } = await supabase.auth.signInWithIdToken({
-          provider: 'google',
+          provider: "google",
           token: idToken,
         });
         if (error) throw error;
         router.replace("/");
       } else {
-        throw new Error('No token found');
+        throw new Error("No token found");
       }
     } catch (error: any) {
       if (error.code === statusCodes.SIGN_IN_CANCELLED) {
@@ -85,24 +94,32 @@ export default function LoginScreen() {
     } catch (err: any) {
       // Handle specific Supabase error codes
       let friendlyMessage = "Error al iniciar sesión";
-      
+
       const errorMessage = err?.message || "";
       const errorMsgLower = errorMessage.toLowerCase();
-      
-      if (errorMsgLower.includes("invalid login credentials") || 
-          errorMsgLower.includes("invalid email or password") ||
-          errorMsgLower.includes("invalid credentials")) {
+
+      if (
+        errorMsgLower.includes("invalid login credentials") ||
+        errorMsgLower.includes("invalid email or password") ||
+        errorMsgLower.includes("invalid credentials")
+      ) {
         friendlyMessage = "Correo o contraseña incorrectos";
       } else if (errorMsgLower.includes("email not confirmed")) {
         friendlyMessage = "Debes confirmar tu correo antes de iniciar sesión";
-      } else if (errorMsgLower.includes("user not found") || errorMsgLower.includes("no user with that email")) {
+      } else if (
+        errorMsgLower.includes("user not found") ||
+        errorMsgLower.includes("no user with that email")
+      ) {
         friendlyMessage = "No existe una cuenta con este correo";
-      } else if (errorMsgLower.includes("network") || errorMsgLower.includes("fetch")) {
+      } else if (
+        errorMsgLower.includes("network") ||
+        errorMsgLower.includes("fetch")
+      ) {
         friendlyMessage = "Error de conexión. Verifica tu internet.";
       } else if (errorMessage) {
         friendlyMessage = errorMessage;
       }
-      
+
       showSnackbar(friendlyMessage, "error");
     } finally {
       setLoading(false);
@@ -110,7 +127,10 @@ export default function LoginScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={["left", "right"]}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      edges={["left", "right"]}
+    >
       <CustomHeader title="Iniciar Sesión" showBackButton={false} />
       <KeyboardAvoidingView
         style={styles.keyboardView}
@@ -120,7 +140,12 @@ export default function LoginScreen() {
           style={styles.scrollView}
           contentContainerStyle={[
             styles.content,
-            { paddingTop: 24, paddingBottom: 32, justifyContent: 'center', flexGrow: 1 }
+            {
+              paddingTop: 24,
+              paddingBottom: 32,
+              justifyContent: "center",
+              flexGrow: 1,
+            },
           ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
@@ -134,11 +159,20 @@ export default function LoginScreen() {
                 contentFit="contain"
               />
             </View>
-            <Text variant="headlineLarge" style={[styles.title, { color: theme.colors.primary }]}>
+            <Text
+              variant="headlineLarge"
+              style={[styles.title, { color: theme.colors.primary }]}
+            >
               ¡Hola de nuevo!
             </Text>
             {/* Subtitle moved/removed or kept */}
-            <Text variant="bodyLarge" style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }]}>
+            <Text
+              variant="bodyLarge"
+              style={[
+                styles.subtitle,
+                { color: theme.colors.onSurfaceVariant },
+              ]}
+            >
               Inicia sesión para continuar
             </Text>
           </View>
@@ -155,7 +189,10 @@ export default function LoginScreen() {
               mode="outlined"
               left={<TextInput.Icon icon="email-outline" />}
               style={styles.input}
-              outlineStyle={{ borderColor: theme.colors.secondaryContainer, borderRadius: 16 }}
+              outlineStyle={{
+                borderColor: theme.colors.secondaryContainer,
+                borderRadius: 16,
+              }}
             />
 
             <TextInput
@@ -167,13 +204,16 @@ export default function LoginScreen() {
               mode="outlined"
               left={<TextInput.Icon icon="lock-outline" />}
               right={
-                <TextInput.Icon 
-                  icon={showPassword ? "eye-off-outline" : "eye-outline"} 
+                <TextInput.Icon
+                  icon={showPassword ? "eye-off-outline" : "eye-outline"}
                   onPress={() => setShowPassword(!showPassword)}
                 />
               }
               style={styles.input}
-              outlineStyle={{ borderColor: theme.colors.secondaryContainer, borderRadius: 16 }}
+              outlineStyle={{
+                borderColor: theme.colors.secondaryContainer,
+                borderRadius: 16,
+              }}
             />
 
             <Button
@@ -181,11 +221,14 @@ export default function LoginScreen() {
               onPress={handleLogin}
               loading={loading}
               disabled={!email.trim() || !password}
-              style={[styles.button, { 
-                backgroundColor: theme.colors.primary,
-                borderWidth: 1,
-                borderColor: theme.colors.primary 
-              }]}
+              style={[
+                styles.button,
+                {
+                  backgroundColor: theme.colors.primary,
+                  borderWidth: 1,
+                  borderColor: theme.colors.primary,
+                },
+              ]}
               contentStyle={styles.buttonContent}
               labelStyle={styles.buttonLabel}
             >
@@ -195,11 +238,27 @@ export default function LoginScreen() {
 
           {/* Divider */}
           <View style={styles.divider}>
-            <View style={[styles.dividerLine, { backgroundColor: theme.colors.outlineVariant }]} />
-            <Text variant="labelMedium" style={{ color: theme.colors.onSurfaceVariant, paddingHorizontal: 12 }}>
+            <View
+              style={[
+                styles.dividerLine,
+                { backgroundColor: theme.colors.outlineVariant },
+              ]}
+            />
+            <Text
+              variant="labelMedium"
+              style={{
+                color: theme.colors.onSurfaceVariant,
+                paddingHorizontal: 12,
+              }}
+            >
               o continúa con
             </Text>
-            <View style={[styles.dividerLine, { backgroundColor: theme.colors.outlineVariant }]} />
+            <View
+              style={[
+                styles.dividerLine,
+                { backgroundColor: theme.colors.outlineVariant },
+              ]}
+            />
           </View>
 
           <Button
@@ -207,7 +266,14 @@ export default function LoginScreen() {
             onPress={handleGoogleLogin}
             loading={loading}
             icon="google"
-            style={[styles.button, { marginBottom: 24, marginTop: 0, borderColor: theme.colors.outline }]}
+            style={[
+              styles.button,
+              {
+                marginBottom: 24,
+                marginTop: 0,
+                borderColor: theme.colors.outline,
+              },
+            ]}
             textColor={theme.colors.onSurface}
             labelStyle={styles.buttonLabel}
           >
@@ -216,11 +282,17 @@ export default function LoginScreen() {
 
           {/* Footer */}
           <View style={styles.footer}>
-            <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
+            <Text
+              variant="bodyMedium"
+              style={{ color: theme.colors.onSurfaceVariant }}
+            >
               ¿No tienes cuenta?
             </Text>
             <TouchableOpacity onPress={() => router.push("/auth/register")}>
-              <Text variant="bodyMedium" style={[styles.link, { color: theme.colors.tertiary }]}>
+              <Text
+                variant="bodyMedium"
+                style={[styles.link, { color: theme.colors.tertiary }]}
+              >
                 Regístrate
               </Text>
             </TouchableOpacity>
@@ -250,8 +322,8 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     marginBottom: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   logo: {
     width: 90,
