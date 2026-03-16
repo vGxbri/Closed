@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams } from "expo-router";
-import React from "react";
+import { BlurTargetView } from "expo-blur";
+import React, { useRef } from "react";
 import {
   ScrollView,
   StyleSheet,
@@ -56,6 +57,8 @@ export default function GroupMembersScreen() {
   const hideDialog = () => setDialogConfig(prev => ({ ...prev, visible: false }));
   const hideOptionsMenu = () => setOptionsMenu(prev => ({ ...prev, visible: false }));
 
+  const backgroundRef = useRef(null);
+
   const { 
     group, 
     isLoading, 
@@ -80,7 +83,8 @@ export default function GroupMembersScreen() {
 
   return (
     <>
-      <CustomHeader title={`Miembros (${group.members.length})`} showBackButton={true} />
+      <BlurTargetView ref={backgroundRef} style={styles.container}>
+        <CustomHeader title={`Miembros (${group.members.length})`} showBackButton={true} />
 
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <ScrollView
@@ -220,6 +224,7 @@ export default function GroupMembersScreen() {
           </Surface>
         </ScrollView>
       </View>
+      </BlurTargetView>
 
       <ConfirmDialog
         visible={dialogConfig.visible}
@@ -230,6 +235,7 @@ export default function GroupMembersScreen() {
         onConfirm={dialogConfig.onConfirm}
         onCancel={hideDialog}
         showCancel={true}
+        blurTargetRef={backgroundRef}
       />
 
       <OptionsMenu

@@ -29,6 +29,7 @@ import { ConfirmDialog, DialogType } from "../../../../components/ui/ConfirmDial
 import { CustomHeader } from "../../../../components/ui/CustomHeader";
 import { MenuOption, OptionsMenu } from "../../../../components/ui/OptionsMenu";
 import { useSnackbar } from "../../../../components/ui/SnackbarContext";
+import { BlurTargetView } from "expo-blur";
 
 export default function GroupDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -67,6 +68,8 @@ export default function GroupDetailScreen() {
 
   const hideDialog = () => setDialogConfig(prev => ({ ...prev, visible: false }));
   const hideOptionsMenu = () => setOptionsMenu(prev => ({ ...prev, visible: false }));
+
+  const backgroundRef = React.useRef(null);
 
   const { 
     group, 
@@ -135,6 +138,7 @@ export default function GroupDetailScreen() {
         }}
       />
 
+      <BlurTargetView ref={backgroundRef} style={styles.container}>
       <CustomHeader 
         title={group.name} 
         showBackButton={true}
@@ -496,6 +500,7 @@ export default function GroupDetailScreen() {
           groupName={group.name}
         />
       </View>
+      </BlurTargetView>
       <OptionsMenu
         visible={optionsMenu.visible}
         title={optionsMenu.title}
@@ -512,6 +517,7 @@ export default function GroupDetailScreen() {
         onConfirm={dialogConfig.onConfirm}
         onCancel={hideDialog}
         showCancel={true}
+        blurTargetRef={backgroundRef}
       />
     </>
   );

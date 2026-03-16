@@ -1,6 +1,6 @@
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Ionicons } from "@expo/vector-icons";
-import { BlurView } from "expo-blur";
+import { BlurView, BlurTargetView } from "expo-blur";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
@@ -50,6 +50,7 @@ export default function ProfileScreen() {
   const { groups, isLoading: groupsLoading } = useGroups();
   const { showSnackbar } = useSnackbar();
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const backgroundRef = useRef(null);
 
   // Edit profile state
   const [showEditModal, setShowEditModal] = useState(false);
@@ -232,6 +233,7 @@ export default function ProfileScreen() {
       style={[styles.container, { backgroundColor: theme.colors.background }]}
       edges={["left", "right"]}
     >
+      <BlurTargetView ref={backgroundRef} style={styles.container}>
       <CustomHeader title="Perfil" showBackButton={false} />
       <ScrollView
         style={styles.scrollView}
@@ -472,6 +474,7 @@ export default function ProfileScreen() {
           Juan Homo
         </Text>
       </ScrollView>
+      </BlurTargetView>
 
       <ConfirmDialog
         visible={showLogoutDialog}
@@ -482,6 +485,7 @@ export default function ProfileScreen() {
         cancelText="Cancelar"
         onConfirm={confirmSignOut}
         onCancel={() => setShowLogoutDialog(false)}
+        blurTargetRef={backgroundRef}
       />
 
       {/* Edit Profile Modal */}
@@ -501,6 +505,7 @@ export default function ProfileScreen() {
                   tint="dark"
                   style={StyleSheet.absoluteFill}
                   blurMethod="dimezisBlurView"
+                  blurTarget={backgroundRef}
                 />
               </Animated.View>
             </Pressable>

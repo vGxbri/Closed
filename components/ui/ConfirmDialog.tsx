@@ -2,11 +2,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import React from "react";
 import {
-    Animated,
-    Pressable,
-    StyleSheet,
-    TouchableOpacity,
-    View,
+  Animated,
+  Pressable,
+  StyleSheet,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { Portal, Text, useTheme } from "react-native-paper";
 
@@ -22,6 +22,8 @@ interface ConfirmDialogProps {
   cancelText?: string;
   type?: DialogType;
   showCancel?: boolean;
+  // NUEVO: Referencia al fondo que queremos difuminar (necesario para Android SDK 55)
+  blurTargetRef?: React.RefObject<any>;
 }
 
 export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
@@ -34,61 +36,32 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   cancelText = "Cancelar",
   type = "info",
   showCancel = true,
+  blurTargetRef, // Lo recibimos por props
 }) => {
   const theme = useTheme();
   const opacityAnim = React.useRef(new Animated.Value(0)).current;
-  const scaleAnim = React.useRef(new Animated.Value(0.85)).current;
-  const translateYAnim = React.useRef(new Animated.Value(40)).current;
   const [shouldRender, setShouldRender] = React.useState(visible);
 
   React.useEffect(() => {
     if (visible) {
       setShouldRender(true);
       opacityAnim.setValue(0);
-      scaleAnim.setValue(0.85);
-      translateYAnim.setValue(40);
 
-      Animated.parallel([
-        Animated.timing(opacityAnim, {
-          toValue: 1,
-          duration: 250,
-          useNativeDriver: true,
-        }),
-        Animated.spring(scaleAnim, {
-          toValue: 1,
-          useNativeDriver: true,
-          tension: 100,
-          friction: 10,
-        }),
-        Animated.spring(translateYAnim, {
-          toValue: 0,
-          useNativeDriver: true,
-          tension: 100,
-          friction: 10,
-        }),
-      ]).start();
+      Animated.timing(opacityAnim, {
+        toValue: 1,
+        duration: 350,
+        useNativeDriver: true,
+      }).start();
     } else {
-      Animated.parallel([
-        Animated.timing(opacityAnim, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(scaleAnim, {
-          toValue: 0.85,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(translateYAnim, {
-          toValue: 40,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
+      Animated.timing(opacityAnim, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: true,
+      }).start(() => {
         setShouldRender(false);
       });
     }
-  }, [visible, opacityAnim, scaleAnim, translateYAnim]);
+  }, [visible, opacityAnim]);
 
   const getIconConfig = (): {
     name: keyof typeof Ionicons.glyphMap;
@@ -167,13 +140,17 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         {/* Backdrop */}
         <Pressable style={styles.backdrop} onPress={onCancel}>
           <Animated.View
-            style={[StyleSheet.absoluteFill, { opacity: opacityAnim }]}
+            style={[
+              StyleSheet.absoluteFill,
+              { opacity: opacityAnim, backgroundColor: "rgba(0,0,0,0.4)" },
+            ]}
           >
             <BlurView
-              intensity={25}
+              intensity={80}
               tint="dark"
-              style={StyleSheet.absoluteFill}
               blurMethod="dimezisBlurView"
+              blurTarget={blurTargetRef}
+              style={StyleSheet.absoluteFill}
             />
           </Animated.View>
         </Pressable>
@@ -185,7 +162,6 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             {
               backgroundColor: theme.colors.surface,
               borderColor: theme.colors.surfaceVariant,
-              transform: [{ scale: scaleAnim }, { translateY: translateYAnim }],
               opacity: opacityAnim,
             },
           ]}

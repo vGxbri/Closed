@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
-import { BlurView } from "expo-blur";
+import { BlurView, BlurTargetView } from "expo-blur";
 import * as DocumentPicker from "expo-document-picker";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
@@ -74,6 +74,7 @@ export default function AwardDetailScreen() {
   const [actionLoading, setActionLoading] = useState(false);
 
   const [myVote, setMyVote] = useState<string | null>(null);
+  const backgroundRef = React.useRef(null);
 
   // Dialog State
   const [dialogConfig, setDialogConfig] = useState<{
@@ -653,6 +654,7 @@ export default function AwardDetailScreen() {
 
   return (
     <>
+      <BlurTargetView ref={backgroundRef} style={styles.container}>
       <CustomHeader title={award.name} showBackButton={true} />
       <ScrollView
         style={[styles.container, { backgroundColor: theme.colors.background }]}
@@ -1430,6 +1432,7 @@ export default function AwardDetailScreen() {
 
         <View style={{ height: 100 }} />
       </ScrollView>
+      </BlurTargetView>
 
       {/* Start Voting Modal - ConfirmDialog Style */}
       <StartVotingModal
@@ -1507,6 +1510,7 @@ export default function AwardDetailScreen() {
         onConfirm={dialogConfig.onConfirm}
         onCancel={hideDialog}
         showCancel={dialogConfig.showCancel}
+        blurTargetRef={backgroundRef}
       />
     </>
   );

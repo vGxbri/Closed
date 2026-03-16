@@ -25,6 +25,7 @@ import { useGroup } from "../../../../hooks";
 import { ConfirmDialog, DialogType } from "../../../../components/ui/ConfirmDialog";
 import { CustomHeader } from "../../../../components/ui/CustomHeader";
 import { useSnackbar } from "../../../../components/ui/SnackbarContext";
+import { BlurTargetView } from "expo-blur";
 
 export default function GroupSettingsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -63,6 +64,8 @@ export default function GroupSettingsScreen() {
   });
 
   const hideDialog = () => setDialogConfig(prev => ({ ...prev, visible: false }));
+  
+  const backgroundRef = React.useRef(null);
   
   // Settings
   const [allowMemberNominations, setAllowMemberNominations] = useState(false);
@@ -177,6 +180,7 @@ export default function GroupSettingsScreen() {
 
   return (
     <>
+      <BlurTargetView ref={backgroundRef} style={styles.container}>
       <CustomHeader title="Ajustes del Grupo" showBackButton={true} />
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <KeyboardAvoidingView
@@ -422,6 +426,7 @@ export default function GroupSettingsScreen() {
           </Surface>
         </KeyboardAvoidingView>
       </View>
+      </BlurTargetView>
       <ConfirmDialog
         visible={dialogConfig.visible}
         title={dialogConfig.title}
@@ -432,6 +437,7 @@ export default function GroupSettingsScreen() {
         onConfirm={dialogConfig.onConfirm}
         onCancel={hideDialog}
         showCancel={true}
+        blurTargetRef={backgroundRef}
       />
     </>
   );
