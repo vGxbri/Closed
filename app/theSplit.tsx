@@ -4,6 +4,7 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useRef, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
+import SquircleView from "react-native-fast-squircle";
 import { Text, useTheme } from "react-native-paper";
 import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -69,6 +70,7 @@ export default function TheSplit() {
             entering={FadeInDown.duration(600).delay(200)}
             style={styles.actions}
           >
+            {/* BOTÓN 1: Crear grupo */}
             <Pressable
               onPress={() => router.push("/createGroup")}
               style={({ pressed }) => [
@@ -78,11 +80,15 @@ export default function TheSplit() {
                 },
               ]}
             >
-              <View
+              <SquircleView
                 style={[
                   styles.ctaCard,
-                  { backgroundColor: theme.colors.primary, borderRadius: 24 },
+                  {
+                    backgroundColor: theme.colors.primary,
+                    borderRadius: 20,
+                  },
                 ]}
+                cornerSmoothing={1}
               >
                 <View style={styles.ctaContent}>
                   <View style={styles.ctaTextBlock}>
@@ -103,22 +109,29 @@ export default function TheSplit() {
                       Empieza algo nuevo con tu gente
                     </Text>
                   </View>
-                  <View
+                  <SquircleView
                     style={[
                       styles.ctaIcon,
-                      { borderColor: "rgba(255,255,255,0.3)" },
+                      {
+                        backgroundColor: "rgba(255,255,255,0.15)",
+                        borderColor: "rgba(255,255,255,0.3)",
+                        borderWidth: 1,
+                        borderRadius: 16,
+                      },
                     ]}
+                    cornerSmoothing={1}
                   >
                     <Ionicons
                       name="add"
                       size={24}
                       color={theme.colors.onPrimary}
                     />
-                  </View>
+                  </SquircleView>
                 </View>
-              </View>
+              </SquircleView>
             </Pressable>
 
+            {/* BOTÓN 2: Unirme a un grupo */}
             <Pressable
               onPress={() => router.push("/join/joinGroup")}
               style={({ pressed }) => [
@@ -128,14 +141,15 @@ export default function TheSplit() {
                 },
               ]}
             >
-              <View
+              <SquircleView
                 style={[
                   styles.ctaCard,
                   {
                     backgroundColor: theme.colors.surfaceVariant,
-                    borderRadius: 24,
+                    borderRadius: 20,
                   },
                 ]}
+                cornerSmoothing={1}
               >
                 <View style={styles.ctaContent}>
                   <View style={styles.ctaTextBlock}>
@@ -156,29 +170,67 @@ export default function TheSplit() {
                       Tengo un código de invitación
                     </Text>
                   </View>
-                  <View
+                  <SquircleView
                     style={[
                       styles.ctaIcon,
-                      { borderColor: theme.colors.outline },
+                      {
+                        backgroundColor: "rgba(255,255,255,0.15)",
+                        borderColor: theme.colors.outline,
+                        borderWidth: 1,
+                        borderRadius: 16,
+                      },
                     ]}
+                    cornerSmoothing={1}
                   >
                     <Ionicons
                       name="arrow-forward"
                       size={24}
                       color={theme.colors.onSurface}
                     />
-                  </View>
+                  </SquircleView>
                 </View>
-              </View>
+              </SquircleView>
             </Pressable>
 
+            {/* BOTÓN 3: Cerrar Sesión (SIN SQUIRCLE, VIEW NORMAL) */}
             <Pressable
               onPress={() => setShowLogoutModal(true)}
-              style={styles.logoutButton}
+              style={({ pressed }) => [
+                {
+                  opacity: pressed ? 0.8 : 1,
+                  transform: [{ scale: pressed ? 0.98 : 1 }],
+                  alignSelf: "center",
+                  marginTop: 8,
+                },
+              ]}
             >
-              <Text style={[styles.logoutText, { color: theme.colors.error }]}>
-                Cerrar Sesión
-              </Text>
+              <SquircleView
+                style={[
+                  {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 8,
+                    paddingVertical: 12,
+                    paddingHorizontal: 20,
+                    backgroundColor:
+                      theme.colors.errorContainer || "rgba(255, 59, 48, 0.1)",
+                    borderRadius: 40,
+                  },
+                ]}
+                cornerSmoothing={1}
+              >
+                <Ionicons
+                  name="log-out-outline"
+                  size={18}
+                  color={theme.colors.error}
+                />
+                <Text
+                  style={[styles.logoutText, { color: theme.colors.error }]}
+                >
+                  Cerrar Sesión
+                </Text>
+              </SquircleView>
             </Pressable>
           </Animated.View>
         </View>
@@ -262,11 +314,10 @@ const styles = StyleSheet.create({
   ctaIcon: {
     width: 48,
     height: 48,
-    borderRadius: 24,
-    borderWidth: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.15)",
+    // Quitamos de aquí el borderRadius, borderWidth y backgroundColor
+    // porque ahora lo gestiona squircleParams
   },
   logoutButton: {
     alignSelf: "center",

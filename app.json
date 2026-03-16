@@ -20,7 +20,6 @@
         "backgroundColor": "#EBEBEB",
         "monochromeImage": "./assets/images/adaptive-monochrome.png"
       },
-      "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.vgxbri.closed",
       "permissions": [
@@ -41,7 +40,16 @@
           "iosUrlScheme": "com.googleusercontent.apps.YOUR_IOS_CLIENT_ID_REVERSED"
         }
       ],
-      "expo-asset"
+      "expo-asset",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "kotlinVersion": "2.1.20"
+          }
+        }
+      ],
+      "./withKotlinFix.js"
     ],
     "experiments": {
       "typedRoutes": true,
