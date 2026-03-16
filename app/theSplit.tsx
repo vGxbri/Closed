@@ -34,7 +34,7 @@ export default function TheSplit() {
         <View style={styles.content}>
           {/* Header Section */}
           <Animated.View
-            entering={FadeInUp.duration(600)}
+            entering={FadeInUp.duration(150)}
             style={styles.header}
           >
             <Text style={[styles.welcomeText, { color: theme.colors.primary }]}>
@@ -67,7 +67,7 @@ export default function TheSplit() {
 
           {/* CTA Section */}
           <Animated.View
-            entering={FadeInDown.duration(600).delay(200)}
+            entering={FadeInDown.duration(150)}
             style={styles.actions}
           >
             {/* BOTÓN 1: Crear grupo */}

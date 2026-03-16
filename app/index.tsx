@@ -1,29 +1,39 @@
 import { Redirect } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, View } from "react-native";
-import { Colors } from "../constants/Colors";
+import { StyleSheet, View } from "react-native";
+import { useTheme } from "react-native-paper";
+import MatrixLoader from "../components/ui/MatrixLoader";
 import { useAuth } from "../hooks";
-import { groupsService } from "../services/groups.service";
+import { groupsService } from "../services";
 
-// Root index - Invisible Router
+// Root index - Invisible Router that handles initial redirection
 export default function Index() {
   const { isAuthenticated, isLoading, isProfileLoading, profile } = useAuth();
+  const theme = useTheme();
   const [isCheckingGroups, setIsCheckingGroups] = useState(true);
   const [hasGroups, setHasGroups] = useState(false);
 
+  // 1. NUEVO ESTADO: Controla si ya ha pasado nuestro tiempo mínimo de gracia (1 seg)
+  const [minTimeElapsed, setMinTimeElapsed] = useState(false);
+
+  // 2. NUEVO EFFECT: Arranca el cronómetro nada más abrir la app
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setMinTimeElapsed(true);
+    }, 1000); // 1000ms = 1 segundo exacto de MatrixLoader garantizado
+
+    return () => clearTimeout(timer); // Limpieza de seguridad
+  }, []);
+
   useEffect(() => {
     const checkGroups = async () => {
+      // Only check groups if we are authenticated and have a profile
       if (isAuthenticated && profile) {
         try {
-          // We can use a lightweight query if available, or just getMyGroups
-          // getMyGroups fetches everything which is heavy, but for now it's okay.
-          // Optimization: create a checkUserGroupsStatus method later.
           const groups = await groupsService.getMyGroups();
           setHasGroups(groups.length > 0);
         } catch (error) {
-          console.error("Error checking groups:", error);
-          // If error, maybe assume no groups or retry?
-          // Safe bet: assume no groups and let TheSplit handle it or show error logic
+          console.error("Error checking groups in index:", error);
           setHasGroups(false);
         } finally {
           setIsCheckingGroups(false);
@@ -42,41 +52,47 @@ export default function Index() {
     }
   }, [isAuthenticated, profile, isLoading, isProfileLoading]);
 
-  // Show loading while checking auth, profile, or groups
+  // 3. ACTUALIZAMOS LA CONDICIÓN: Ahora el loader se muestra si la app está cargando algo,
+  //    O si simplemente nuestro cronómetro (!minTimeElapsed) todavía no ha terminado.
   if (
     isLoading ||
     isProfileLoading ||
-    (isAuthenticated && profile && isCheckingGroups)
+    (isAuthenticated && profile && isCheckingGroups) ||
+    !minTimeElapsed // <-- El guardián del tiempo
   ) {
     return (
       <View
-        style={{
-          flex: 1,
-          justifyContent: "center",
-          alignItems: "center",
-          backgroundColor: Colors.background,
-        }}
+        style={[styles.container, { backgroundColor: theme.colors.background }]}
       >
-        <ActivityIndicator size="large" color={Colors.primary} />
+        <MatrixLoader size={45} />
       </View>
     );
   }
 
-  // 1. Not Authenticated -> Login
+  // Navigation Logic
+  // 1. Not Authenticated -> Send to Login
   if (!isAuthenticated) {
     return <Redirect href="/auth/login" />;
   }
 
-  // 2. Authenticated but No Profile -> Profile Setup
+  // 2. Authenticated but No Profile -> Send to Profile Setup
   if (!profile) {
     return <Redirect href="/profileSetup" />;
   }
 
-  // 3. Authenticated, Profile, but No Groups -> The Split
+  // 3. Authenticated, Profile, but No Groups -> Send to The Split (Group Selection)
   if (!hasGroups) {
     return <Redirect href="/theSplit" />;
   }
 
-  // 4. Authenticated, Profile, Groups -> Home
+  // 4. Authenticated, Profile, Groups -> Send to Home Tabs
   return <Redirect href="/(tabs)/home" />;
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+});
