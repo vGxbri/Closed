@@ -37,6 +37,7 @@ const PALETTE = {
   // Status
   error: "#D32F2F",
   errorLight: "#EF5350",
+  errorContainer: "rgba(255, 59, 48, 0.1)",
   success: "#388E3C",
   warning: "#F57C00",
   info: "#1976D2",

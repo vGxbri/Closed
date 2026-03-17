@@ -85,7 +85,6 @@ export default function TheSplit() {
                   styles.ctaCard,
                   {
                     backgroundColor: theme.colors.primary,
-                    borderRadius: 20,
                   },
                 ]}
                 cornerSmoothing={1}
@@ -146,7 +145,6 @@ export default function TheSplit() {
                   styles.ctaCard,
                   {
                     backgroundColor: theme.colors.surfaceVariant,
-                    borderRadius: 20,
                   },
                 ]}
                 cornerSmoothing={1}
@@ -204,27 +202,8 @@ export default function TheSplit() {
                 },
               ]}
             >
-              <SquircleView
-                style={[
-                  {
-                    flexDirection: "row",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 8,
-                    paddingVertical: 12,
-                    paddingHorizontal: 20,
-                    backgroundColor:
-                      theme.colors.errorContainer || "rgba(255, 59, 48, 0.1)",
-                    borderRadius: 40,
-                  },
-                ]}
-                cornerSmoothing={1}
-              >
-                <Ionicons
-                  name="log-out-outline"
-                  size={18}
-                  color={theme.colors.error}
-                />
+              <SquircleView style={styles.logoutButton} cornerSmoothing={1}>
+                <Ionicons name="log-out" size={18} color={theme.colors.error} />
                 <Text
                   style={[styles.logoutText, { color: theme.colors.error }]}
                 >
@@ -269,6 +248,7 @@ const styles = StyleSheet.create({
     fontFamily: "InstrumentSerif-Italic",
     fontSize: 36,
     letterSpacing: 1,
+    paddingVertical: 5,
   },
   logo: {
     width: "80%",
@@ -292,6 +272,9 @@ const styles = StyleSheet.create({
   ctaCard: {
     paddingVertical: 24,
     paddingHorizontal: 24,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
   },
   ctaContent: {
     flexDirection: "row",
@@ -316,15 +299,21 @@ const styles = StyleSheet.create({
     height: 48,
     justifyContent: "center",
     alignItems: "center",
-    // Quitamos de aquí el borderRadius, borderWidth y backgroundColor
-    // porque ahora lo gestiona squircleParams
   },
   logoutButton: {
-    alignSelf: "center",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
     paddingVertical: 12,
-    marginTop: 8,
+    paddingHorizontal: 20,
+    backgroundColor: "rgba(255, 59, 48, 0.3)",
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
   },
   logoutText: {
+    fontFamily: "Archivo-Bold",
     fontSize: 14,
     letterSpacing: 0.5,
   },

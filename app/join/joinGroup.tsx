@@ -4,12 +4,13 @@ import React, { useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   TextInput as RNTextInput,
   StyleSheet,
   View,
 } from "react-native";
 import SquircleView from "react-native-fast-squircle";
-import { Button, Text, useTheme } from "react-native-paper";
+import { Text, useTheme } from "react-native-paper";
 import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { CustomHeader } from "../../components/ui/CustomHeader";
@@ -31,39 +32,53 @@ export default function JoinGroupInputScreen() {
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: theme.colors.background }]}
-      edges={["left", "right"]}
+      edges={["top", "left", "right", "bottom"]}
     >
       <CustomHeader title="" showBackButton={true} />
 
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? "padding" : "padding"}
         style={styles.keyboardView}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
       >
         <View style={styles.content}>
           <Animated.View
             entering={FadeInUp.duration(400)}
             style={styles.header}
           >
-            <View
+            <SquircleView
               style={[
                 styles.iconContainer,
-                { backgroundColor: theme.colors.secondaryContainer },
+                {
+                  backgroundColor: theme.colors.secondaryContainer,
+                  borderColor: "rgba(255,255,255,0.1)",
+                  borderWidth: 1,
+                },
               ]}
+              cornerSmoothing={1}
             >
               <Ionicons
                 name="keypad"
                 size={32}
                 color={theme.colors.onSecondaryContainer}
               />
-            </View>
+            </SquircleView>
+
             <Text
               variant="headlineMedium"
-              style={[styles.title, { color: theme.colors.onSurface }]}
+              style={[styles.title, { color: theme.colors.primary }]}
             >
-              Ingresa el código
+              Únete a un grupo
             </Text>
+
+            <View
+              style={[
+                styles.divider,
+                { backgroundColor: theme.colors.outlineVariant },
+              ]}
+            />
+
             <Text
-              variant="bodyLarge"
               style={[
                 styles.subtitle,
                 { color: theme.colors.onSurfaceVariant },
@@ -99,9 +114,9 @@ export default function JoinGroupInputScreen() {
                           borderColor: isFocused
                             ? theme.colors.primary
                             : digit
-                              ? theme.colors.outline
+                              ? theme.colors.outlineVariant
                               : "transparent",
-                          borderWidth: isFocused || digit ? 2 : 0,
+                          borderWidth: isFocused || digit ? 1 : 0,
                         },
                       ]}
                       cornerSmoothing={1}
@@ -110,9 +125,7 @@ export default function JoinGroupInputScreen() {
                         style={[
                           styles.codeDigit,
                           {
-                            color: digit
-                              ? theme.colors.onSurface
-                              : theme.colors.onSurfaceVariant,
+                            color: theme.colors.onSurface,
                           },
                         ]}
                       >
@@ -141,38 +154,85 @@ export default function JoinGroupInputScreen() {
                 autoCorrect={false}
                 autoFocus={true}
                 caretHidden={true}
-                maxLength={CODE_LENGTH} // Le decimos al teclado cuándo parar
+                maxLength={CODE_LENGTH}
                 onSubmitEditing={handleContinue}
                 returnKeyType="go"
               />
             </View>
 
-            <Button
-              mode="contained"
+            {/* CTA Section */}
+            <Pressable
               onPress={handleContinue}
               disabled={code.length !== CODE_LENGTH}
-              style={[
-                styles.button,
+              style={({ pressed }) => [
                 {
-                  backgroundColor:
-                    code.length === CODE_LENGTH
-                      ? theme.colors.primary
-                      : theme.colors.surfaceVariant,
-                },
-              ]}
-              contentStyle={styles.buttonContent}
-              labelStyle={[
-                styles.buttonLabel,
-                {
-                  color:
-                    code.length === CODE_LENGTH
-                      ? theme.colors.onPrimary
-                      : theme.colors.onSurfaceVariant,
+                  opacity:
+                    code.length !== CODE_LENGTH ? 0.6 : pressed ? 0.9 : 1,
+                  transform: [
+                    {
+                      scale: pressed && code.length === CODE_LENGTH ? 0.98 : 1,
+                    },
+                  ],
+                  width: "100%",
                 },
               ]}
             >
-              Buscar grupo
-            </Button>
+              <SquircleView
+                style={[
+                  styles.ctaCard,
+                  {
+                    backgroundColor:
+                      code.length === CODE_LENGTH
+                        ? theme.colors.primary
+                        : theme.colors.surfaceVariant,
+                  },
+                ]}
+                cornerSmoothing={1}
+              >
+                <View style={styles.ctaContent}>
+                  <View style={styles.ctaTextBlock}>
+                    <Text
+                      style={[
+                        styles.ctaTitle,
+                        {
+                          color:
+                            code.length === CODE_LENGTH
+                              ? theme.colors.onPrimary
+                              : theme.colors.onSurfaceVariant,
+                        },
+                      ]}
+                    >
+                      Buscar grupo
+                    </Text>
+                  </View>
+                  <SquircleView
+                    style={[
+                      styles.ctaIcon,
+                      {
+                        backgroundColor: "rgba(255,255,255,0.15)",
+                        borderColor:
+                          code.length === CODE_LENGTH
+                            ? "rgba(255,255,255,0.3)"
+                            : theme.colors.outline,
+                        borderWidth: 1,
+                        borderRadius: 16,
+                      },
+                    ]}
+                    cornerSmoothing={1}
+                  >
+                    <Ionicons
+                      name="arrow-forward"
+                      size={24}
+                      color={
+                        code.length === CODE_LENGTH
+                          ? theme.colors.onPrimary
+                          : theme.colors.onSurfaceVariant
+                      }
+                    />
+                  </SquircleView>
+                </View>
+              </SquircleView>
+            </Pressable>
           </Animated.View>
         </View>
       </KeyboardAvoidingView>
@@ -189,9 +249,10 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: 24,
     justifyContent: "center",
     alignItems: "center",
+    paddingBottom: 20,
   },
   header: {
     alignItems: "center",
@@ -207,14 +268,24 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   title: {
-    fontWeight: "800",
-    marginBottom: 12,
+    fontFamily: "InstrumentSerif-Italic",
+    fontSize: 36,
+    letterSpacing: 1,
     textAlign: "center",
-    letterSpacing: -0.5,
+    marginBottom: 8,
+    paddingVertical: 5,
+  },
+  divider: {
+    width: "85%",
+    height: 1,
+    marginTop: 4,
+    marginBottom: 24,
   },
   subtitle: {
+    fontSize: 16,
+    letterSpacing: 0.5,
     textAlign: "center",
-    lineHeight: 24,
+    lineHeight: 22,
     paddingHorizontal: 20,
   },
   form: {
@@ -227,36 +298,52 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 400,
     marginBottom: 48,
-    position: "relative", // Necesario para que el input absolute funcione respecto a este contenedor
+    position: "relative",
   },
   codeBox: {
-    width: "14%",
+    width: "14.5%",
     aspectRatio: 0.85,
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
   },
   codeDigit: {
-    fontSize: 32,
-    fontWeight: "800",
+    fontSize: 28,
+    fontFamily: "Archivo-Bold",
   },
   hiddenOverlayInput: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    opacity: 0, // <-- Ahora que es grande, esto oculta el texto nativo al 100%
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0,
   },
-  button: {
-    borderRadius: 100,
-    width: "100%",
+  ctaCard: {
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
   },
-  buttonContent: {
-    paddingVertical: 10,
+  ctaContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
-  buttonLabel: {
-    fontSize: 16,
-    fontWeight: "700",
+  ctaTextBlock: {
+    flex: 1,
+    marginRight: 16,
+  },
+  ctaTitle: {
+    fontFamily: "Archivo-Bold",
+    fontSize: 20,
+    marginBottom: 4,
+  },
+  ctaDescription: {
+    fontSize: 14,
+    opacity: 0.8,
+  },
+  ctaIcon: {
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });

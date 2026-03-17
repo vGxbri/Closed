@@ -55,11 +55,32 @@ export default function CreateGroupScreen() {
   const [name, setName] = useState("");
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [maxStepReached, setMaxStepReached] = useState(1);
+
+  React.useEffect(() => {
+    if (step > maxStepReached) {
+      setMaxStepReached(step);
+    }
+  }, [step, maxStepReached]);
 
   const handleTypeSelect = useCallback((type: string) => {
     setSelectedType(type);
     setStep(2);
   }, []);
+
+  const handleBack = useCallback(() => {
+    if (step > 1) {
+      setStep(step - 1);
+    } else {
+      router.back();
+    }
+  }, [step, router]);
+
+  const handleForward = useCallback(() => {
+    if (step < maxStepReached) {
+      setStep(step + 1);
+    }
+  }, [step, maxStepReached]);
 
   const handlePickPhoto = useCallback(async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -461,6 +482,42 @@ export default function CreateGroupScreen() {
         ))}
       </View>
 
+      {/* Navigation Controls */}
+      <View style={styles.navigationContainer}>
+        <Pressable
+          onPress={handleBack}
+          style={({ pressed }) => [
+            styles.navButton,
+            {
+              opacity: pressed ? 0.7 : 1,
+            },
+          ]}
+        >
+          <Ionicons
+            name="chevron-back"
+            size={28}
+            color={theme.colors.onSurfaceVariant}
+          />
+        </Pressable>
+
+        <Pressable
+          onPress={handleForward}
+          disabled={step >= maxStepReached}
+          style={({ pressed }) => [
+            styles.navButton,
+            {
+              opacity: step >= maxStepReached ? 0.3 : pressed ? 0.7 : 1,
+            },
+          ]}
+        >
+          <Ionicons
+            name="chevron-forward"
+            size={28}
+            color={theme.colors.onSurfaceVariant}
+          />
+        </Pressable>
+      </View>
+
       <View style={styles.content}>
         {step === 1 && renderStepOne()}
         {step === 2 && renderStepTwo()}
@@ -492,6 +549,20 @@ const styles = StyleSheet.create({
   stepContainer: {
     flex: 1,
   },
+  navigationContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 24,
+    marginBottom: 8,
+    gap: 10,
+  },
+  navButton: {
+    width: 48,
+    height: 48,
+    justifyContent: "center",
+    alignItems: "center",
+  },
 
   // Shared title block
   stepTitleBlock: {
@@ -507,6 +578,7 @@ const styles = StyleSheet.create({
     fontSize: 42,
     marginTop: -20,
     letterSpacing: 2,
+    paddingVertical: 5,
   },
   titleDivider: {
     borderBottomWidth: 1,
@@ -538,6 +610,7 @@ const styles = StyleSheet.create({
     fontFamily: "InstrumentSerif-Italic",
     marginBottom: 8,
     textAlign: "center",
+    paddingVertical: 5,
   },
   cardDescription: {
     fontSize: 16,
