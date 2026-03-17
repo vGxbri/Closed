@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import {
   GoogleSignin,
   statusCodes,
@@ -8,18 +9,20 @@ import React, { useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
   View,
 } from "react-native";
-import { Button, Text, TextInput, useTheme } from "react-native-paper";
-import {
-  SafeAreaView
-} from "react-native-safe-area-context";
-import { CustomHeader } from "../../components/ui/CustomHeader";
+import SquircleView from "react-native-fast-squircle";
+import { Text, TextInput, useTheme } from "react-native-paper";
+import Animated, {
+  FadeInDown,
+  FadeInUp
+} from "react-native-reanimated";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useSnackbar } from "../../components/ui/SnackbarContext";
-import { theme as appTheme } from "../../constants/theme";
 import { useAuth } from "../../hooks";
 import { supabase } from "../../lib/supabase";
 
@@ -92,9 +95,7 @@ export default function LoginScreen() {
       await signIn(email.trim(), password);
       router.replace("/");
     } catch (err: any) {
-      // Handle specific Supabase error codes
       let friendlyMessage = "Error al iniciar sesión";
-
       const errorMessage = err?.message || "";
       const errorMsgLower = errorMessage.toLowerCase();
 
@@ -126,48 +127,52 @@ export default function LoginScreen() {
     }
   };
 
+  const isFormValid = email.trim().length > 0 && password.length > 0;
+
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: theme.colors.background }]}
       edges={["left", "right"]}
     >
-      <CustomHeader title="Iniciar Sesión" showBackButton={false} />
       <KeyboardAvoidingView
         style={styles.keyboardView}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView
           style={styles.scrollView}
-          contentContainerStyle={[
-            styles.content,
-            {
-              paddingTop: 24,
-              paddingBottom: 32,
-              justifyContent: "center",
-              flexGrow: 1,
-            },
-          ]}
+          contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
+          bounces={false}
+          overScrollMode="never"
         >
-          {/* Header Content */}
-          <View style={styles.header}>
+          {/* Header Section */}
+          <Animated.View
+            entering={FadeInUp.duration(600)}
+            style={styles.header}
+            renderToHardwareTextureAndroid={true}
+          >
             <View style={styles.logoContainer}>
               <Image
-                source={require("../../assets/images/Glow.png")}
+                source={
+                  theme.dark
+                    ? require("../../assets/images/logo_light.png")
+                    : require("../../assets/images/logo_dark.png")
+                }
                 style={styles.logo}
                 contentFit="contain"
               />
             </View>
-            <Text
-              variant="headlineLarge"
-              style={[styles.title, { color: theme.colors.primary }]}
-            >
+            <Text style={[styles.title, { color: theme.colors.primary }]}>
               ¡Hola de nuevo!
             </Text>
-            {/* Subtitle moved/removed or kept */}
+            <View
+              style={[
+                styles.divider,
+                { backgroundColor: theme.colors.outlineVariant },
+              ]}
+            />
             <Text
-              variant="bodyLarge"
               style={[
                 styles.subtitle,
                 { color: theme.colors.onSurfaceVariant },
@@ -175,10 +180,14 @@ export default function LoginScreen() {
             >
               Inicia sesión para continuar
             </Text>
-          </View>
+          </Animated.View>
 
-          {/* Form */}
-          <View style={styles.form}>
+          {/* Form Section */}
+          <Animated.View
+            entering={FadeInDown.duration(600).delay(200)}
+            style={styles.form}
+            renderToHardwareTextureAndroid={true}
+          >
             <TextInput
               label="Correo electrónico"
               placeholder="tu@email.com"
@@ -190,9 +199,11 @@ export default function LoginScreen() {
               left={<TextInput.Icon icon="email-outline" />}
               style={styles.input}
               outlineStyle={{
-                borderColor: theme.colors.secondaryContainer,
-                borderRadius: 16,
+                borderColor: theme.colors.outlineVariant,
+                borderRadius: 20,
+                borderWidth: 1,
               }}
+              contentStyle={styles.inputContent}
             />
 
             <TextInput
@@ -211,92 +222,145 @@ export default function LoginScreen() {
               }
               style={styles.input}
               outlineStyle={{
-                borderColor: theme.colors.secondaryContainer,
-                borderRadius: 16,
+                borderColor: theme.colors.outlineVariant,
+                borderRadius: 20,
+                borderWidth: 1,
               }}
+              contentStyle={styles.inputContent}
             />
 
-            <Button
-              mode="contained"
+            {/* Login CTA Button */}
+            <Pressable
               onPress={handleLogin}
-              loading={loading}
-              disabled={!email.trim() || !password}
-              style={[
-                styles.button,
+              disabled={!isFormValid || loading}
+              style={({ pressed }) => [
+                styles.ctaContainer,
                 {
-                  backgroundColor: theme.colors.primary,
-                  borderWidth: 1,
-                  borderColor: theme.colors.primary,
+                  opacity: !isFormValid || loading ? 0.6 : pressed ? 0.9 : 1,
+                  transform: [
+                    { scale: pressed && isFormValid && !loading ? 0.98 : 1 },
+                  ],
                 },
               ]}
-              contentStyle={styles.buttonContent}
-              labelStyle={styles.buttonLabel}
             >
-              Iniciar Sesión
-            </Button>
-          </View>
+              <SquircleView
+                style={[
+                  styles.ctaCard,
+                  {
+                    backgroundColor: theme.colors.primary,
+                  },
+                ]}
+                cornerSmoothing={1}
+              >
+                <View style={styles.ctaContent}>
+                  <Text
+                    style={[styles.ctaText, { color: theme.colors.onPrimary }]}
+                  >
+                    {loading ? "Iniciando..." : "Iniciar Sesión"}
+                  </Text>
+                  <SquircleView
+                    style={[
+                      styles.ctaIcon,
+                      {
+                        backgroundColor: "rgba(255,255,255,0.15)",
+                        borderColor: "rgba(255,255,255,0.3)",
+                        borderWidth: 1,
+                      },
+                    ]}
+                    cornerSmoothing={1}
+                  >
+                    <Ionicons
+                      name="arrow-forward"
+                      size={20}
+                      color={theme.colors.onPrimary}
+                    />
+                  </SquircleView>
+                </View>
+              </SquircleView>
+            </Pressable>
 
-          {/* Divider */}
-          <View style={styles.divider}>
-            <View
-              style={[
-                styles.dividerLine,
-                { backgroundColor: theme.colors.outlineVariant },
+            {/* Divider "o continúa con" */}
+            <View style={styles.socialDivider}>
+              <View
+                style={[
+                  styles.dividerLine,
+                  { backgroundColor: theme.colors.outlineVariant },
+                ]}
+              />
+              <Text
+                style={[
+                  styles.socialDividerText,
+                  { color: theme.colors.onSurfaceVariant },
+                ]}
+              >
+                o continúa con
+              </Text>
+              <View
+                style={[
+                  styles.dividerLine,
+                  { backgroundColor: theme.colors.outlineVariant },
+                ]}
+              />
+            </View>
+
+            {/* Google Social Button */}
+            <Pressable
+              onPress={handleGoogleLogin}
+              disabled={loading}
+              style={({ pressed }) => [
+                styles.socialButtonContainer,
+                {
+                  opacity: loading ? 0.6 : pressed ? 0.9 : 1,
+                },
               ]}
-            />
-            <Text
-              variant="labelMedium"
-              style={{
-                color: theme.colors.onSurfaceVariant,
-                paddingHorizontal: 12,
-              }}
             >
-              o continúa con
-            </Text>
-            <View
-              style={[
-                styles.dividerLine,
-                { backgroundColor: theme.colors.outlineVariant },
-              ]}
-            />
-          </View>
+              <SquircleView
+                style={[
+                  styles.socialButton,
+                  {
+                    backgroundColor: theme.colors.surface,
+                    borderColor: "rgba(255,255,255,0.1)",
+                    borderWidth: 1,
+                  },
+                ]}
+                cornerSmoothing={1}
+              >
+                <View style={styles.socialButtonContent}>
+                  <Ionicons
+                    name="logo-google"
+                    size={20}
+                    color={theme.colors.onSurface}
+                  />
+                  <Text
+                    style={[
+                      styles.socialButtonText,
+                      { color: theme.colors.onSurface },
+                    ]}
+                  >
+                    Google
+                  </Text>
+                </View>
+              </SquircleView>
+            </Pressable>
+          </Animated.View>
 
-          <Button
-            mode="outlined"
-            onPress={handleGoogleLogin}
-            loading={loading}
-            icon="google"
-            style={[
-              styles.button,
-              {
-                marginBottom: 24,
-                marginTop: 0,
-                borderColor: theme.colors.outline,
-              },
-            ]}
-            textColor={theme.colors.onSurface}
-            labelStyle={styles.buttonLabel}
+          {/* Footer Section */}
+          <Animated.View
+            entering={FadeInDown.duration(400).delay(200)}
+            style={styles.footer}
+            renderToHardwareTextureAndroid={true}
           >
-            Google
-          </Button>
-
-          {/* Footer */}
-          <View style={styles.footer}>
-            <Text
-              variant="bodyMedium"
-              style={{ color: theme.colors.onSurfaceVariant }}
-            >
+            <Text style={{ color: theme.colors.onSurfaceVariant }}>
               ¿No tienes cuenta?
             </Text>
             <TouchableOpacity onPress={() => router.push("/auth/register")}>
               <Text
-                variant="bodyMedium"
-                style={[styles.link, { color: theme.colors.tertiary }]}
+                style={[styles.registerLink, { color: theme.colors.tertiary }]}
               >
                 Regístrate
               </Text>
             </TouchableOpacity>
-          </View>
+          </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -313,65 +377,122 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
-  content: {
-    paddingHorizontal: appTheme.spacing.xl,
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 24,
+    justifyContent: "center",
+    alignItems: "center",
   },
   header: {
     alignItems: "center",
-    marginBottom: 40,
+    marginBottom: 24,
   },
   logoContainer: {
-    marginBottom: 20,
-    alignItems: "center",
-    justifyContent: "center",
+    marginBottom: 16,
   },
   logo: {
-    width: 90,
-    height: 90,
+    width: 100,
+    height: 100,
   },
   title: {
-    fontWeight: "800",
+    fontFamily: "InstrumentSerif-Italic",
+    fontSize: 42,
+    letterSpacing: 1,
+    textAlign: "center",
+    paddingVertical: 5,
+  },
+  divider: {
+    width: "60%",
+    height: 1,
+    marginTop: 0,
     marginBottom: 0,
-    letterSpacing: -1,
   },
   subtitle: {
+    fontSize: 16,
+    letterSpacing: 0.5,
     textAlign: "center",
-    marginTop: 4,
+    lineHeight: 22,
   },
   form: {
-    marginBottom: 32,
+    width: "100%",
   },
   input: {
     marginBottom: 8,
+    backgroundColor: "transparent",
   },
-  button: {
-    marginTop: 8,
-    borderRadius: 16,
+  inputContent: {
+    fontFamily: "Archivo-Medium",
   },
-  buttonContent: {
-    paddingVertical: 8,
+  ctaContainer: {
+    marginTop: 14,
+    width: "100%",
   },
-  buttonLabel: {
-    fontSize: 16,
-    fontWeight: "700",
-    letterSpacing: 0.5,
+  ctaCard: {
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 20,
+    borderColor: "rgba(255,255,255,0.3)",
+    borderWidth: 1,
   },
-  divider: {
+  ctaContent: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 32,
+    justifyContent: "space-between",
+  },
+  ctaText: {
+    fontFamily: "Archivo-Bold",
+    fontSize: 18,
+    letterSpacing: 0.5,
+  },
+  ctaIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  socialDivider: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 32,
+    marginBottom: 16,
   },
   dividerLine: {
     flex: 1,
     height: 1,
   },
+  socialDividerText: {
+    paddingHorizontal: 12,
+    fontSize: 13,
+    fontFamily: "Archivo-Medium",
+  },
+  socialButtonContainer: {
+    width: "100%",
+    marginBottom: 16,
+  },
+  socialButton: {
+    paddingVertical: 14,
+    borderRadius: 100,
+  },
+  socialButtonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+  },
+  socialButtonText: {
+    fontFamily: "Archivo-Bold",
+    fontSize: 16,
+  },
   footer: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
+    gap: 8,
+    marginTop: 20,
   },
-  link: {
-    fontWeight: "700",
+  registerLink: {
+    fontFamily: "Archivo-Bold",
+    fontSize: 15,
   },
 });
