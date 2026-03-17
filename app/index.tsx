@@ -2,7 +2,7 @@ import { Redirect } from "expo-router";
 import { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { useTheme } from "react-native-paper";
-import MatrixLoader from "../components/ui/MatrixLoader";
+import { CircleLoadingIndicator } from "../components/premade/molecules/circle-loader";
 import { useAuth } from "../hooks";
 import { groupsService } from "../services";
 
@@ -13,14 +13,14 @@ export default function Index() {
   const [isCheckingGroups, setIsCheckingGroups] = useState(true);
   const [hasGroups, setHasGroups] = useState(false);
 
-  // 1. NUEVO ESTADO: Controla si ya ha pasado nuestro tiempo mínimo de gracia (1 seg)
+  // 1. ESTADO: Controla si ya ha pasado nuestro tiempo mínimo de gracia (1 seg)
   const [minTimeElapsed, setMinTimeElapsed] = useState(false);
 
-  // 2. NUEVO EFFECT: Arranca el cronómetro nada más abrir la app
+  // 2. EFFECT: Arranca el cronómetro nada más abrir la app
   useEffect(() => {
     const timer = setTimeout(() => {
       setMinTimeElapsed(true);
-    }, 1000); // 1000ms = 1 segundo exacto de MatrixLoader garantizado
+    }, 1000); // 1000ms garantizados para evitar parpadeos
 
     return () => clearTimeout(timer); // Limpieza de seguridad
   }, []);
@@ -52,8 +52,7 @@ export default function Index() {
     }
   }, [isAuthenticated, profile, isLoading, isProfileLoading]);
 
-  // 3. ACTUALIZAMOS LA CONDICIÓN: Ahora el loader se muestra si la app está cargando algo,
-  //    O si simplemente nuestro cronómetro (!minTimeElapsed) todavía no ha terminado.
+  // 3. Renderizamos el nuevo CircleLoadingIndicator
   if (
     isLoading ||
     isProfileLoading ||
@@ -64,7 +63,11 @@ export default function Index() {
       <View
         style={[styles.container, { backgroundColor: theme.colors.background }]}
       >
-        <MatrixLoader size={45} />
+        <CircleLoadingIndicator
+          dotSpacing={8}
+          dotColor={theme.colors.onBackground}
+          duration={500}
+        />
       </View>
     );
   }
