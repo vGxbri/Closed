@@ -30,218 +30,223 @@ export default function JoinGroupInputScreen() {
   };
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
-      edges={["top", "left", "right", "bottom"]}
-    >
-      <CustomHeader title="" showBackButton={true} />
-
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "padding"}
-        style={styles.keyboardView}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <SafeAreaView
+        style={styles.safeArea}
+        edges={["top", "left", "right", "bottom"]}
       >
-        <View style={styles.content}>
-          <Animated.View
-            entering={FadeInUp.duration(400)}
-            style={styles.header}
-          >
-            <SquircleView
-              style={[
-                styles.iconContainer,
-                {
-                  backgroundColor: theme.colors.secondaryContainer,
-                  borderColor: "rgba(255,255,255,0.1)",
-                  borderWidth: 1,
-                },
-              ]}
-              cornerSmoothing={1}
-            >
-              <Ionicons
-                name="keypad"
-                size={32}
-                color={theme.colors.onSecondaryContainer}
-              />
-            </SquircleView>
+        <CustomHeader title="" showBackButton={true} />
 
-            <Text
-              variant="headlineMedium"
-              style={[styles.title, { color: theme.colors.primary }]}
-            >
-              Únete a un grupo
-            </Text>
-
-            <View
-              style={[
-                styles.divider,
-                { backgroundColor: theme.colors.outlineVariant },
-              ]}
-            />
-
-            <Text
-              style={[
-                styles.subtitle,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
-            >
-              Pídele al administrador los 6 dígitos de invitación.
-            </Text>
-          </Animated.View>
-
-          <Animated.View
-            entering={FadeInDown.duration(200).delay(200)}
-            style={styles.form}
-          >
-            {/* Contenedor relativo para el truco del Input superpuesto */}
-            <View style={styles.codeContainer}>
-              {Array(CODE_LENGTH)
-                .fill(0)
-                .map((_, index) => {
-                  const digit = code[index] || "";
-                  const isFocused =
-                    index === code.length ||
-                    (index === CODE_LENGTH - 1 && code.length === CODE_LENGTH);
-
-                  return (
-                    // @ts-ignore
-                    <SquircleView
-                      key={index}
-                      pointerEvents="none"
-                      style={[
-                        styles.codeBox,
-                        {
-                          backgroundColor: theme.colors.surfaceVariant,
-                          borderColor: isFocused
-                            ? theme.colors.primary
-                            : digit
-                              ? theme.colors.outlineVariant
-                              : "transparent",
-                          borderWidth: isFocused || digit ? 1 : 0,
-                        },
-                      ]}
-                      cornerSmoothing={1}
-                    >
-                      <Text
-                        style={[
-                          styles.codeDigit,
-                          {
-                            color: theme.colors.onSurface,
-                          },
-                        ]}
-                      >
-                        {digit}
-                      </Text>
-                    </SquircleView>
-                  );
-                })}
-
-              {/* Input invisible que cubre exactamente todos los cuadrados */}
-              <RNTextInput
-                ref={inputRef}
-                value={code}
-                onChangeText={(text: string) => {
-                  const cleaned = text
-                    .replace(/[^a-zA-Z0-9]/g, "")
-                    .toUpperCase();
-                  if (cleaned.length <= CODE_LENGTH) {
-                    setCode(cleaned);
-                  }
-                }}
-                style={styles.hiddenOverlayInput}
-                keyboardType="ascii-capable"
-                autoCapitalize="characters"
-                autoComplete="off"
-                autoCorrect={false}
-                autoFocus={true}
-                caretHidden={true}
-                maxLength={CODE_LENGTH}
-                onSubmitEditing={handleContinue}
-                returnKeyType="go"
-              />
-            </View>
-
-            {/* CTA Section */}
-            <Pressable
-              onPress={handleContinue}
-              disabled={code.length !== CODE_LENGTH}
-              style={({ pressed }) => [
-                {
-                  opacity:
-                    code.length !== CODE_LENGTH ? 0.6 : pressed ? 0.9 : 1,
-                  transform: [
-                    {
-                      scale: pressed && code.length === CODE_LENGTH ? 0.98 : 1,
-                    },
-                  ],
-                  width: "100%",
-                },
-              ]}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "padding"}
+          style={styles.keyboardView}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+        >
+          <View style={styles.content}>
+            <Animated.View
+              entering={FadeInUp.duration(400)}
+              style={styles.header}
             >
               <SquircleView
                 style={[
-                  styles.ctaCard,
+                  styles.iconContainer,
                   {
-                    backgroundColor:
-                      code.length === CODE_LENGTH
-                        ? theme.colors.primary
-                        : theme.colors.surfaceVariant,
+                    backgroundColor: theme.colors.secondaryContainer,
+                    borderColor: "rgba(255,255,255,0.1)",
+                    borderWidth: 1,
                   },
                 ]}
                 cornerSmoothing={1}
               >
-                <View style={styles.ctaContent}>
-                  <View style={styles.ctaTextBlock}>
-                    <Text
+                <Ionicons
+                  name="keypad"
+                  size={32}
+                  color={theme.colors.onSecondaryContainer}
+                />
+              </SquircleView>
+
+              <Text
+                variant="headlineMedium"
+                style={[styles.title, { color: theme.colors.primary }]}
+              >
+                Únete a un grupo
+              </Text>
+
+              <View
+                style={[
+                  styles.divider,
+                  { backgroundColor: theme.colors.outlineVariant },
+                ]}
+              />
+
+              <Text
+                style={[
+                  styles.subtitle,
+                  { color: theme.colors.onSurfaceVariant },
+                ]}
+              >
+                Pídele al administrador los 6 dígitos de invitación.
+              </Text>
+            </Animated.View>
+
+            <Animated.View
+              entering={FadeInDown.duration(200).delay(200)}
+              style={styles.form}
+            >
+              {/* Contenedor relativo para el truco del Input superpuesto */}
+              <View style={styles.codeContainer}>
+                {Array(CODE_LENGTH)
+                  .fill(0)
+                  .map((_, index) => {
+                    const digit = code[index] || "";
+                    const isFocused =
+                      index === code.length ||
+                      (index === CODE_LENGTH - 1 && code.length === CODE_LENGTH);
+
+                    return (
+                      // @ts-ignore
+                      <SquircleView
+                        key={index}
+                        pointerEvents="none"
+                        style={[
+                          styles.codeBox,
+                          {
+                            backgroundColor: theme.colors.surfaceVariant,
+                            borderColor: isFocused
+                              ? theme.colors.primary
+                              : digit
+                                ? theme.colors.outlineVariant
+                                : "transparent",
+                            borderWidth: isFocused || digit ? 1 : 0,
+                          },
+                        ]}
+                        cornerSmoothing={1}
+                      >
+                        <Text
+                          style={[
+                            styles.codeDigit,
+                            {
+                              color: theme.colors.onSurface,
+                            },
+                          ]}
+                        >
+                          {digit}
+                        </Text>
+                      </SquircleView>
+                    );
+                  })}
+
+                {/* Input invisible que cubre exactamente todos los cuadrados */}
+                <RNTextInput
+                  ref={inputRef}
+                  value={code}
+                  onChangeText={(text: string) => {
+                    const cleaned = text
+                      .replace(/[^a-zA-Z0-9]/g, "")
+                      .toUpperCase();
+                    if (cleaned.length <= CODE_LENGTH) {
+                      setCode(cleaned);
+                    }
+                  }}
+                  style={styles.hiddenOverlayInput}
+                  keyboardType="ascii-capable"
+                  autoCapitalize="characters"
+                  autoComplete="off"
+                  autoCorrect={false}
+                  autoFocus={true}
+                  caretHidden={true}
+                  maxLength={CODE_LENGTH}
+                  onSubmitEditing={handleContinue}
+                  returnKeyType="go"
+                />
+              </View>
+
+              {/* CTA Section */}
+              <Pressable
+                onPress={handleContinue}
+                disabled={code.length !== CODE_LENGTH}
+                style={({ pressed }) => [
+                  {
+                    opacity:
+                      code.length !== CODE_LENGTH ? 0.6 : pressed ? 0.9 : 1,
+                    transform: [
+                      {
+                        scale: pressed && code.length === CODE_LENGTH ? 0.98 : 1,
+                      },
+                    ],
+                    width: "100%",
+                  },
+                ]}
+              >
+                <SquircleView
+                  style={[
+                    styles.ctaCard,
+                    {
+                      backgroundColor:
+                        code.length === CODE_LENGTH
+                          ? theme.colors.primary
+                          : theme.colors.surfaceVariant,
+                    },
+                  ]}
+                  cornerSmoothing={1}
+                >
+                  <View style={styles.ctaContent}>
+                    <View style={styles.ctaTextBlock}>
+                      <Text
+                        style={[
+                          styles.ctaTitle,
+                          {
+                            color:
+                              code.length === CODE_LENGTH
+                                ? theme.colors.onPrimary
+                                : theme.colors.onSurfaceVariant,
+                          },
+                        ]}
+                      >
+                        Buscar grupo
+                      </Text>
+                    </View>
+                    <SquircleView
                       style={[
-                        styles.ctaTitle,
+                        styles.ctaIcon,
                         {
-                          color:
+                          backgroundColor: "rgba(255,255,255,0.15)",
+                          borderColor:
                             code.length === CODE_LENGTH
-                              ? theme.colors.onPrimary
-                              : theme.colors.onSurfaceVariant,
+                              ? "rgba(255,255,255,0.3)"
+                              : theme.colors.outline,
+                          borderWidth: 1,
+                          borderRadius: 16,
                         },
                       ]}
+                      cornerSmoothing={1}
                     >
-                      Buscar grupo
-                    </Text>
-                  </View>
-                  <SquircleView
-                    style={[
-                      styles.ctaIcon,
-                      {
-                        backgroundColor: "rgba(255,255,255,0.15)",
-                        borderColor:
+                      <Ionicons
+                        name="arrow-forward"
+                        size={24}
+                        color={
                           code.length === CODE_LENGTH
-                            ? "rgba(255,255,255,0.3)"
-                            : theme.colors.outline,
-                        borderWidth: 1,
-                        borderRadius: 16,
-                      },
-                    ]}
-                    cornerSmoothing={1}
-                  >
-                    <Ionicons
-                      name="arrow-forward"
-                      size={24}
-                      color={
-                        code.length === CODE_LENGTH
-                          ? theme.colors.onPrimary
-                          : theme.colors.onSurfaceVariant
-                      }
-                    />
-                  </SquircleView>
-                </View>
-              </SquircleView>
-            </Pressable>
-          </Animated.View>
-        </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+                            ? theme.colors.onPrimary
+                            : theme.colors.onSurfaceVariant
+                        }
+                      />
+                    </SquircleView>
+                  </View>
+                </SquircleView>
+              </Pressable>
+            </Animated.View>
+          </View>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  safeArea: {
     flex: 1,
   },
   keyboardView: {

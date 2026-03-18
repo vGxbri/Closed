@@ -13,8 +13,9 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
+import SquircleView from "react-native-fast-squircle";
 import { Text, TextInput, useTheme } from "react-native-paper";
-import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
+import Animated, { FadeIn, FadeInDown, FadeOut } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ParallaxCarousel } from "../components/premade/molecules/parallax-carousel";
 import { groupsService } from "../services";
@@ -211,105 +212,120 @@ export default function CreateGroupScreen() {
 
   const renderStepTwo = () => (
     <Animated.View
-      entering={FadeIn}
+      entering={FadeInDown.duration(400)}
       exiting={FadeOut}
       style={styles.stepContainer}
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={styles.formView}
+          style={styles.formContainer}
         >
-          <View style={styles.formHeader}>
-            <Text
-              style={[styles.stepMainTitle, { color: theme.colors.onSurface }]}
-            >
-              Dale un
-            </Text>
-            <Text
-              style={[styles.stepAccentTitle, { color: theme.colors.primary }]}
-            >
-              nombre
-            </Text>
-            <View
-              style={[
-                styles.titleDivider,
-                { borderBottomColor: theme.colors.outlineVariant },
-              ]}
-            />
-            <Text
-              style={[
-                styles.formSubtitle,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
-            >
-              Has elegido &quot;{selectedType}&quot;. Ahora ponle un nombre
-              único a tu grupo.
-            </Text>
-          </View>
-
-          <View style={styles.form}>
-            <TextInput
-              label="Nombre del grupo"
-              placeholder="Ej. Viaje a Bali"
-              value={name}
-              onChangeText={setName}
-              mode="outlined"
-              style={styles.input}
-              outlineStyle={{ borderRadius: 16 }}
-              returnKeyType="done"
-              autoFocus
-            />
-
-            <Pressable
-              onPress={() => {
-                if (name.trim()) setStep(3);
-              }}
-              disabled={!name.trim()}
-              style={({ pressed }) => [
-                styles.continueButton,
-                {
-                  backgroundColor: name.trim()
-                    ? theme.colors.primary
-                    : theme.colors.surfaceVariant,
-                  opacity: pressed && name.trim() ? 0.9 : 1,
-                  transform: [{ scale: pressed && name.trim() ? 0.98 : 1 }],
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.continueButtonText,
-                  {
-                    color: name.trim()
-                      ? theme.colors.onPrimary
-                      : theme.colors.onSurfaceVariant,
-                  },
-                ]}
-              >
-                Continuar
+          <View style={styles.formContent}>
+            <View style={styles.header}>
+              <Text style={[styles.title, { color: theme.colors.primary }]}>
+                Dale un nombre
               </Text>
               <View
                 style={[
-                  styles.continueButtonIcon,
+                  styles.divider,
+                  { backgroundColor: theme.colors.outlineVariant },
+                ]}
+              />
+              <Text
+                style={[
+                  styles.subtitle,
+                  { color: theme.colors.onSurfaceVariant },
+                ]}
+              >
+                Has elegido &quot;{selectedType}&quot;. Ahora ponle un nombre
+                único a tu grupo.
+              </Text>
+            </View>
+
+            <View style={styles.form}>
+              <TextInput
+                label="Nombre del grupo"
+                placeholder="Ej. Viaje a Bali"
+                value={name}
+                onChangeText={setName}
+                mode="outlined"
+                left={<TextInput.Icon icon="account-group-outline" />}
+                style={styles.input}
+                outlineStyle={{
+                  borderColor: theme.colors.outlineVariant,
+                  borderRadius: 20,
+                  borderWidth: 1,
+                }}
+                contentStyle={styles.inputContent}
+                returnKeyType="done"
+                autoFocus
+              />
+
+              <Pressable
+                onPress={() => {
+                  if (name.trim()) setStep(3);
+                }}
+                disabled={!name.trim()}
+                style={({ pressed }) => [
+                  styles.ctaContainer,
                   {
-                    borderColor: name.trim()
-                      ? "rgba(255,255,255,0.3)"
-                      : theme.colors.outline,
+                    opacity: !name.trim() ? 0.6 : pressed ? 0.9 : 1,
+                    transform: [{ scale: pressed && name.trim() ? 0.98 : 1 }],
                   },
                 ]}
               >
-                <Ionicons
-                  name="arrow-forward"
-                  size={20}
-                  color={
-                    name.trim()
-                      ? theme.colors.onPrimary
-                      : theme.colors.onSurfaceVariant
-                  }
-                />
-              </View>
-            </Pressable>
+                <SquircleView
+                  style={[
+                    styles.ctaCard,
+                    {
+                      backgroundColor: name.trim()
+                        ? theme.colors.primary
+                        : theme.colors.surfaceVariant,
+                    },
+                  ]}
+                  cornerSmoothing={1}
+                >
+                  <View style={styles.ctaContent}>
+                    <Text
+                      style={[
+                        styles.ctaText,
+                        {
+                          color: name.trim()
+                            ? theme.colors.onPrimary
+                            : theme.colors.onSurfaceVariant,
+                        },
+                      ]}
+                    >
+                      Continuar
+                    </Text>
+                    <SquircleView
+                      style={[
+                        styles.ctaIcon,
+                        {
+                          backgroundColor: "rgba(255,255,255,0.15)",
+                          borderColor: name.trim()
+                            ? "rgba(255,255,255,0.3)"
+                            : theme.colors.outline,
+                          borderWidth: 1,
+                        },
+                      ]}
+                      cornerSmoothing={1}
+                    >
+                      <Ionicons
+                        name="arrow-forward"
+                        size={20}
+                        color={
+                          name.trim()
+                            ? theme.colors.onPrimary
+                            : theme.colors.onSurfaceVariant
+                        }
+                      />
+                    </SquircleView>
+                  </View>
+                </SquircleView>
+              </Pressable>
+            </View>
           </View>
         </KeyboardAvoidingView>
       </TouchableWithoutFeedback>
@@ -318,87 +334,87 @@ export default function CreateGroupScreen() {
 
   const renderStepThree = () => (
     <Animated.View
-      entering={FadeIn}
+      entering={FadeInDown.duration(400)}
       exiting={FadeOut}
       style={styles.stepContainer}
     >
-      <View style={styles.photoContent}>
-        <View style={[styles.formHeader, { paddingHorizontal: 24 }]}>
-          <Text
-            style={[styles.stepMainTitle, { color: theme.colors.onSurface }]}
-          >
-            Ponle una
-          </Text>
-          <Text
-            style={[styles.stepAccentTitle, { color: theme.colors.primary }]}
-          >
-            foto
+      <View style={styles.formContent}>
+        <View style={styles.header}>
+          <Text style={[styles.title, { color: theme.colors.primary }]}>
+            Ponle una foto
           </Text>
           <View
             style={[
-              styles.titleDivider,
-              { borderBottomColor: theme.colors.outlineVariant },
+              styles.divider,
+              { backgroundColor: theme.colors.outlineVariant },
             ]}
           />
           <Text
-            style={[
-              styles.formSubtitle,
-              { color: theme.colors.onSurfaceVariant },
-            ]}
+            style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }]}
           >
             Una imagen para identificar &quot;{name}&quot; al instante.
           </Text>
         </View>
 
-        <View style={styles.photoSection}>
+        <View style={styles.photoContainer}>
           <Pressable
             onPress={handlePickPhoto}
             style={({ pressed }) => [
-              styles.photoPickerCircle,
+              styles.photoPicker,
               {
-                borderColor: photoUri
-                  ? theme.colors.primary
-                  : theme.colors.outlineVariant,
-                backgroundColor: photoUri
-                  ? "transparent"
-                  : theme.colors.surfaceVariant,
                 opacity: pressed ? 0.85 : 1,
                 transform: [{ scale: pressed ? 0.97 : 1 }],
               },
             ]}
           >
-            {photoUri ? (
-              <Image
-                source={{ uri: photoUri }}
-                style={styles.photoPreview}
-                contentFit="cover"
-                transition={300}
-              />
-            ) : (
-              <View style={styles.photoPlaceholder}>
-                <Ionicons
-                  name="camera-outline"
-                  size={48}
-                  color={theme.colors.onSurfaceVariant}
+            <SquircleView
+              style={[
+                styles.photoSquircle,
+                {
+                  borderColor: photoUri
+                    ? theme.colors.primary
+                    : theme.colors.outlineVariant,
+                  backgroundColor: theme.colors.surfaceVariant,
+                },
+              ]}
+              cornerSmoothing={1}
+            >
+              {photoUri ? (
+                <Image
+                  source={{ uri: photoUri }}
+                  style={styles.photoPreview}
+                  contentFit="cover"
+                  transition={300}
                 />
-                <Text
-                  style={[
-                    styles.photoPlaceholderText,
-                    { color: theme.colors.onSurfaceVariant },
-                  ]}
-                >
-                  Toca para elegir
-                </Text>
-              </View>
-            )}
+              ) : (
+                <View style={styles.photoPlaceholder}>
+                  <Ionicons
+                    name="image-outline"
+                    size={48}
+                    color={theme.colors.onSurfaceVariant}
+                  />
+                  <Text
+                    style={[
+                      styles.photoPlaceholderText,
+                      { color: theme.colors.onSurfaceVariant },
+                    ]}
+                  >
+                    Toca para elegir
+                  </Text>
+                </View>
+              )}
+            </SquircleView>
           </Pressable>
 
           {photoUri && (
-            <Pressable onPress={handlePickPhoto} style={styles.changePhotoLink}>
+            <Pressable
+              onPress={handlePickPhoto}
+              style={styles.changePhotoButton}
+            >
               <Text
                 style={[
                   styles.changePhotoText,
-                  { color: theme.colors.primary },
+                  { color: theme.colors.tertiary },
                 ]}
               >
                 Cambiar foto
@@ -407,47 +423,58 @@ export default function CreateGroupScreen() {
           )}
         </View>
 
-        <View style={styles.photoActions}>
+        <View style={styles.footerActions}>
           <Pressable
             onPress={handleCreate}
             disabled={loading}
             style={({ pressed }) => [
-              styles.continueButton,
+              styles.ctaContainer,
               {
-                backgroundColor: theme.colors.primary,
-                opacity: pressed && !loading ? 0.9 : loading ? 0.6 : 1,
+                opacity: loading ? 0.6 : pressed ? 0.9 : 1,
                 transform: [{ scale: pressed && !loading ? 0.98 : 1 }],
               },
             ]}
           >
-            <Text
+            <SquircleView
               style={[
-                styles.continueButtonText,
-                { color: theme.colors.onPrimary },
+                styles.ctaCard,
+                {
+                  backgroundColor: theme.colors.primary,
+                },
               ]}
+              cornerSmoothing={1}
             >
-              {loading ? "Creando..." : "Crear grupo"}
-            </Text>
-            {!loading && (
-              <View
-                style={[
-                  styles.continueButtonIcon,
-                  { borderColor: "rgba(255,255,255,0.3)" },
-                ]}
-              >
-                <Ionicons
-                  name="checkmark"
-                  size={20}
-                  color={theme.colors.onPrimary}
-                />
+              <View style={styles.ctaContent}>
+                <Text
+                  style={[styles.ctaText, { color: theme.colors.onPrimary }]}
+                >
+                  {loading ? "Creando..." : "Crear grupo"}
+                </Text>
+                <SquircleView
+                  style={[
+                    styles.ctaIcon,
+                    {
+                      backgroundColor: "rgba(255,255,255,0.15)",
+                      borderColor: "rgba(255,255,255,0.3)",
+                      borderWidth: 1,
+                    },
+                  ]}
+                  cornerSmoothing={1}
+                >
+                  <Ionicons
+                    name={loading ? "refresh" : "checkmark"}
+                    size={20}
+                    color={theme.colors.onPrimary}
+                  />
+                </SquircleView>
               </View>
-            )}
+            </SquircleView>
           </Pressable>
 
           <Pressable onPress={handleCreate} disabled={loading}>
             <Text
               style={[
-                styles.skipText,
+                styles.skipLink,
                 { color: theme.colors.onSurfaceVariant },
               ]}
             >
@@ -460,75 +487,85 @@ export default function CreateGroupScreen() {
   );
 
   return (
-    <SafeAreaView
+    <View
       style={[styles.container, { backgroundColor: theme.colors.background }]}
-      edges={["top", "left", "right", "bottom"]}
     >
-      {/* Stepper Indicator */}
-      <View style={styles.stepperContainer}>
-        {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
-          <View
-            key={i}
-            style={[
-              styles.stepIndicator,
+      <SafeAreaView
+        style={styles.safeArea}
+        edges={["top", "left", "right", "bottom"]}
+      >
+        {/* Stepper Indicator */}
+        <View style={styles.stepperContainer}>
+          {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
+            <View
+              key={i}
+              style={[
+                styles.stepIndicator,
+                {
+                  backgroundColor:
+                    step >= i + 1
+                      ? theme.colors.primary
+                      : theme.colors.surfaceVariant,
+                },
+              ]}
+            />
+          ))}
+        </View>
+
+        {/* Navigation Controls */}
+        <View style={styles.navigationContainer}>
+          <Pressable
+            onPress={handleBack}
+            style={({ pressed }) => [
+              styles.navButton,
               {
-                backgroundColor:
-                  step >= i + 1
-                    ? theme.colors.primary
-                    : theme.colors.surfaceVariant,
+                opacity: pressed ? 0.7 : 1,
               },
             ]}
-          />
-        ))}
-      </View>
+          >
+            <Ionicons
+              name="chevron-back"
+              size={28}
+              color={theme.colors.onSurfaceVariant}
+            />
+          </Pressable>
 
-      {/* Navigation Controls */}
-      <View style={styles.navigationContainer}>
-        <Pressable
-          onPress={handleBack}
-          style={({ pressed }) => [
-            styles.navButton,
-            {
-              opacity: pressed ? 0.7 : 1,
-            },
-          ]}
-        >
-          <Ionicons
-            name="chevron-back"
-            size={28}
-            color={theme.colors.onSurfaceVariant}
-          />
-        </Pressable>
+          <Pressable
+            onPress={handleForward}
+            disabled={step >= maxStepReached}
+            style={({ pressed }) => [
+              styles.navButton,
+              {
+                opacity: step >= maxStepReached ? 0.3 : pressed ? 0.7 : 1,
+              },
+            ]}
+          >
+            <Ionicons
+              name="chevron-forward"
+              size={28}
+              color={theme.colors.onSurfaceVariant}
+            />
+          </Pressable>
+        </View>
 
-        <Pressable
-          onPress={handleForward}
-          disabled={step >= maxStepReached}
-          style={({ pressed }) => [
-            styles.navButton,
-            {
-              opacity: step >= maxStepReached ? 0.3 : pressed ? 0.7 : 1,
-            },
-          ]}
-        >
-          <Ionicons
-            name="chevron-forward"
-            size={28}
-            color={theme.colors.onSurfaceVariant}
-          />
-        </Pressable>
-      </View>
-
-      <View style={styles.content}>
-        {step === 1 && renderStepOne()}
-        {step === 2 && renderStepTwo()}
-        {step === 3 && renderStepThree()}
-      </View>
-    </SafeAreaView>
+        <View style={styles.content}>
+          {step === 1 && renderStepOne()}
+          {step === 2 && renderStepTwo()}
+          {step === 3 && renderStepThree()}
+        </View>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  backgroundContainer: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  safeArea: {
     flex: 1,
   },
   stepperContainer: {
@@ -537,6 +574,7 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 8,
     marginTop: 20,
+    zIndex: 10,
   },
   stepIndicator: {
     flex: 1,
@@ -556,6 +594,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     marginBottom: 8,
     gap: 10,
+    zIndex: 10,
   },
   navButton: {
     width: 48,
@@ -584,6 +623,40 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     width: "90%",
     marginTop: 5,
+  },
+
+  // Premium Header
+  header: {
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  logoContainer: {
+    width: 88,
+    height: 88,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 16,
+    borderRadius: 24,
+  },
+  title: {
+    fontFamily: "InstrumentSerif-Italic",
+    fontSize: 42,
+    letterSpacing: 1,
+    textAlign: "center",
+    paddingVertical: 5,
+  },
+  divider: {
+    width: "60%",
+    height: 1,
+    marginTop: 0,
+    marginBottom: 0,
+  },
+  subtitle: {
+    fontSize: 16,
+    letterSpacing: 0.5,
+    textAlign: "center",
+    lineHeight: 22,
+    marginTop: 8,
   },
 
   // Step 1 — Carousel
@@ -641,63 +714,71 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
 
-  // Step 2 — Name
-  formView: {
+  // Premium Form
+  formContainer: {
     flex: 1,
+  },
+  formContent: {
+    flexGrow: 1,
     paddingHorizontal: 24,
-  },
-  formHeader: {
-    marginBottom: 32,
-  },
-  formSubtitle: {
-    fontSize: 15,
-    lineHeight: 22,
-    marginTop: 16,
+    justifyContent: "flex-start",
+    alignItems: "center",
   },
   form: {
-    paddingHorizontal: 24,
-    gap: 20,
+    width: "100%",
+    marginTop: 24,
   },
   input: {
+    marginBottom: 16,
     backgroundColor: "transparent",
   },
-  continueButton: {
+  inputContent: {
+    fontFamily: "Archivo-Medium",
+  },
+  ctaContainer: {
+    marginTop: 14,
+    width: "100%",
+  },
+  ctaCard: {
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 20,
+    borderColor: "rgba(255,255,255,0.3)",
+    borderWidth: 1,
+  },
+  ctaContent: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    borderRadius: 20,
-    paddingVertical: 20,
-    paddingHorizontal: 24,
   },
-  continueButtonText: {
+  ctaText: {
     fontFamily: "Archivo-Bold",
     fontSize: 18,
+    letterSpacing: 0.5,
   },
-  continueButtonIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1,
+  ctaIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.15)",
   },
 
-  // Step 3 — Photo
-  photoContent: {
-    flex: 1,
-    justifyContent: "space-between",
-    paddingBottom: 40,
-  },
-  photoSection: {
+  // Photo Step
+  photoContainer: {
     alignItems: "center",
-    gap: 16,
+    width: "100%",
+    marginVertical: 32,
   },
-  photoPickerCircle: {
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    borderWidth: 2.5,
+  photoPicker: {
+    width: 200,
+    height: 200,
+  },
+  photoSquircle: {
+    width: 200,
+    height: 200,
+    borderRadius: 40,
+    borderWidth: 2,
     borderStyle: "dashed",
     justifyContent: "center",
     alignItems: "center",
@@ -706,31 +787,32 @@ const styles = StyleSheet.create({
   photoPreview: {
     width: "100%",
     height: "100%",
-    borderRadius: 90,
   },
   photoPlaceholder: {
     alignItems: "center",
     gap: 8,
   },
   photoPlaceholderText: {
-    fontSize: 13,
+    fontSize: 14,
+    fontFamily: "Archivo-Medium",
   },
-  changePhotoLink: {
+  changePhotoButton: {
+    marginTop: 16,
     paddingVertical: 8,
+    paddingHorizontal: 16,
   },
   changePhotoText: {
-    fontFamily: "Archivo-Medium",
-    fontSize: 14,
-    letterSpacing: 0.5,
+    fontFamily: "Archivo-Bold",
+    fontSize: 15,
   },
-  photoActions: {
-    paddingHorizontal: 24,
+  footerActions: {
+    width: "100%",
     gap: 16,
     alignItems: "center",
   },
-  skipText: {
-    fontSize: 14,
-    letterSpacing: 0.5,
+  skipLink: {
+    fontFamily: "Archivo-Bold",
+    fontSize: 15,
     paddingVertical: 8,
   },
 });

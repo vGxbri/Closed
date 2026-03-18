@@ -3,14 +3,14 @@ import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { Alert, StyleSheet, TouchableOpacity, View } from "react-native";
-import { Avatar, Button, Surface, Text, TextInput } from "react-native-paper";
+import { Avatar, Button, Surface, Text, TextInput, useTheme } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Colors } from "../constants/Colors";
 import { useAuth } from "../hooks/useAuth";
 import { supabase } from "../lib/supabase";
 
 export default function ProfileSetup() {
   const router = useRouter();
+  const theme = useTheme();
   const { user, updateProfile, isProfileLoading } = useAuth();
 
   const [displayName, setDisplayName] = useState("");
@@ -18,7 +18,6 @@ export default function ProfileSetup() {
   const [isUploading, setIsUploading] = useState(false);
 
   const pickImage = async () => {
-    // No permissions request is necessary for launching the image library
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
@@ -49,11 +48,6 @@ export default function ProfileSetup() {
       if (error) throw error;
 
       const { data } = supabase.storage.from("avatars").getPublicUrl(filePath);
-
-      // We will perform the actual profile update when the user clicks continue
-      // but strictly speaking we could update the avatar_url here if we wanted immediate feedback
-      // For now, we just keep the local preview and logic separate.
-      // Actually, let's just save the url to state to submit it later
       setImage(data.publicUrl);
     } catch (error) {
       Alert.alert("Error uploading image", (error as Error).message);
@@ -71,9 +65,8 @@ export default function ProfileSetup() {
     try {
       await updateProfile({
         display_name: displayName,
-        avatar_url: image || undefined, // Only update if we hava a new image
+        avatar_url: image || undefined,
       });
-      // The router in index.tsx will handle the redirect based on the new state
       router.replace("/");
     } catch (error) {
       console.error(error);
@@ -82,71 +75,78 @@ export default function ProfileSetup() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <View style={styles.header}>
-          <Text variant="displaySmall" style={styles.title}>
-            ¡Hola!
-          </Text>
-          <Text variant="bodyLarge" style={styles.subtitle}>
-            ¿Cómo quieres que te llamen?
-          </Text>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.content}>
+          <View style={styles.header}>
+            <Text variant="displaySmall" style={[styles.title, { color: theme.colors.onSurface }]}>
+              ¡Hola!
+            </Text>
+            <Text variant="bodyLarge" style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }]}>
+              ¿Cómo quieres que te llamen?
+            </Text>
+          </View>
+
+          <View style={styles.avatarContainer}>
+            <TouchableOpacity onPress={pickImage}>
+              {image ? (
+                <Avatar.Image size={120} source={{ uri: image }} />
+              ) : (
+                <Surface 
+                  style={[styles.avatarPlaceholder, { backgroundColor: theme.colors.surfaceVariant }]} 
+                  elevation={2}
+                >
+                  <Text variant="displayMedium" style={{ color: theme.colors.primary }}>
+                    {displayName.charAt(0).toUpperCase() || "?"}
+                  </Text>
+                </Surface>
+              )}
+              <View style={[styles.editBadge, { backgroundColor: theme.colors.background, borderColor: theme.colors.outline }]}>
+                <Text style={styles.editBadgeText}>✏️</Text>
+              </View>
+            </TouchableOpacity>
+            <Text variant="bodyMedium" style={[styles.photoHint, { color: theme.colors.primary }]}>
+              Toca para cambiar tu foto
+            </Text>
+          </View>
+
+          <TextInput
+            label="Nombre o Apodo"
+            value={displayName}
+            onChangeText={setDisplayName}
+            mode="outlined"
+            style={styles.input}
+            outlineColor={theme.colors.outline}
+            activeOutlineColor={theme.colors.primary}
+            textColor={theme.colors.onSurface}
+            placeholder="Ej: Gabri"
+            placeholderTextColor={theme.colors.onSurfaceVariant}
+          />
+
+          <View style={styles.spacer} />
+
+          <Button
+            mode="contained"
+            onPress={handleContinue}
+            loading={isProfileLoading || isUploading}
+            disabled={isProfileLoading || isUploading || !displayName.trim()}
+            style={styles.button}
+            contentStyle={styles.buttonContent}
+          >
+            Continuar
+          </Button>
         </View>
-
-        <View style={styles.avatarContainer}>
-          <TouchableOpacity onPress={pickImage}>
-            {image ? (
-              <Avatar.Image size={120} source={{ uri: image }} />
-            ) : (
-              <Surface style={styles.avatarPlaceholder} elevation={2}>
-                <Text variant="displayMedium" style={{ color: Colors.primary }}>
-                  {displayName.charAt(0).toUpperCase() || "?"}
-                </Text>
-              </Surface>
-            )}
-            <View style={styles.editBadge}>
-              <Text style={styles.editBadgeText}>✏️</Text>
-            </View>
-          </TouchableOpacity>
-          <Text variant="bodyMedium" style={styles.photoHint}>
-            Toca para cambiar tu foto
-          </Text>
-        </View>
-
-        <TextInput
-          label="Nombre o Apodo"
-          value={displayName}
-          onChangeText={setDisplayName}
-          mode="outlined"
-          style={styles.input}
-          outlineColor={Colors.outline}
-          activeOutlineColor={Colors.primary}
-          textColor={Colors.onSurface}
-          placeholder="Ej: Gabri"
-          placeholderTextColor={Colors.onSurfaceVariant}
-        />
-
-        <View style={styles.spacer} />
-
-        <Button
-          mode="contained"
-          onPress={handleContinue}
-          loading={isProfileLoading || isUploading}
-          disabled={isProfileLoading || isUploading || !displayName.trim()}
-          style={styles.button}
-          contentStyle={styles.buttonContent}
-        >
-          Continuar
-        </Button>
-      </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+  },
+  safeArea: {
+    flex: 1,
   },
   content: {
     flex: 1,
@@ -159,11 +159,10 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: "ClashDisplay-Bold",
-    color: Colors.onSurface,
     marginBottom: 8,
   },
   subtitle: {
-    color: Colors.onSurfaceVariant,
+    // color se maneja en el componente
   },
   avatarContainer: {
     alignItems: "center",
@@ -173,7 +172,6 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: Colors.surfaceVariant,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -181,29 +179,26 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 0,
     right: 0,
-    backgroundColor: Colors.background,
     borderRadius: 12,
     padding: 4,
     borderWidth: 1,
-    borderColor: Colors.outline,
   },
   editBadgeText: {
     fontSize: 12,
   },
   photoHint: {
     marginTop: 12,
-    color: Colors.primary,
     fontFamily: "Archivo-Medium",
   },
   input: {
-    backgroundColor: Colors.background,
+    backgroundColor: "transparent",
     width: "100%",
   },
   spacer: {
     flex: 1,
   },
   button: {
-    borderRadius: 100, // Fully rounded
+    borderRadius: 100,
   },
   buttonContent: {
     height: 56,

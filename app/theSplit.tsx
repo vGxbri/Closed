@@ -10,6 +10,7 @@ import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import { useAuth } from "../hooks";
+import { GrainyGradient } from "../components/premade/organisms/grainy-gradient";
 
 export default function TheSplit() {
   const router = useRouter();
@@ -26,212 +27,236 @@ export default function TheSplit() {
   };
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
-      edges={["top", "left", "right", "bottom"]}
-    >
-      <BlurTargetView ref={backgroundRef} style={styles.container}>
-        <View style={styles.content}>
-          {/* Header Section */}
-          <Animated.View
-            entering={FadeInUp.duration(150)}
-            style={styles.header}
-          >
-            <Text style={[styles.welcomeText, { color: theme.colors.primary }]}>
-              Bienvenido a
-            </Text>
-            <Image
-              source={
-                theme.dark
-                  ? require("../assets/images/logo_full_light.png")
-                  : require("../assets/images/logo_full_dark.png")
-              }
-              style={styles.logo}
-              contentFit="contain"
-            />
-            <View
-              style={[
-                styles.divider,
-                { backgroundColor: theme.colors.outlineVariant },
-              ]}
-            />
-            <Text
-              style={[
-                styles.subtitle,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
-            >
-              Tu círculo, tus reglas.
-            </Text>
-          </Animated.View>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      {/* Background decoration */}
+      <Animated.View 
+        entering={FadeInUp.duration(600)}
+        style={styles.backgroundContainer}
+      >
+        <GrainyGradient
+          colors={
+            theme.dark
+              ? ["#121212", "#1E3A34", "#121212", "#121212"]
+              : ["#FAFAFA", "#E0F2EF", "#FAFAFA", "#FAFAFA"]
+          }
+          intensity={0.08}
+          speed={1.5}
+        />
+      </Animated.View>
 
-          {/* CTA Section */}
-          <Animated.View
-            entering={FadeInDown.duration(150)}
-            style={styles.actions}
-          >
-            {/* BOTÓN 1: Crear grupo */}
-            <Pressable
-              onPress={() => router.push("/createGroup")}
-              style={({ pressed }) => [
-                {
-                  opacity: pressed ? 0.9 : 1,
-                  transform: [{ scale: pressed ? 0.98 : 1 }],
-                },
-              ]}
+      <SafeAreaView
+        style={styles.safeArea}
+        edges={["top", "left", "right", "bottom"]}
+      >
+        <BlurTargetView ref={backgroundRef} style={styles.safeArea}>
+          <View style={styles.content}>
+            {/* Header Section */}
+            <Animated.View
+              entering={FadeInUp.duration(150)}
+              style={styles.header}
             >
-              <SquircleView
+              <Text style={[styles.welcomeText, { color: theme.colors.primary }]}>
+                Bienvenido a
+              </Text>
+              <Image
+                source={
+                  theme.dark
+                    ? require("../assets/images/logo_full_light.png")
+                    : require("../assets/images/logo_full_dark.png")
+                }
+                style={styles.logo}
+                contentFit="contain"
+              />
+              <View
                 style={[
-                  styles.ctaCard,
+                  styles.divider,
+                  { backgroundColor: theme.colors.outlineVariant },
+                ]}
+              />
+              <Text
+                style={[
+                  styles.subtitle,
+                  { color: theme.colors.onSurfaceVariant },
+                ]}
+              >
+                Tu círculo, tus reglas.
+              </Text>
+            </Animated.View>
+
+            {/* CTA Section */}
+            <Animated.View
+              entering={FadeInDown.duration(150)}
+              style={styles.actions}
+            >
+              {/* BOTÓN 1: Crear grupo */}
+              <Pressable
+                onPress={() => router.push("/createGroup")}
+                style={({ pressed }) => [
                   {
-                    backgroundColor: theme.colors.primary,
+                    opacity: pressed ? 0.9 : 1,
+                    transform: [{ scale: pressed ? 0.98 : 1 }],
                   },
                 ]}
-                cornerSmoothing={1}
               >
-                <View style={styles.ctaContent}>
-                  <View style={styles.ctaTextBlock}>
-                    <Text
-                      style={[
-                        styles.ctaTitle,
-                        { color: theme.colors.onPrimary },
-                      ]}
-                    >
-                      Crear grupo
-                    </Text>
-                    <Text
-                      style={[
-                        styles.ctaDescription,
-                        { color: theme.colors.onPrimary },
-                      ]}
-                    >
-                      Empieza algo nuevo con tu gente
-                    </Text>
-                  </View>
-                  <SquircleView
-                    style={[
-                      styles.ctaIcon,
-                      {
-                        backgroundColor: "rgba(255,255,255,0.15)",
-                        borderColor: "rgba(255,255,255,0.3)",
-                        borderWidth: 1,
-                        borderRadius: 16,
-                      },
-                    ]}
-                    cornerSmoothing={1}
-                  >
-                    <Ionicons
-                      name="add"
-                      size={24}
-                      color={theme.colors.onPrimary}
-                    />
-                  </SquircleView>
-                </View>
-              </SquircleView>
-            </Pressable>
-
-            {/* BOTÓN 2: Unirme a un grupo */}
-            <Pressable
-              onPress={() => router.push("/join/joinGroup")}
-              style={({ pressed }) => [
-                {
-                  opacity: pressed ? 0.9 : 1,
-                  transform: [{ scale: pressed ? 0.98 : 1 }],
-                },
-              ]}
-            >
-              <SquircleView
-                style={[
-                  styles.ctaCard,
-                  {
-                    backgroundColor: theme.colors.surfaceVariant,
-                  },
-                ]}
-                cornerSmoothing={1}
-              >
-                <View style={styles.ctaContent}>
-                  <View style={styles.ctaTextBlock}>
-                    <Text
-                      style={[
-                        styles.ctaTitle,
-                        { color: theme.colors.onSurface },
-                      ]}
-                    >
-                      Unirme a un grupo
-                    </Text>
-                    <Text
-                      style={[
-                        styles.ctaDescription,
-                        { color: theme.colors.onSurfaceVariant },
-                      ]}
-                    >
-                      Tengo un código de invitación
-                    </Text>
-                  </View>
-                  <SquircleView
-                    style={[
-                      styles.ctaIcon,
-                      {
-                        backgroundColor: "rgba(255,255,255,0.15)",
-                        borderColor: theme.colors.outline,
-                        borderWidth: 1,
-                        borderRadius: 16,
-                      },
-                    ]}
-                    cornerSmoothing={1}
-                  >
-                    <Ionicons
-                      name="arrow-forward"
-                      size={24}
-                      color={theme.colors.onSurface}
-                    />
-                  </SquircleView>
-                </View>
-              </SquircleView>
-            </Pressable>
-
-            {/* BOTÓN 3: Cerrar Sesión (SIN SQUIRCLE, VIEW NORMAL) */}
-            <Pressable
-              onPress={() => setShowLogoutModal(true)}
-              style={({ pressed }) => [
-                {
-                  opacity: pressed ? 0.8 : 1,
-                  transform: [{ scale: pressed ? 0.98 : 1 }],
-                  alignSelf: "center",
-                  marginTop: 8,
-                },
-              ]}
-            >
-              <SquircleView style={styles.logoutButton} cornerSmoothing={1}>
-                <Ionicons name="log-out" size={18} color={theme.colors.error} />
-                <Text
-                  style={[styles.logoutText, { color: theme.colors.error }]}
+                <SquircleView
+                  style={[
+                    styles.ctaCard,
+                    {
+                      backgroundColor: theme.colors.primary,
+                    },
+                  ]}
+                  cornerSmoothing={1}
                 >
-                  Cerrar Sesión
-                </Text>
-              </SquircleView>
-            </Pressable>
-          </Animated.View>
-        </View>
-      </BlurTargetView>
+                  <View style={styles.ctaContent}>
+                    <View style={styles.ctaTextBlock}>
+                      <Text
+                        style={[
+                          styles.ctaTitle,
+                          { color: theme.colors.onPrimary },
+                        ]}
+                      >
+                        Crear grupo
+                      </Text>
+                      <Text
+                        style={[
+                          styles.ctaDescription,
+                          { color: theme.colors.onPrimary },
+                        ]}
+                      >
+                        Empieza algo nuevo con tu gente
+                      </Text>
+                    </View>
+                    <SquircleView
+                      style={[
+                        styles.ctaIcon,
+                        {
+                          backgroundColor: "rgba(255,255,255,0.15)",
+                          borderColor: "rgba(255,255,255,0.3)",
+                          borderWidth: 1,
+                          borderRadius: 16,
+                        },
+                      ]}
+                      cornerSmoothing={1}
+                    >
+                      <Ionicons
+                        name="add"
+                        size={24}
+                        color={theme.colors.onPrimary}
+                      />
+                    </SquircleView>
+                  </View>
+                </SquircleView>
+              </Pressable>
 
-      <ConfirmDialog
-        visible={showLogoutModal}
-        title="Cerrar Sesión"
-        message="¿Estás seguro de que quieres cerrar tu sesión?"
-        confirmText="Salir"
-        cancelText="Cancelar"
-        type="error"
-        onConfirm={handleLogout}
-        onCancel={() => setShowLogoutModal(false)}
-        blurTargetRef={backgroundRef}
-      />
-    </SafeAreaView>
+              {/* BOTÓN 2: Unirme a un grupo */}
+              <Pressable
+                onPress={() => router.push("/join/joinGroup")}
+                style={({ pressed }) => [
+                  {
+                    opacity: pressed ? 0.9 : 1,
+                    transform: [{ scale: pressed ? 0.98 : 1 }],
+                  },
+                ]}
+              >
+                <SquircleView
+                  style={[
+                    styles.ctaCard,
+                    {
+                      backgroundColor: theme.colors.surfaceVariant,
+                    },
+                  ]}
+                  cornerSmoothing={1}
+                >
+                  <View style={styles.ctaContent}>
+                    <View style={styles.ctaTextBlock}>
+                      <Text
+                        style={[
+                          styles.ctaTitle,
+                          { color: theme.colors.onSurface },
+                        ]}
+                      >
+                        Unirme a un grupo
+                      </Text>
+                      <Text
+                        style={[
+                          styles.ctaDescription,
+                          { color: theme.colors.onSurfaceVariant },
+                        ]}
+                      >
+                        Tengo un código de invitación
+                      </Text>
+                    </View>
+                    <SquircleView
+                      style={[
+                        styles.ctaIcon,
+                        {
+                          backgroundColor: "rgba(255,255,255,0.15)",
+                          borderColor: theme.colors.outline,
+                          borderWidth: 1,
+                          borderRadius: 16,
+                        },
+                      ]}
+                      cornerSmoothing={1}
+                    >
+                      <Ionicons
+                        name="arrow-forward"
+                        size={24}
+                        color={theme.colors.onSurface}
+                      />
+                    </SquircleView>
+                  </View>
+                </SquircleView>
+              </Pressable>
+
+              {/* BOTÓN 3: Cerrar Sesión (SIN SQUIRCLE, VIEW NORMAL) */}
+              <Pressable
+                onPress={() => setShowLogoutModal(true)}
+                style={({ pressed }) => [
+                  {
+                    opacity: pressed ? 0.8 : 1,
+                    transform: [{ scale: pressed ? 0.98 : 1 }],
+                    alignSelf: "center",
+                    marginTop: 8,
+                  },
+                ]}
+              >
+                <SquircleView style={styles.logoutButton} cornerSmoothing={1}>
+                  <Ionicons name="log-out" size={18} color={theme.colors.error} />
+                  <Text
+                    style={[styles.logoutText, { color: theme.colors.error }]}
+                  >
+                    Cerrar Sesión
+                  </Text>
+                </SquircleView>
+              </Pressable>
+            </Animated.View>
+          </View>
+        </BlurTargetView>
+
+        <ConfirmDialog
+          visible={showLogoutModal}
+          title="Cerrar Sesión"
+          message="¿Estás seguro de que quieres cerrar tu sesión?"
+          confirmText="Salir"
+          cancelText="Cancelar"
+          type="error"
+          onConfirm={handleLogout}
+          onCancel={() => setShowLogoutModal(false)}
+          blurTargetRef={backgroundRef}
+        />
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  backgroundContainer: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  safeArea: {
     flex: 1,
   },
   content: {
