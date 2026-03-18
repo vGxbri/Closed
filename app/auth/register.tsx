@@ -17,6 +17,7 @@ import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSnackbar } from "../../components/ui/SnackbarContext";
 import { useAuth } from "../../hooks";
+import { GrainyGradient } from "../../components/premade/organisms/grainy-gradient";
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -93,243 +94,275 @@ export default function RegisterScreen() {
   const passwordTooShort = password && password.length < 6;
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
-      edges={["left", "right"]}
-    >
-      <KeyboardAvoidingView
-        style={styles.keyboardView}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      {/* Background decoration */}
+      <Animated.View 
+        entering={FadeInUp.duration(600)}
+        style={styles.backgroundContainer}
       >
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-          bounces={false}
-          overScrollMode="never"
+        <GrainyGradient
+          colors={
+            theme.dark
+              ? ["#121212", "#1E3A34", "#121212", "#121212"]
+              : ["#FAFAFA", "#E0F2EF", "#FAFAFA", "#FAFAFA"]
+          }
+          intensity={0.08}
+          speed={1.5}
+        />
+      </Animated.View>
+
+      <SafeAreaView
+        style={styles.safeArea}
+        edges={["left", "right"]}
+      >
+        <KeyboardAvoidingView
+          style={styles.keyboardView}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
-          {/* Header Section */}
-          <Animated.View
-            entering={FadeInUp.duration(600)}
-            style={styles.header}
-            renderToHardwareTextureAndroid={true}
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+            overScrollMode="never"
           >
-            <View style={styles.logoContainer}>
-              <Image
-                source={
-                  theme.dark
-                    ? require("../../assets/images/logo_light.png")
-                    : require("../../assets/images/logo_dark.png")
-                }
-                style={styles.logo}
-                contentFit="contain"
-              />
-            </View>
-            <Text style={[styles.title, { color: theme.colors.primary }]}>
-              Crear Cuenta
-            </Text>
-            <View
-              style={[
-                styles.divider,
-                { backgroundColor: theme.colors.outlineVariant },
-              ]}
-            />
-            <Text
-              style={[
-                styles.subtitle,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
-            >
-              Únete a nuestra familia
-            </Text>
-          </Animated.View>
-
-          {/* Form Section */}
-          <Animated.View
-            entering={FadeInDown.duration(600).delay(200)}
-            style={styles.form}
-            renderToHardwareTextureAndroid={true}
-          >
-            <TextInput
-              label="Nombre de usuario"
-              placeholder="Tu nombre"
-              value={displayName}
-              onChangeText={setDisplayName}
-              mode="outlined"
-              left={<TextInput.Icon icon="account-outline" />}
-              style={styles.input}
-              outlineStyle={{
-                borderColor: theme.colors.outlineVariant,
-                borderRadius: 20,
-                borderWidth: 1,
-              }}
-              contentStyle={styles.inputContent}
-            />
-
-            <TextInput
-              label="Correo electrónico"
-              placeholder="tu@email.com"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              mode="outlined"
-              left={<TextInput.Icon icon="email-outline" />}
-              style={styles.input}
-              outlineStyle={{
-                borderColor: theme.colors.outlineVariant,
-                borderRadius: 20,
-                borderWidth: 1,
-              }}
-              contentStyle={styles.inputContent}
-            />
-
-            <View>
-              <TextInput
-                label="Contraseña"
-                placeholder="••••••••"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-                mode="outlined"
-                left={<TextInput.Icon icon="lock-outline" />}
-                right={
-                  <TextInput.Icon
-                    icon={showPassword ? "eye-off-outline" : "eye-outline"}
-                    onPress={() => setShowPassword(!showPassword)}
-                  />
-                }
-                error={!!passwordTooShort}
-                style={styles.input}
-                outlineStyle={{
-                  borderColor: theme.colors.outlineVariant,
-                  borderRadius: 20,
-                  borderWidth: 1,
-                }}
-                contentStyle={styles.inputContent}
-              />
-              {passwordTooShort && (
-                <HelperText type="error" visible style={styles.helperText}>
-                  Mínimo 6 caracteres
-                </HelperText>
-              )}
-            </View>
-
-            <View>
-              <TextInput
-                label="Confirmar contraseña"
-                placeholder="••••••••"
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                secureTextEntry={!showConfirmPassword}
-                mode="outlined"
-                left={<TextInput.Icon icon="lock-check-outline" />}
-                right={
-                  <TextInput.Icon
-                    icon={
-                      showConfirmPassword ? "eye-off-outline" : "eye-outline"
-                    }
-                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                  />
-                }
-                error={!!passwordsDoNotMatch}
-                style={styles.input}
-                outlineStyle={{
-                  borderColor: theme.colors.outlineVariant,
-                  borderRadius: 20,
-                  borderWidth: 1,
-                }}
-                contentStyle={styles.inputContent}
-              />
-              {passwordsDoNotMatch && (
-                <HelperText type="error" visible style={styles.helperText}>
-                  Las contraseñas no coinciden
-                </HelperText>
-              )}
-            </View>
-
-            {/* Register CTA Button */}
-            <Pressable
-              onPress={handleRegister}
-              disabled={!isFormValid || loading}
-              style={({ pressed }) => [
-                styles.ctaContainer,
-                {
-                  opacity: !isFormValid || loading ? 0.6 : pressed ? 0.9 : 1,
-                  transform: [
-                    { scale: pressed && isFormValid && !loading ? 0.98 : 1 },
-                  ],
-                },
-              ]}
+            {/* Header Section */}
+            <Animated.View
+              entering={FadeInUp.duration(600)}
+              style={styles.header}
             >
               <SquircleView
                 style={[
-                  styles.ctaCard,
+                  styles.logoContainer,
                   {
-                    backgroundColor: theme.colors.primary,
+                    backgroundColor: theme.colors.surface,
+                    borderColor: theme.colors.outlineVariant,
+                    borderWidth: 1,
                   },
                 ]}
                 cornerSmoothing={1}
               >
-                <View style={styles.ctaContent}>
-                  <Text
-                    style={[styles.ctaText, { color: theme.colors.onPrimary }]}
-                  >
-                    {loading ? "Creando..." : "Crear Cuenta"}
-                  </Text>
-                  <SquircleView
-                    style={[
-                      styles.ctaIcon,
-                      {
-                        backgroundColor: "rgba(255,255,255,0.15)",
-                        borderColor: "rgba(255,255,255,0.3)",
-                        borderWidth: 1,
-                      },
-                    ]}
-                    cornerSmoothing={1}
-                  >
-                    <Ionicons
-                      name="arrow-forward"
-                      size={20}
-                      color={theme.colors.onPrimary}
-                    />
-                  </SquircleView>
-                </View>
+                <Image
+                  source={
+                    theme.dark
+                      ? require("../../assets/images/logo_light.png")
+                      : require("../../assets/images/logo_dark.png")
+                  }
+                  style={styles.logo}
+                  contentFit="contain"
+                />
               </SquircleView>
-            </Pressable>
-          </Animated.View>
-
-          {/* Footer Section */}
-          <Animated.View
-            entering={FadeInDown.duration(600).delay(400)}
-            style={styles.footer}
-            renderToHardwareTextureAndroid={true}
-          >
-            <Text style={{ color: theme.colors.onSurfaceVariant }}>
-              ¿Ya tienes cuenta?
-            </Text>
-            <TouchableOpacity onPress={() => router.push("/auth/login")}>
+              <Text style={[styles.title, { color: theme.colors.primary }]}>
+                Crear Cuenta
+              </Text>
+              <View
+                style={[
+                  styles.divider,
+                  { backgroundColor: theme.colors.outlineVariant },
+                ]}
+              />
               <Text
                 style={[
-                  styles.loginLink,
+                  styles.subtitle,
+                  { color: theme.colors.onSurfaceVariant },
+                ]}
+              >
+                Únete a nuestra familia
+              </Text>
+            </Animated.View>
+
+            {/* Form Section */}
+            <Animated.View
+              entering={FadeInDown.duration(600).delay(200)}
+              style={styles.form}
+            >
+              <TextInput
+                label="Nombre de usuario"
+                placeholder="Tu nombre"
+                value={displayName}
+                onChangeText={setDisplayName}
+                mode="outlined"
+                left={<TextInput.Icon icon="account-outline" />}
+                style={styles.input}
+                outlineStyle={{
+                  borderColor: theme.colors.outlineVariant,
+                  borderRadius: 20,
+                  borderWidth: 1,
+                }}
+                contentStyle={styles.inputContent}
+              />
+
+              <TextInput
+                label="Correo electrónico"
+                placeholder="tu@email.com"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                mode="outlined"
+                left={<TextInput.Icon icon="email-outline" />}
+                style={styles.input}
+                outlineStyle={{
+                  borderColor: theme.colors.outlineVariant,
+                  borderRadius: 20,
+                  borderWidth: 1,
+                }}
+                contentStyle={styles.inputContent}
+              />
+
+              <View>
+                <TextInput
+                  label="Contraseña"
+                  placeholder="••••••••"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  mode="outlined"
+                  left={<TextInput.Icon icon="lock-outline" />}
+                  right={
+                    <TextInput.Icon
+                      icon={showPassword ? "eye-off-outline" : "eye-outline"}
+                      onPress={() => setShowPassword(!showPassword)}
+                    />
+                  }
+                  error={!!passwordTooShort}
+                  style={styles.input}
+                  outlineStyle={{
+                    borderColor: theme.colors.outlineVariant,
+                    borderRadius: 20,
+                    borderWidth: 1,
+                  }}
+                  contentStyle={styles.inputContent}
+                />
+                {passwordTooShort && (
+                  <HelperText type="error" visible style={styles.helperText}>
+                    Mínimo 6 caracteres
+                  </HelperText>
+                )}
+              </View>
+
+              <View>
+                <TextInput
+                  label="Confirmar contraseña"
+                  placeholder="••••••••"
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  secureTextEntry={!showConfirmPassword}
+                  mode="outlined"
+                  left={<TextInput.Icon icon="lock-check-outline" />}
+                  right={
+                    <TextInput.Icon
+                      icon={
+                        showConfirmPassword ? "eye-off-outline" : "eye-outline"
+                      }
+                      onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                    />
+                  }
+                  error={!!passwordsDoNotMatch}
+                  style={styles.input}
+                  outlineStyle={{
+                    borderColor: theme.colors.outlineVariant,
+                    borderRadius: 20,
+                    borderWidth: 1,
+                  }}
+                  contentStyle={styles.inputContent}
+                />
+                {passwordsDoNotMatch && (
+                  <HelperText type="error" visible style={styles.helperText}>
+                    Las contraseñas no coinciden
+                  </HelperText>
+                )}
+              </View>
+
+              {/* Register CTA Button */}
+              <Pressable
+                onPress={handleRegister}
+                disabled={!isFormValid || loading}
+                style={({ pressed }) => [
+                  styles.ctaContainer,
                   {
-                    color: theme.colors.tertiary,
+                    opacity: !isFormValid || loading ? 0.6 : pressed ? 0.9 : 1,
+                    transform: [
+                      { scale: pressed && isFormValid && !loading ? 0.98 : 1 },
+                    ],
                   },
                 ]}
               >
-                Inicia sesión
+                <SquircleView
+                  style={[
+                    styles.ctaCard,
+                    {
+                      backgroundColor: theme.colors.primary,
+                    },
+                  ]}
+                  cornerSmoothing={1}
+                >
+                  <View style={styles.ctaContent}>
+                    <Text
+                      style={[styles.ctaText, { color: theme.colors.onPrimary }]}
+                    >
+                      {loading ? "Creando..." : "Crear Cuenta"}
+                    </Text>
+                    <SquircleView
+                      style={[
+                        styles.ctaIcon,
+                        {
+                          backgroundColor: "rgba(255,255,255,0.15)",
+                          borderColor: "rgba(255,255,255,0.3)",
+                          borderWidth: 1,
+                        },
+                      ]}
+                      cornerSmoothing={1}
+                    >
+                      <Ionicons
+                        name="arrow-forward"
+                        size={20}
+                        color={theme.colors.onPrimary}
+                      />
+                    </SquircleView>
+                  </View>
+                </SquircleView>
+              </Pressable>
+            </Animated.View>
+
+            {/* Footer Section */}
+            <Animated.View
+              entering={FadeInDown.duration(600).delay(400)}
+              style={styles.footer}
+              renderToHardwareTextureAndroid={true}
+            >
+              <Text style={{ color: theme.colors.onSurfaceVariant }}>
+                ¿Ya tienes cuenta?
               </Text>
-            </TouchableOpacity>
-          </Animated.View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+              <TouchableOpacity onPress={() => router.push("/auth/login")}>
+                <Text
+                  style={[
+                    styles.loginLink,
+                    {
+                      color: theme.colors.tertiary,
+                    },
+                  ]}
+                >
+                  Inicia sesión
+                </Text>
+              </TouchableOpacity>
+            </Animated.View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  backgroundContainer: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  safeArea: {
     flex: 1,
   },
   keyboardView: {
@@ -349,11 +382,16 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   logoContainer: {
+    width: 88,
+    height: 88,
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 16,
+    borderRadius: 24,
   },
   logo: {
-    width: 100,
-    height: 100,
+    width: 50,
+    height: 50,
   },
   title: {
     fontFamily: "InstrumentSerif-Italic",

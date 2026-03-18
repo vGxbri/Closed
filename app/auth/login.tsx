@@ -17,14 +17,12 @@ import {
 } from "react-native";
 import SquircleView from "react-native-fast-squircle";
 import { Text, TextInput, useTheme } from "react-native-paper";
-import Animated, {
-  FadeInDown,
-  FadeInUp
-} from "react-native-reanimated";
+import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSnackbar } from "../../components/ui/SnackbarContext";
 import { useAuth } from "../../hooks";
 import { supabase } from "../../lib/supabase";
+import { GrainyGradient } from "../../components/premade/organisms/grainy-gradient";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -130,245 +128,277 @@ export default function LoginScreen() {
   const isFormValid = email.trim().length > 0 && password.length > 0;
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
-      edges={["left", "right"]}
-    >
-      <KeyboardAvoidingView
-        style={styles.keyboardView}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      {/* Background decoration */}
+      <Animated.View 
+        entering={FadeInUp.duration(600)}
+        style={styles.backgroundContainer}
       >
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-          bounces={false}
-          overScrollMode="never"
+        <GrainyGradient
+          colors={
+            theme.dark
+              ? ["#121212", "#1E3A34", "#121212", "#121212"]
+              : ["#FAFAFA", "#E0F2EF", "#FAFAFA", "#FAFAFA"]
+          }
+          intensity={0.08}
+          speed={1.5}
+        />
+      </Animated.View>
+
+      <SafeAreaView
+        style={styles.safeArea}
+        edges={["left", "right"]}
+      >
+        <KeyboardAvoidingView
+          style={styles.keyboardView}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
-          {/* Header Section */}
-          <Animated.View
-            entering={FadeInUp.duration(600)}
-            style={styles.header}
-            renderToHardwareTextureAndroid={true}
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+            overScrollMode="never"
           >
-            <View style={styles.logoContainer}>
-              <Image
-                source={
-                  theme.dark
-                    ? require("../../assets/images/logo_light.png")
-                    : require("../../assets/images/logo_dark.png")
-                }
-                style={styles.logo}
-                contentFit="contain"
-              />
-            </View>
-            <Text style={[styles.title, { color: theme.colors.primary }]}>
-              ¡Hola de nuevo!
-            </Text>
-            <View
-              style={[
-                styles.divider,
-                { backgroundColor: theme.colors.outlineVariant },
-              ]}
-            />
-            <Text
-              style={[
-                styles.subtitle,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
-            >
-              Inicia sesión para continuar
-            </Text>
-          </Animated.View>
-
-          {/* Form Section */}
-          <Animated.View
-            entering={FadeInDown.duration(600).delay(200)}
-            style={styles.form}
-            renderToHardwareTextureAndroid={true}
-          >
-            <TextInput
-              label="Correo electrónico"
-              placeholder="tu@email.com"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              mode="outlined"
-              left={<TextInput.Icon icon="email-outline" />}
-              style={styles.input}
-              outlineStyle={{
-                borderColor: theme.colors.outlineVariant,
-                borderRadius: 20,
-                borderWidth: 1,
-              }}
-              contentStyle={styles.inputContent}
-            />
-
-            <TextInput
-              label="Contraseña"
-              placeholder="••••••••"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-              mode="outlined"
-              left={<TextInput.Icon icon="lock-outline" />}
-              right={
-                <TextInput.Icon
-                  icon={showPassword ? "eye-off-outline" : "eye-outline"}
-                  onPress={() => setShowPassword(!showPassword)}
-                />
-              }
-              style={styles.input}
-              outlineStyle={{
-                borderColor: theme.colors.outlineVariant,
-                borderRadius: 20,
-                borderWidth: 1,
-              }}
-              contentStyle={styles.inputContent}
-            />
-
-            {/* Login CTA Button */}
-            <Pressable
-              onPress={handleLogin}
-              disabled={!isFormValid || loading}
-              style={({ pressed }) => [
-                styles.ctaContainer,
-                {
-                  opacity: !isFormValid || loading ? 0.6 : pressed ? 0.9 : 1,
-                  transform: [
-                    { scale: pressed && isFormValid && !loading ? 0.98 : 1 },
-                  ],
-                },
-              ]}
+            {/* Header Section */}
+            <Animated.View
+              entering={FadeInUp.duration(600)}
+              style={styles.header}
             >
               <SquircleView
                 style={[
-                  styles.ctaCard,
-                  {
-                    backgroundColor: theme.colors.primary,
-                  },
-                ]}
-                cornerSmoothing={1}
-              >
-                <View style={styles.ctaContent}>
-                  <Text
-                    style={[styles.ctaText, { color: theme.colors.onPrimary }]}
-                  >
-                    {loading ? "Iniciando..." : "Iniciar Sesión"}
-                  </Text>
-                  <SquircleView
-                    style={[
-                      styles.ctaIcon,
-                      {
-                        backgroundColor: "rgba(255,255,255,0.15)",
-                        borderColor: "rgba(255,255,255,0.3)",
-                        borderWidth: 1,
-                      },
-                    ]}
-                    cornerSmoothing={1}
-                  >
-                    <Ionicons
-                      name="arrow-forward"
-                      size={20}
-                      color={theme.colors.onPrimary}
-                    />
-                  </SquircleView>
-                </View>
-              </SquircleView>
-            </Pressable>
-
-            {/* Divider "o continúa con" */}
-            <View style={styles.socialDivider}>
-              <View
-                style={[
-                  styles.dividerLine,
-                  { backgroundColor: theme.colors.outlineVariant },
-                ]}
-              />
-              <Text
-                style={[
-                  styles.socialDividerText,
-                  { color: theme.colors.onSurfaceVariant },
-                ]}
-              >
-                o continúa con
-              </Text>
-              <View
-                style={[
-                  styles.dividerLine,
-                  { backgroundColor: theme.colors.outlineVariant },
-                ]}
-              />
-            </View>
-
-            {/* Google Social Button */}
-            <Pressable
-              onPress={handleGoogleLogin}
-              disabled={loading}
-              style={({ pressed }) => [
-                styles.socialButtonContainer,
-                {
-                  opacity: loading ? 0.6 : pressed ? 0.9 : 1,
-                },
-              ]}
-            >
-              <SquircleView
-                style={[
-                  styles.socialButton,
+                  styles.logoContainer,
                   {
                     backgroundColor: theme.colors.surface,
-                    borderColor: "rgba(255,255,255,0.1)",
+                    borderColor: theme.colors.outlineVariant,
                     borderWidth: 1,
                   },
                 ]}
                 cornerSmoothing={1}
               >
-                <View style={styles.socialButtonContent}>
-                  <Ionicons
-                    name="logo-google"
-                    size={20}
-                    color={theme.colors.onSurface}
-                  />
-                  <Text
-                    style={[
-                      styles.socialButtonText,
-                      { color: theme.colors.onSurface },
-                    ]}
-                  >
-                    Google
-                  </Text>
-                </View>
+                <Image
+                  source={
+                    theme.dark
+                      ? require("../../assets/images/logo_light.png")
+                      : require("../../assets/images/logo_dark.png")
+                  }
+                  style={styles.logo}
+                  contentFit="contain"
+                />
               </SquircleView>
-            </Pressable>
-          </Animated.View>
-
-          {/* Footer Section */}
-          <Animated.View
-            entering={FadeInDown.duration(400).delay(200)}
-            style={styles.footer}
-            renderToHardwareTextureAndroid={true}
-          >
-            <Text style={{ color: theme.colors.onSurfaceVariant }}>
-              ¿No tienes cuenta?
-            </Text>
-            <TouchableOpacity onPress={() => router.push("/auth/register")}>
-              <Text
-                style={[styles.registerLink, { color: theme.colors.tertiary }]}
-              >
-                Regístrate
+              <Text style={[styles.title, { color: theme.colors.primary }]}>
+                ¡Hola de nuevo!
               </Text>
-            </TouchableOpacity>
-          </Animated.View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+              <View
+                style={[
+                  styles.divider,
+                  { backgroundColor: theme.colors.outlineVariant },
+                ]}
+              />
+              <Text
+                style={[
+                  styles.subtitle,
+                  { color: theme.colors.onSurfaceVariant },
+                ]}
+              >
+                Inicia sesión para continuar
+              </Text>
+            </Animated.View>
+
+            {/* Form Section */}
+            <Animated.View
+              entering={FadeInDown.duration(600).delay(200)}
+              style={styles.form}
+            >
+              <TextInput
+                label="Correo electrónico"
+                placeholder="tu@email.com"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                mode="outlined"
+                left={<TextInput.Icon icon="email-outline" />}
+                style={styles.input}
+                outlineStyle={{
+                  borderColor: theme.colors.outlineVariant,
+                  borderRadius: 20,
+                  borderWidth: 1,
+                }}
+                contentStyle={styles.inputContent}
+              />
+
+              <TextInput
+                label="Contraseña"
+                placeholder="••••••••"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                mode="outlined"
+                left={<TextInput.Icon icon="lock-outline" />}
+                right={
+                  <TextInput.Icon
+                    icon={showPassword ? "eye-off-outline" : "eye-outline"}
+                    onPress={() => setShowPassword(!showPassword)}
+                  />
+                }
+                style={styles.input}
+                outlineStyle={{
+                  borderColor: theme.colors.outlineVariant,
+                  borderRadius: 20,
+                  borderWidth: 1,
+                }}
+                contentStyle={styles.inputContent}
+              />
+
+              {/* Login CTA Button */}
+              <Pressable
+                onPress={handleLogin}
+                disabled={!isFormValid || loading}
+                style={({ pressed }) => [
+                  styles.ctaContainer,
+                  {
+                    opacity: !isFormValid || loading ? 0.6 : pressed ? 0.9 : 1,
+                    transform: [
+                      { scale: pressed && isFormValid && !loading ? 0.98 : 1 },
+                    ],
+                  },
+                ]}
+              >
+                <SquircleView
+                  style={[
+                    styles.ctaCard,
+                    {
+                      backgroundColor: theme.colors.primary,
+                    },
+                  ]}
+                  cornerSmoothing={1}
+                >
+                  <View style={styles.ctaContent}>
+                    <Text
+                      style={[styles.ctaText, { color: theme.colors.onPrimary }]}
+                    >
+                      {loading ? "Iniciando..." : "Iniciar Sesión"}
+                    </Text>
+                    <SquircleView
+                      style={[
+                        styles.ctaIcon,
+                        {
+                          backgroundColor: "rgba(255,255,255,0.15)",
+                          borderColor: "rgba(255,255,255,0.3)",
+                          borderWidth: 1,
+                        },
+                      ]}
+                      cornerSmoothing={1}
+                    >
+                      <Ionicons
+                        name="arrow-forward"
+                        size={20}
+                        color={theme.colors.onPrimary}
+                      />
+                    </SquircleView>
+                  </View>
+                </SquircleView>
+              </Pressable>
+
+              {/* Divider "o continúa con" */}
+              <View style={styles.socialDivider}>
+                <View
+                  style={[
+                    styles.dividerLine,
+                    { backgroundColor: theme.colors.outlineVariant },
+                  ]}
+                />
+                <Text
+                  style={[
+                    styles.socialDividerText,
+                    { color: theme.colors.onSurfaceVariant },
+                  ]}
+                >
+                  o continúa con
+                </Text>
+                <View
+                  style={[
+                    styles.dividerLine,
+                    { backgroundColor: theme.colors.outlineVariant },
+                  ]}
+                />
+              </View>
+
+              {/* Google Social Button */}
+              <Pressable
+                onPress={handleGoogleLogin}
+                disabled={loading}
+                style={({ pressed }) => [
+                  styles.socialButtonContainer,
+                  {
+                    opacity: loading ? 0.6 : pressed ? 0.9 : 1,
+                  },
+                ]}
+              >
+                <SquircleView
+                  style={[
+                    styles.socialButton,
+                    {
+                      backgroundColor: theme.colors.surface,
+                      borderColor: "rgba(255,255,255,0.1)",
+                      borderWidth: 1,
+                    },
+                  ]}
+                  cornerSmoothing={1}
+                >
+                  <View style={styles.socialButtonContent}>
+                    <Ionicons
+                      name="logo-google"
+                      size={20}
+                      color={theme.colors.onSurface}
+                    />
+                    <Text
+                      style={[
+                        styles.socialButtonText,
+                        { color: theme.colors.onSurface },
+                      ]}
+                    >
+                      Google
+                    </Text>
+                  </View>
+                </SquircleView>
+              </Pressable>
+            </Animated.View>
+
+            {/* Footer Section */}
+            <Animated.View
+              entering={FadeInDown.duration(400).delay(200)}
+              style={styles.footer}
+              renderToHardwareTextureAndroid={true}
+            >
+              <Text style={{ color: theme.colors.onSurfaceVariant }}>
+                ¿No tienes cuenta?
+              </Text>
+              <TouchableOpacity onPress={() => router.push("/auth/register")}>
+                <Text
+                  style={[styles.registerLink, { color: theme.colors.tertiary }]}
+                >
+                  Regístrate
+                </Text>
+              </TouchableOpacity>
+            </Animated.View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  backgroundContainer: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  safeArea: {
     flex: 1,
   },
   keyboardView: {
@@ -388,11 +418,16 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   logoContainer: {
+    width: 88,
+    height: 88,
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 16,
+    borderRadius: 24,
   },
   logo: {
-    width: 100,
-    height: 100,
+    width: 50,
+    height: 50,
   },
   title: {
     fontFamily: "InstrumentSerif-Italic",
