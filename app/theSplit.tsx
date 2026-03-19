@@ -1,3 +1,4 @@
+import { CTAButton } from "@/components/ui/CTAButton";
 import { Ionicons } from "@expo/vector-icons";
 import { BlurTargetView } from "expo-blur";
 import { Image } from "expo-image";
@@ -8,9 +9,9 @@ import SquircleView from "react-native-fast-squircle";
 import { Text, useTheme } from "react-native-paper";
 import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { GrainyGradient } from "../components/premade/organisms/grainy-gradient";
 import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import { useAuth } from "../hooks";
-import { GrainyGradient } from "../components/premade/organisms/grainy-gradient";
 
 export default function TheSplit() {
   const router = useRouter();
@@ -27,9 +28,11 @@ export default function TheSplit() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <View
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+    >
       {/* Background decoration */}
-      <Animated.View 
+      <Animated.View
         entering={FadeInUp.duration(600)}
         style={styles.backgroundContainer}
       >
@@ -55,7 +58,9 @@ export default function TheSplit() {
               entering={FadeInUp.duration(150)}
               style={styles.header}
             >
-              <Text style={[styles.welcomeText, { color: theme.colors.primary }]}>
+              <Text
+                style={[styles.welcomeText, { color: theme.colors.primary }]}
+              >
                 Bienvenido a
               </Text>
               <Image
@@ -89,124 +94,23 @@ export default function TheSplit() {
               style={styles.actions}
             >
               {/* BOTÓN 1: Crear grupo */}
-              <Pressable
+              <CTAButton
+                title="Crear grupo"
+                description="Empieza algo nuevo con tu gente"
+                iconName="add"
                 onPress={() => router.push("/createGroup")}
-                style={({ pressed }) => [
-                  {
-                    opacity: pressed ? 0.9 : 1,
-                    transform: [{ scale: pressed ? 0.98 : 1 }],
-                  },
-                ]}
-              >
-                <SquircleView
-                  style={[
-                    styles.ctaCard,
-                    {
-                      backgroundColor: theme.colors.primary,
-                    },
-                  ]}
-                  cornerSmoothing={1}
-                >
-                  <View style={styles.ctaContent}>
-                    <View style={styles.ctaTextBlock}>
-                      <Text
-                        style={[
-                          styles.ctaTitle,
-                          { color: theme.colors.onPrimary },
-                        ]}
-                      >
-                        Crear grupo
-                      </Text>
-                      <Text
-                        style={[
-                          styles.ctaDescription,
-                          { color: theme.colors.onPrimary },
-                        ]}
-                      >
-                        Empieza algo nuevo con tu gente
-                      </Text>
-                    </View>
-                    <SquircleView
-                      style={[
-                        styles.ctaIcon,
-                        {
-                          backgroundColor: "rgba(255,255,255,0.15)",
-                          borderColor: "rgba(255,255,255,0.3)",
-                          borderWidth: 1,
-                          borderRadius: 16,
-                        },
-                      ]}
-                      cornerSmoothing={1}
-                    >
-                      <Ionicons
-                        name="add"
-                        size={24}
-                        color={theme.colors.onPrimary}
-                      />
-                    </SquircleView>
-                  </View>
-                </SquircleView>
-              </Pressable>
+              />
 
               {/* BOTÓN 2: Unirme a un grupo */}
-              <Pressable
+              <CTAButton
+                title="Unirme a un grupo"
+                description="Tengo un código de invitación"
+                iconName="arrow-forward"
+                backgroundColor={theme.colors.surfaceVariant}
+                textColor={theme.colors.onSurface}
+                iconBorderColor={theme.colors.outline}
                 onPress={() => router.push("/join/joinGroup")}
-                style={({ pressed }) => [
-                  {
-                    opacity: pressed ? 0.9 : 1,
-                    transform: [{ scale: pressed ? 0.98 : 1 }],
-                  },
-                ]}
-              >
-                <SquircleView
-                  style={[
-                    styles.ctaCard,
-                    {
-                      backgroundColor: theme.colors.surfaceVariant,
-                    },
-                  ]}
-                  cornerSmoothing={1}
-                >
-                  <View style={styles.ctaContent}>
-                    <View style={styles.ctaTextBlock}>
-                      <Text
-                        style={[
-                          styles.ctaTitle,
-                          { color: theme.colors.onSurface },
-                        ]}
-                      >
-                        Unirme a un grupo
-                      </Text>
-                      <Text
-                        style={[
-                          styles.ctaDescription,
-                          { color: theme.colors.onSurfaceVariant },
-                        ]}
-                      >
-                        Tengo un código de invitación
-                      </Text>
-                    </View>
-                    <SquircleView
-                      style={[
-                        styles.ctaIcon,
-                        {
-                          backgroundColor: "rgba(255,255,255,0.15)",
-                          borderColor: theme.colors.outline,
-                          borderWidth: 1,
-                          borderRadius: 16,
-                        },
-                      ]}
-                      cornerSmoothing={1}
-                    >
-                      <Ionicons
-                        name="arrow-forward"
-                        size={24}
-                        color={theme.colors.onSurface}
-                      />
-                    </SquircleView>
-                  </View>
-                </SquircleView>
-              </Pressable>
+              />
 
               {/* BOTÓN 3: Cerrar Sesión (SIN SQUIRCLE, VIEW NORMAL) */}
               <Pressable
@@ -221,7 +125,11 @@ export default function TheSplit() {
                 ]}
               >
                 <SquircleView style={styles.logoutButton} cornerSmoothing={1}>
-                  <Ionicons name="log-out" size={18} color={theme.colors.error} />
+                  <Ionicons
+                    name="log-out"
+                    size={18}
+                    color={theme.colors.error}
+                  />
                   <Text
                     style={[styles.logoutText, { color: theme.colors.error }]}
                   >

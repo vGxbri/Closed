@@ -1,4 +1,4 @@
-import { Redirect } from "expo-router";
+import { Redirect, Stack } from "expo-router"; // <-- Añadido Stack aquí
 import { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { useTheme } from "react-native-paper";
@@ -63,6 +63,8 @@ export default function Index() {
       <View
         style={[styles.container, { backgroundColor: theme.colors.background }]}
       >
+        <Stack.Screen options={{ animation: "fade", headerShown: false }} />
+
         <CircleLoadingIndicator
           dotSpacing={8}
           dotColor={theme.colors.onBackground}

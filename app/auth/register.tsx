@@ -1,15 +1,14 @@
-import { Ionicons } from "@expo/vector-icons";
+import { CTAButton } from "@/components/ui/CTAButton";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 import SquircleView from "react-native-fast-squircle";
 import { HelperText, Text, TextInput, useTheme } from "react-native-paper";
@@ -277,57 +276,14 @@ export default function RegisterScreen() {
               </View>
 
               {/* Register CTA Button */}
-              <Pressable
+              <CTAButton
+                title="Crear Cuenta"
+                loadingText="Creando..."
                 onPress={handleRegister}
-                disabled={!isFormValid || loading}
-                style={({ pressed }) => [
-                  styles.ctaContainer,
-                  {
-                    opacity: !isFormValid || loading ? 0.6 : pressed ? 0.9 : 1,
-                    transform: [
-                      { scale: pressed && isFormValid && !loading ? 0.98 : 1 },
-                    ],
-                  },
-                ]}
-              >
-                <SquircleView
-                  style={[
-                    styles.ctaCard,
-                    {
-                      backgroundColor: theme.colors.primary,
-                    },
-                  ]}
-                  cornerSmoothing={1}
-                >
-                  <View style={styles.ctaContent}>
-                    <Text
-                      style={[
-                        styles.ctaText,
-                        { color: theme.colors.onPrimary },
-                      ]}
-                    >
-                      {loading ? "Creando..." : "Crear Cuenta"}
-                    </Text>
-                    <SquircleView
-                      style={[
-                        styles.ctaIcon,
-                        {
-                          backgroundColor: "rgba(255,255,255,0.15)",
-                          borderColor: "rgba(255,255,255,0.3)",
-                          borderWidth: 1,
-                        },
-                      ]}
-                      cornerSmoothing={1}
-                    >
-                      <Ionicons
-                        name="arrow-forward"
-                        size={20}
-                        color={theme.colors.onPrimary}
-                      />
-                    </SquircleView>
-                  </View>
-                </SquircleView>
-              </Pressable>
+                disabled={!isFormValid}
+                loading={loading}
+                style={{ marginTop: 14 }}
+              />
             </Animated.View>
 
             {/* Footer Section */}

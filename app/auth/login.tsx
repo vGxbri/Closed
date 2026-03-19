@@ -1,3 +1,4 @@
+import { CTAButton } from "@/components/ui/CTAButton";
 import { Ionicons } from "@expo/vector-icons";
 import {
   GoogleSignin,
@@ -252,57 +253,14 @@ export default function LoginScreen() {
               />
 
               {/* Login CTA Button */}
-              <Pressable
+              <CTAButton
+                title="Iniciar Sesión"
+                loadingText="Iniciando..."
                 onPress={handleLogin}
-                disabled={!isFormValid || loading}
-                style={({ pressed }) => [
-                  styles.ctaContainer,
-                  {
-                    opacity: !isFormValid || loading ? 0.6 : pressed ? 0.9 : 1,
-                    transform: [
-                      { scale: pressed && isFormValid && !loading ? 0.98 : 1 },
-                    ],
-                  },
-                ]}
-              >
-                <SquircleView
-                  style={[
-                    styles.ctaCard,
-                    {
-                      backgroundColor: theme.colors.primary,
-                    },
-                  ]}
-                  cornerSmoothing={1}
-                >
-                  <View style={styles.ctaContent}>
-                    <Text
-                      style={[
-                        styles.ctaText,
-                        { color: theme.colors.onPrimary },
-                      ]}
-                    >
-                      {loading ? "Iniciando..." : "Iniciar Sesión"}
-                    </Text>
-                    <SquircleView
-                      style={[
-                        styles.ctaIcon,
-                        {
-                          backgroundColor: "rgba(255,255,255,0.15)",
-                          borderColor: "rgba(255,255,255,0.3)",
-                          borderWidth: 1,
-                        },
-                      ]}
-                      cornerSmoothing={1}
-                    >
-                      <Ionicons
-                        name="arrow-forward"
-                        size={20}
-                        color={theme.colors.onPrimary}
-                      />
-                    </SquircleView>
-                  </View>
-                </SquircleView>
-              </Pressable>
+                disabled={!isFormValid}
+                loading={loading}
+                style={{ marginTop: 14 }}
+              />
 
               {/* Divider "o continúa con" */}
               <View style={styles.socialDivider}>

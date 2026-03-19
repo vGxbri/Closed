@@ -1,3 +1,4 @@
+import { CTAButton } from "@/components/ui/CTAButton";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
@@ -15,7 +16,13 @@ import {
 } from "react-native";
 import SquircleView from "react-native-fast-squircle";
 import { Text, TextInput, useTheme } from "react-native-paper";
-import Animated, { FadeIn, FadeInDown, FadeOut } from "react-native-reanimated";
+import Animated, {
+  FadeIn,
+  SlideInLeft,
+  SlideInRight,
+  SlideOutLeft,
+  SlideOutRight,
+} from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ParallaxCarousel } from "../components/premade/molecules/parallax-carousel";
 import { groupsService } from "../services";
@@ -58,30 +65,57 @@ export default function CreateGroupScreen() {
   const [loading, setLoading] = useState(false);
   const [maxStepReached, setMaxStepReached] = useState(1);
 
+  const [direction, setDirection] = useState<"forward" | "backward">("forward");
+  const [isAnimating, setIsAnimating] = useState(false);
+
   React.useEffect(() => {
     if (step > maxStepReached) {
       setMaxStepReached(step);
     }
   }, [step, maxStepReached]);
 
-  const handleTypeSelect = useCallback((type: string) => {
-    setSelectedType(type);
-    setStep(2);
-  }, []);
+  const changeStep = useCallback(
+    (newStep: number, dir: "forward" | "backward") => {
+      if (isAnimating || newStep === step) return;
+
+      setIsAnimating(true);
+
+      // 1. Cambiamos SOLO la dirección primero
+      setDirection(dir);
+
+      // 2. Le damos a React un "tick" (15ms) para que aplique la nueva dirección
+      // a la propiedad 'exiting' de la pantalla actual ANTES de matarla.
+      setTimeout(() => {
+        setStep(newStep);
+      }, 15);
+
+      // 3. Desbloqueamos el candado cuando acabe la animación (400ms)
+      setTimeout(() => setIsAnimating(false), 400);
+    },
+    [isAnimating, step],
+  );
+
+  const handleTypeSelect = useCallback(
+    (type: string) => {
+      setSelectedType(type);
+      changeStep(2, "forward");
+    },
+    [changeStep],
+  );
 
   const handleBack = useCallback(() => {
     if (step > 1) {
-      setStep(step - 1);
+      changeStep(step - 1, "backward");
     } else {
       router.back();
     }
-  }, [step, router]);
+  }, [step, router, changeStep]);
 
   const handleForward = useCallback(() => {
     if (step < maxStepReached) {
-      setStep(step + 1);
+      changeStep(step + 1, "forward");
     }
-  }, [step, maxStepReached]);
+  }, [step, maxStepReached, changeStep]);
 
   const handlePickPhoto = useCallback(async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -124,363 +158,303 @@ export default function CreateGroupScreen() {
 
   const renderStepOne = () => (
     <Animated.View
-      entering={FadeIn}
-      exiting={FadeOut}
-      style={[
-        styles.stepContainer,
-        { justifyContent: "flex-end", paddingBottom: 0 },
-      ]}
+      key="step-1"
+      // MAGIA AQUÍ: Si venimos del Paso 2 (backward), deslizamos. Si es la carga inicial, Fade.
+      entering={direction === "backward" ? SlideInLeft : FadeIn}
+      // El Paso 1 solo puede salir hacia la izquierda (hacia el Paso 2)
+      exiting={SlideOutLeft}
+      style={StyleSheet.absoluteFill}
     >
-      <View style={styles.stepTitleBlock}>
-        <Text style={[styles.stepMainTitle, { color: theme.colors.onSurface }]}>
-          Elige tu
-        </Text>
-        <Text style={[styles.stepAccentTitle, { color: theme.colors.primary }]}>
-          tipo de grupo
-        </Text>
-        <View
-          style={[
-            styles.titleDivider,
-            { borderBottomColor: theme.colors.outlineVariant },
-          ]}
-        />
-      </View>
+      <View
+        style={[
+          styles.stepContainer,
+          { justifyContent: "flex-end", paddingBottom: 0 },
+        ]}
+      >
+        <View style={styles.stepTitleBlock}>
+          <Text
+            style={[styles.stepMainTitle, { color: theme.colors.onSurface }]}
+          >
+            Elige tu
+          </Text>
+          <Text
+            style={[styles.stepAccentTitle, { color: theme.colors.primary }]}
+          >
+            tipo de grupo
+          </Text>
+          <View
+            style={[
+              styles.titleDivider,
+              { borderBottomColor: theme.colors.outlineVariant },
+            ]}
+          />
+        </View>
 
-      <View style={styles.carouselContainer}>
-        <ParallaxCarousel
-          data={ITEMS}
-          renderItem={({ item, index }) => (
-            <Pressable
-              onPress={() => handleTypeSelect(item.title)}
-              style={StyleSheet.absoluteFill}
-            >
-              <View style={[styles.cardContent, { width: width - 40 }]}>
-                <View style={styles.indicatorContainer}>
-                  {ITEMS.map((_, i) => (
-                    <View
-                      key={i}
-                      style={[
-                        styles.indicatorDot,
-                        {
-                          backgroundColor:
-                            i === index
-                              ? "rgba(255, 255, 255, 1)"
-                              : "rgba(255, 255, 255, 0.5)",
-                          width: i === index ? 8 : 6,
-                          height: i === index ? 8 : 6,
-                        },
-                      ]}
+        <View style={styles.carouselContainer}>
+          <ParallaxCarousel
+            data={ITEMS}
+            renderItem={({ item, index }) => (
+              <Pressable
+                onPress={() => handleTypeSelect(item.title)}
+                style={StyleSheet.absoluteFill}
+              >
+                <View style={[styles.cardContent, { width: width - 40 }]}>
+                  <View style={styles.indicatorContainer}>
+                    {ITEMS.map((_, i) => (
+                      <View
+                        key={i}
+                        style={[
+                          styles.indicatorDot,
+                          {
+                            backgroundColor:
+                              i === index
+                                ? "rgba(255, 255, 255, 1)"
+                                : "rgba(255, 255, 255, 0.5)",
+                            width: i === index ? 8 : 6,
+                            height: i === index ? 8 : 6,
+                          },
+                        ]}
+                      />
+                    ))}
+                  </View>
+
+                  <View style={styles.textOverlay} />
+                  <Text
+                    style={[
+                      styles.cardTitle,
+                      { color: theme.colors.onPrimary },
+                    ]}
+                  >
+                    {item.title}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.cardDescription,
+                      { color: theme.colors.onPrimary },
+                    ]}
+                  >
+                    {item.description}
+                  </Text>
+                  <View
+                    style={[
+                      styles.actionIndicator,
+                      { borderColor: theme.colors.onPrimary },
+                    ]}
+                  >
+                    <Ionicons
+                      name="arrow-forward"
+                      size={24}
+                      color={theme.colors.onPrimary}
                     />
-                  ))}
+                  </View>
                 </View>
-
-                <View style={styles.textOverlay} />
-                <Text
-                  style={[styles.cardTitle, { color: theme.colors.onPrimary }]}
-                >
-                  {item.title}
-                </Text>
-                <Text
-                  style={[
-                    styles.cardDescription,
-                    { color: theme.colors.onPrimary },
-                  ]}
-                >
-                  {item.description}
-                </Text>
-                <View
-                  style={[
-                    styles.actionIndicator,
-                    { borderColor: theme.colors.onPrimary },
-                  ]}
-                >
-                  <Ionicons
-                    name="arrow-forward"
-                    size={24}
-                    color={theme.colors.onPrimary}
-                  />
-                </View>
-              </View>
-            </Pressable>
-          )}
-          parallaxIntensity={1}
-          itemHeight={height * 0.7}
-        />
+              </Pressable>
+            )}
+            parallaxIntensity={1}
+            itemHeight={height * 0.7}
+          />
+        </View>
       </View>
     </Animated.View>
   );
 
   const renderStepTwo = () => (
     <Animated.View
-      entering={FadeInDown.duration(400)}
-      exiting={FadeOut}
-      style={styles.stepContainer}
+      key="step-2"
+      entering={direction === "forward" ? SlideInRight : SlideInLeft}
+      exiting={direction === "forward" ? SlideOutLeft : SlideOutRight}
+      style={StyleSheet.absoluteFill}
     >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={styles.formContainer}
-        >
-          <View style={styles.formContent}>
-            <View style={styles.header}>
-              <Text style={[styles.title, { color: theme.colors.primary }]}>
-                Dale un nombre
-              </Text>
-              <View
-                style={[
-                  styles.divider,
-                  { backgroundColor: theme.colors.outlineVariant },
-                ]}
-              />
-              <Text
-                style={[
-                  styles.subtitle,
-                  { color: theme.colors.onSurfaceVariant },
-                ]}
-              >
-                Has elegido &quot;{selectedType}&quot;. Ahora ponle un nombre
-                único a tu grupo.
-              </Text>
-            </View>
-
-            <View style={styles.form}>
-              <TextInput
-                label="Nombre del grupo"
-                placeholder="Ej. Viaje a Bali"
-                value={name}
-                onChangeText={setName}
-                mode="outlined"
-                left={<TextInput.Icon icon="account-group-outline" />}
-                style={styles.input}
-                outlineStyle={{
-                  borderColor: theme.colors.outlineVariant,
-                  borderRadius: 20,
-                  borderWidth: 1,
-                }}
-                contentStyle={styles.inputContent}
-                returnKeyType="done"
-                autoFocus
-              />
-
-              <Pressable
-                onPress={() => {
-                  if (name.trim()) setStep(3);
-                }}
-                disabled={!name.trim()}
-                style={({ pressed }) => [
-                  styles.ctaContainer,
-                  {
-                    opacity: !name.trim() ? 0.6 : pressed ? 0.9 : 1,
-                    transform: [{ scale: pressed && name.trim() ? 0.98 : 1 }],
-                  },
-                ]}
-              >
-                <SquircleView
+      <View style={styles.stepContainer}>
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={styles.formContainer}
+          >
+            <View style={styles.formContent}>
+              <View style={styles.header}>
+                <Text style={[styles.title, { color: theme.colors.primary }]}>
+                  Dale un nombre
+                </Text>
+                <View
                   style={[
-                    styles.ctaCard,
-                    {
-                      backgroundColor: name.trim()
-                        ? theme.colors.primary
-                        : theme.colors.surfaceVariant,
-                    },
+                    styles.divider,
+                    { backgroundColor: theme.colors.outlineVariant },
                   ]}
-                  cornerSmoothing={1}
+                />
+                <Text
+                  style={[
+                    styles.subtitle,
+                    { color: theme.colors.onSurfaceVariant },
+                  ]}
                 >
-                  <View style={styles.ctaContent}>
-                    <Text
-                      style={[
-                        styles.ctaText,
-                        {
-                          color: name.trim()
-                            ? theme.colors.onPrimary
-                            : theme.colors.onSurfaceVariant,
-                        },
-                      ]}
-                    >
-                      Continuar
-                    </Text>
-                    <SquircleView
-                      style={[
-                        styles.ctaIcon,
-                        {
-                          backgroundColor: "rgba(255,255,255,0.15)",
-                          borderColor: name.trim()
-                            ? "rgba(255,255,255,0.3)"
-                            : theme.colors.outline,
-                          borderWidth: 1,
-                        },
-                      ]}
-                      cornerSmoothing={1}
-                    >
-                      <Ionicons
-                        name="arrow-forward"
-                        size={20}
-                        color={
-                          name.trim()
-                            ? theme.colors.onPrimary
-                            : theme.colors.onSurfaceVariant
-                        }
-                      />
-                    </SquircleView>
-                  </View>
-                </SquircleView>
-              </Pressable>
+                  Has elegido &quot;{selectedType}&quot;. Ahora ponle un nombre
+                  único a tu grupo.
+                </Text>
+              </View>
+
+              <View style={styles.form}>
+                <TextInput
+                  label="Nombre del grupo"
+                  placeholder="Ej. Viaje a Bali"
+                  value={name}
+                  onChangeText={setName}
+                  mode="outlined"
+                  left={<TextInput.Icon icon="account-group-outline" />}
+                  style={styles.input}
+                  outlineStyle={{
+                    borderColor: theme.colors.outlineVariant,
+                    borderRadius: 20,
+                    borderWidth: 1,
+                  }}
+                  contentStyle={styles.inputContent}
+                  returnKeyType="done"
+                  autoFocus
+                />
+                <CTAButton
+                  title="Continuar"
+                  onPress={() => {
+                    if (name.trim()) changeStep(3, "forward");
+                  }}
+                  disabled={!name.trim() || isAnimating}
+                  backgroundColor={
+                    name.trim()
+                      ? theme.colors.primary
+                      : theme.colors.surfaceVariant
+                  }
+                  textColor={
+                    name.trim()
+                      ? theme.colors.onPrimary
+                      : theme.colors.onSurfaceVariant
+                  }
+                  iconBorderColor={
+                    name.trim() ? "rgba(255,255,255,0.3)" : theme.colors.outline
+                  }
+                  style={{ marginTop: 14 }}
+                />
+              </View>
             </View>
-          </View>
-        </KeyboardAvoidingView>
-      </TouchableWithoutFeedback>
+          </KeyboardAvoidingView>
+        </TouchableWithoutFeedback>
+      </View>
     </Animated.View>
   );
 
   const renderStepThree = () => (
     <Animated.View
-      entering={FadeInDown.duration(400)}
-      exiting={FadeOut}
-      style={styles.stepContainer}
+      key="step-3"
+      entering={direction === "forward" ? SlideInRight : SlideInLeft}
+      exiting={direction === "forward" ? SlideOutLeft : SlideOutRight}
+      style={StyleSheet.absoluteFill}
     >
-      <View style={styles.formContent}>
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: theme.colors.primary }]}>
-            Ponle una foto
-          </Text>
-          <View
-            style={[
-              styles.divider,
-              { backgroundColor: theme.colors.outlineVariant },
-            ]}
-          />
-          <Text
-            style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }]}
-          >
-            Una imagen para identificar &quot;{name}&quot; al instante.
-          </Text>
-        </View>
-
-        <View style={styles.photoContainer}>
-          <Pressable
-            onPress={handlePickPhoto}
-            style={({ pressed }) => [
-              styles.photoPicker,
-              {
-                opacity: pressed ? 0.85 : 1,
-                transform: [{ scale: pressed ? 0.97 : 1 }],
-              },
-            ]}
-          >
-            <SquircleView
+      <View style={styles.stepContainer}>
+        <View style={styles.formContent}>
+          <View style={styles.header}>
+            <Text style={[styles.title, { color: theme.colors.primary }]}>
+              Ponle una foto
+            </Text>
+            <View
               style={[
-                styles.photoSquircle,
-                {
-                  borderColor: photoUri
-                    ? theme.colors.primary
-                    : theme.colors.outlineVariant,
-                  backgroundColor: theme.colors.surfaceVariant,
-                },
+                styles.divider,
+                { backgroundColor: theme.colors.outlineVariant },
               ]}
-              cornerSmoothing={1}
-            >
-              {photoUri ? (
-                <Image
-                  source={{ uri: photoUri }}
-                  style={styles.photoPreview}
-                  contentFit="cover"
-                  transition={300}
-                />
-              ) : (
-                <View style={styles.photoPlaceholder}>
-                  <Ionicons
-                    name="image-outline"
-                    size={48}
-                    color={theme.colors.onSurfaceVariant}
-                  />
-                  <Text
-                    style={[
-                      styles.photoPlaceholderText,
-                      { color: theme.colors.onSurfaceVariant },
-                    ]}
-                  >
-                    Toca para elegir
-                  </Text>
-                </View>
-              )}
-            </SquircleView>
-          </Pressable>
-
-          {photoUri && (
-            <Pressable
-              onPress={handlePickPhoto}
-              style={styles.changePhotoButton}
-            >
-              <Text
-                style={[
-                  styles.changePhotoText,
-                  { color: theme.colors.tertiary },
-                ]}
-              >
-                Cambiar foto
-              </Text>
-            </Pressable>
-          )}
-        </View>
-
-        <View style={styles.footerActions}>
-          <Pressable
-            onPress={handleCreate}
-            disabled={loading}
-            style={({ pressed }) => [
-              styles.ctaContainer,
-              {
-                opacity: loading ? 0.6 : pressed ? 0.9 : 1,
-                transform: [{ scale: pressed && !loading ? 0.98 : 1 }],
-              },
-            ]}
-          >
-            <SquircleView
-              style={[
-                styles.ctaCard,
-                {
-                  backgroundColor: theme.colors.primary,
-                },
-              ]}
-              cornerSmoothing={1}
-            >
-              <View style={styles.ctaContent}>
-                <Text
-                  style={[styles.ctaText, { color: theme.colors.onPrimary }]}
-                >
-                  {loading ? "Creando..." : "Crear grupo"}
-                </Text>
-                <SquircleView
-                  style={[
-                    styles.ctaIcon,
-                    {
-                      backgroundColor: "rgba(255,255,255,0.15)",
-                      borderColor: "rgba(255,255,255,0.3)",
-                      borderWidth: 1,
-                    },
-                  ]}
-                  cornerSmoothing={1}
-                >
-                  <Ionicons
-                    name={loading ? "refresh" : "checkmark"}
-                    size={20}
-                    color={theme.colors.onPrimary}
-                  />
-                </SquircleView>
-              </View>
-            </SquircleView>
-          </Pressable>
-
-          <Pressable onPress={handleCreate} disabled={loading}>
+            />
             <Text
               style={[
-                styles.skipLink,
+                styles.subtitle,
                 { color: theme.colors.onSurfaceVariant },
               ]}
             >
-              Saltar por ahora
+              Una imagen para identificar &quot;{name}&quot; al instante.
             </Text>
-          </Pressable>
+          </View>
+
+          <View style={styles.photoContainer}>
+            <Pressable
+              onPress={handlePickPhoto}
+              style={({ pressed }) => [
+                styles.photoPicker,
+                {
+                  opacity: pressed ? 0.85 : 1,
+                  transform: [{ scale: pressed ? 0.97 : 1 }],
+                },
+              ]}
+            >
+              <SquircleView
+                style={[
+                  styles.photoSquircle,
+                  {
+                    borderColor: photoUri
+                      ? theme.colors.primary
+                      : theme.colors.outlineVariant,
+                    backgroundColor: theme.colors.surfaceVariant,
+                  },
+                ]}
+                cornerSmoothing={1}
+              >
+                {photoUri ? (
+                  <Image
+                    source={{ uri: photoUri }}
+                    style={styles.photoPreview}
+                    contentFit="cover"
+                    transition={300}
+                  />
+                ) : (
+                  <View style={styles.photoPlaceholder}>
+                    <Ionicons
+                      name="image-outline"
+                      size={48}
+                      color={theme.colors.onSurfaceVariant}
+                    />
+                    <Text
+                      style={[
+                        styles.photoPlaceholderText,
+                        { color: theme.colors.onSurfaceVariant },
+                      ]}
+                    >
+                      Toca para elegir
+                    </Text>
+                  </View>
+                )}
+              </SquircleView>
+            </Pressable>
+
+            {photoUri && (
+              <Pressable
+                onPress={handlePickPhoto}
+                style={styles.changePhotoButton}
+              >
+                <Text
+                  style={[
+                    styles.changePhotoText,
+                    { color: theme.colors.tertiary },
+                  ]}
+                >
+                  Cambiar foto
+                </Text>
+              </Pressable>
+            )}
+          </View>
+
+          <View style={styles.footerActions}>
+            <CTAButton
+              title="Crear grupo"
+              loadingText="Creando..."
+              iconName="checkmark"
+              onPress={handleCreate}
+              loading={loading}
+            />
+            <Pressable onPress={handleCreate} disabled={loading}>
+              <Text
+                style={[
+                  styles.skipLink,
+                  { color: theme.colors.onSurfaceVariant },
+                ]}
+              >
+                Saltar por ahora
+              </Text>
+            </Pressable>
+          </View>
         </View>
       </View>
     </Animated.View>
