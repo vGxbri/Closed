@@ -15,9 +15,9 @@ import SquircleView from "react-native-fast-squircle";
 import { HelperText, Text, TextInput, useTheme } from "react-native-paper";
 import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { GrainyGradient } from "../../components/premade/organisms/grainy-gradient";
 import { useSnackbar } from "../../components/ui/SnackbarContext";
 import { useAuth } from "../../hooks";
-import { GrainyGradient } from "../../components/premade/organisms/grainy-gradient";
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -94,9 +94,11 @@ export default function RegisterScreen() {
   const passwordTooShort = password && password.length < 6;
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <View
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+    >
       {/* Background decoration */}
-      <Animated.View 
+      <Animated.View
         entering={FadeInUp.duration(600)}
         style={styles.backgroundContainer}
       >
@@ -111,10 +113,7 @@ export default function RegisterScreen() {
         />
       </Animated.View>
 
-      <SafeAreaView
-        style={styles.safeArea}
-        edges={["left", "right"]}
-      >
+      <SafeAreaView style={styles.safeArea} edges={["left", "right"]}>
         <KeyboardAvoidingView
           style={styles.keyboardView}
           behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -256,7 +255,9 @@ export default function RegisterScreen() {
                       icon={
                         showConfirmPassword ? "eye-off-outline" : "eye-outline"
                       }
-                      onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                      onPress={() =>
+                        setShowConfirmPassword(!showConfirmPassword)
+                      }
                     />
                   }
                   error={!!passwordsDoNotMatch}
@@ -300,7 +301,10 @@ export default function RegisterScreen() {
                 >
                   <View style={styles.ctaContent}>
                     <Text
-                      style={[styles.ctaText, { color: theme.colors.onPrimary }]}
+                      style={[
+                        styles.ctaText,
+                        { color: theme.colors.onPrimary },
+                      ]}
                     >
                       {loading ? "Creando..." : "Crear Cuenta"}
                     </Text>
