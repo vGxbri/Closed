@@ -1,11 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import {
-    Pressable,
-    StyleProp,
-    StyleSheet,
-    View,
-    ViewStyle,
+  Pressable,
+  StyleProp,
+  StyleSheet,
+  View,
+  ViewStyle,
 } from "react-native";
 import SquircleView from "react-native-fast-squircle";
 import { Text, useTheme } from "react-native-paper";

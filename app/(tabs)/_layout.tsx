@@ -2,9 +2,13 @@ import { Ionicons } from "@expo/vector-icons";
 import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { Tabs } from "expo-router";
 import { Pressable, StyleSheet, View } from "react-native";
+import SquircleView from "react-native-fast-squircle";
 import { useTheme } from "react-native-paper";
+import Animated, {
+  useAnimatedStyle,
+  withTiming,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Animated, { useAnimatedStyle, withTiming } from "react-native-reanimated";
 
 type AnimatedIconProps = {
   focused: boolean;
@@ -13,20 +17,25 @@ type AnimatedIconProps = {
   theme: any;
 };
 
-function AnimatedTabIcon({ focused, iconName, color, theme }: AnimatedIconProps) {
+function AnimatedTabIcon({
+  focused,
+  iconName,
+  color,
+  theme,
+}: AnimatedIconProps) {
   const animatedBgStyle = useAnimatedStyle(() => {
     return {
       opacity: withTiming(focused ? 1 : 0, { duration: 100 }),
-      transform: [
-        { scaleX: withTiming(focused ? 1 : 0.4, { duration: 100 }) }
-      ],
+      transform: [{ scaleX: withTiming(focused ? 1 : 0.4, { duration: 100 }) }],
       position: "absolute",
       top: 0,
       bottom: 0,
       left: 0,
       right: 0,
-      borderRadius: 100, // Guarantees a perfect pill shape
-      backgroundColor: `${theme.colors.primary}20`,
+      borderRadius: 100,
+      backgroundColor: `${theme.colors.primaryContainer}`,
+      borderWidth: 1,
+      borderColor: `${theme.colors.primary}90`,
     };
   }, [focused, theme]);
 
@@ -51,7 +60,7 @@ function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const theme = useTheme();
 
   return (
-    <View
+    <SquircleView
       style={[
         styles.tabBarContainer,
         {
@@ -59,6 +68,7 @@ function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
           backgroundColor: theme.colors.surface,
         },
       ]}
+      cornerSmoothing={1}
     >
       {state.routes.map((route, index) => {
         const { options } = descriptors[route.key];
@@ -67,9 +77,7 @@ function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
         if (!options.tabBarIcon) return null;
 
         const isFocused = state.index === index;
-        const color = isFocused
-          ? theme.colors.primary
-          : theme.colors.onSurfaceVariant;
+        const color = theme.colors.onSurface;
 
         const onPress = () => {
           const event = navigation.emit({
@@ -110,7 +118,7 @@ function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
           </Pressable>
         );
       })}
-    </View>
+    </SquircleView>
   );
 }
 
@@ -121,8 +129,8 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     left: 0,
     right: 0,
-    height: 60,
-    borderRadius: 30,
+    height: 64,
+    borderRadius: 32,
     alignItems: "center",
     justifyContent: "space-evenly",
     elevation: 10,
@@ -130,6 +138,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.15,
     shadowRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
   },
   tabItem: {
     flex: 1,
