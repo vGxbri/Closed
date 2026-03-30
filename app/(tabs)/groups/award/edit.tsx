@@ -25,7 +25,7 @@ import { awardsService } from "../../../../services";
 import { Award } from "../../../../types/database";
 
 export default function EditAwardScreen() {
-  const { id, groupId } = useLocalSearchParams<{ id: string; groupId: string }>();
+  const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const theme = useTheme();
@@ -365,7 +365,7 @@ export default function EditAwardScreen() {
           style={[
             styles.footer, 
             { 
-              paddingBottom: 8 + insets.bottom,
+              paddingBottom: 80 + insets.bottom,
               backgroundColor: theme.colors.surface,
               borderTopEndRadius: 16,
               borderTopStartRadius: 16,

@@ -51,7 +51,7 @@ export default function CreateGroupScreen() {
       
       showSnackbar("¡Grupo creado!", "success");
       router.replace({
-        pathname: "/home/group/[id]",
+        pathname: "/groups/group/[id]",
         params: { id: newGroup.id }
       });
     } catch (err) {
@@ -200,7 +200,7 @@ export default function CreateGroupScreen() {
           style={[
             styles.footer, 
             { 
-              paddingBottom: 8 + insets.bottom,
+              paddingBottom: 80 + insets.bottom,
               backgroundColor: theme.colors.surface,
               borderTopEndRadius: 16,
               borderTopStartRadius: 16,

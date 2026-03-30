@@ -19,7 +19,6 @@ import {
 } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { GroupCard } from "../../../components/GroupCard";
-import { CustomHeader } from "../../../components/ui/CustomHeader";
 import { useAuth, useGroups } from "../../../hooks";
 
 export default function HomeScreen() {
@@ -31,17 +30,17 @@ export default function HomeScreen() {
 
   const handleGroupPress = (groupId: string) => {
     router.push({
-      pathname: "/home/group/[id]",
+      pathname: "/groups/group/[id]",
       params: { id: groupId }
     });
   };
 
   const handleCreateGroup = () => {
-    router.push("/home/group/create" as any);
+    router.push("/groups/group/create" as any);
   };
 
   const handleJoinGroup = () => {
-    router.push("/home/group/join" as any);
+    router.push("/groups/group/join" as any);
   };
 
   // Calculate stats
@@ -69,13 +68,11 @@ export default function HomeScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <CustomHeader title="Closed" showBackButton={false} />
-
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={[
           styles.content,
-          { paddingBottom: 100 + insets.bottom, paddingTop: 16 }
+          { paddingBottom: 100 + insets.bottom, paddingTop: insets.top + 16 }
         ]}
         showsVerticalScrollIndicator={false}
         refreshControl={

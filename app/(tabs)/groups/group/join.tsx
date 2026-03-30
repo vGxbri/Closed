@@ -75,7 +75,7 @@ export default function JoinGroupScreen() {
           style={[
               styles.footer, 
               { 
-                  paddingBottom: 8 + insets.bottom,
+                  paddingBottom: 80 + insets.bottom, // Account for floating navbar height
                   backgroundColor: theme.colors.surface,
                   borderTopEndRadius: 16,
                   borderTopStartRadius: 16,

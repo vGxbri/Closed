@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { Tabs } from "expo-router";
 import { Pressable, StyleSheet, View } from "react-native";
+import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 import SquircleView from "react-native-fast-squircle";
 import { useTheme } from "react-native-paper";
 import Animated, {
@@ -59,66 +60,93 @@ function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const theme = useTheme();
 
+  const bottomMargin = insets.bottom > 0 ? insets.bottom + 12 : 36;
+  const gradientHeight = bottomMargin + 64 + 60; // Tab bar height is 64, plus some padding above
+
   return (
-    <SquircleView
-      style={[
-        styles.tabBarContainer,
-        {
-          bottom: insets.bottom > 0 ? insets.bottom + 12 : 36,
-          backgroundColor: theme.colors.surface,
-        },
-      ]}
-      cornerSmoothing={1}
-    >
-      {state.routes.map((route, index) => {
-        const { options } = descriptors[route.key];
+    <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+      <View
+        style={{
+          position: "absolute",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: gradientHeight,
+        }}
+        pointerEvents="none"
+      >
+        <Svg width="100%" height="100%">
+          <Defs>
+            <LinearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor={theme.colors.background} stopOpacity="0" />
+              <Stop offset="0.4" stopColor={theme.colors.background} stopOpacity="0.7" />
+              <Stop offset="1" stopColor={theme.colors.background} stopOpacity="1" />
+            </LinearGradient>
+          </Defs>
+          <Rect width="100%" height="100%" fill="url(#grad)" />
+        </Svg>
+      </View>
 
-        // Skip tabs without an icon (hidden tabs like index)
-        if (!options.tabBarIcon) return null;
+      <SquircleView
+        style={[
+          styles.tabBarContainer,
+          {
+            bottom: bottomMargin,
+            backgroundColor: theme.colors.surface,
+          },
+        ]}
+        cornerSmoothing={1}
+      >
+        {state.routes.map((route, index) => {
+          const { options } = descriptors[route.key];
 
-        const isFocused = state.index === index;
-        const color = theme.colors.onSurface;
+          // Skip tabs without an icon (hidden tabs like index)
+          if (!options.tabBarIcon) return null;
 
-        const onPress = () => {
-          const event = navigation.emit({
-            type: "tabPress",
-            target: route.key,
-            canPreventDefault: true,
+          const isFocused = state.index === index;
+          const color = theme.colors.onSurface;
+
+          const onPress = () => {
+            const event = navigation.emit({
+              type: "tabPress",
+              target: route.key,
+              canPreventDefault: true,
+            });
+            if (!isFocused && !event.defaultPrevented) {
+              navigation.navigate(route.name);
+            }
+          };
+
+          const onLongPress = () => {
+            navigation.emit({
+              type: "tabLongPress",
+              target: route.key,
+            });
+          };
+
+          // Render icon from options
+          const icon = options.tabBarIcon?.({
+            focused: isFocused,
+            color,
+            size: 24,
           });
-          if (!isFocused && !event.defaultPrevented) {
-            navigation.navigate(route.name);
-          }
-        };
 
-        const onLongPress = () => {
-          navigation.emit({
-            type: "tabLongPress",
-            target: route.key,
-          });
-        };
-
-        // Render icon from options
-        const icon = options.tabBarIcon?.({
-          focused: isFocused,
-          color,
-          size: 24,
-        });
-
-        return (
-          <Pressable
-            key={route.key}
-            accessibilityRole="button"
-            accessibilityState={isFocused ? { selected: true } : {}}
-            accessibilityLabel={options.tabBarAccessibilityLabel}
-            onPress={onPress}
-            onLongPress={onLongPress}
-            style={styles.tabItem}
-          >
-            {icon}
-          </Pressable>
-        );
-      })}
-    </SquircleView>
+          return (
+            <Pressable
+              key={route.key}
+              accessibilityRole="button"
+              accessibilityState={isFocused ? { selected: true } : {}}
+              accessibilityLabel={options.tabBarAccessibilityLabel}
+              onPress={onPress}
+              onLongPress={onLongPress}
+              style={styles.tabItem}
+            >
+              {icon}
+            </Pressable>
+          );
+        })}
+      </SquircleView>
+    </View>
   );
 }
 

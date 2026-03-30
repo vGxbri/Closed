@@ -523,7 +523,7 @@ export default function CreateAwardScreen() {
           style={[
             styles.footer, 
             { 
-              paddingBottom: 8 + insets.bottom,
+              paddingBottom: 80 + insets.bottom,
               backgroundColor: theme.colors.surface,
               borderTopEndRadius: 16,
               borderTopStartRadius: 16,
