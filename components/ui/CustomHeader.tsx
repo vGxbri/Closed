@@ -4,6 +4,7 @@ import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useTheme } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 
 interface CustomHeaderProps {
   title: string;
@@ -41,10 +42,11 @@ export const CustomHeader = ({
             style={styles.backButton}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <MaterialIcons
-              name="arrow-back"
+            <Ionicons
+              name="chevron-back"
               size={24}
               color={theme.colors.onSurface}
+              style={{ marginLeft: -2 }}
             />
           </TouchableOpacity>
         )}

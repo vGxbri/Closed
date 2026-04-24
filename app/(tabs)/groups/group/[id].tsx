@@ -390,7 +390,7 @@ export default function GroupDetailScreen() {
             style={styles.scrollView}
             contentContainerStyle={[
               styles.content,
-              { paddingBottom: 40 + insets.bottom },
+              { paddingBottom: 120 + insets.bottom },
             ]}
             showsVerticalScrollIndicator={false}
             refreshControl={
