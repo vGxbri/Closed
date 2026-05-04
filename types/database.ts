@@ -60,6 +60,7 @@ export interface Group {
   description: string | null;
   icon: string;
   cover_image_url: string | null;
+  category: string;
   status: GroupStatus;
   is_public: boolean;
   invite_code: string;
@@ -79,6 +80,28 @@ export interface GroupMember {
   invited_by: string | null;
   joined_at: string;
   updated_at: string;
+}
+
+export interface Widget {
+  id: string;
+  name: string;
+  subtitle: string | null;
+  icon: string | null;
+  category: string;
+  created_at: string;
+}
+
+export interface GroupWidget {
+  id: string;
+  group_id: string;
+  widget_id: string;
+  display_order: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface GroupWidgetWithDetails extends GroupWidget {
+  widget: Widget;
 }
 
 export interface GroupInvitation {
@@ -214,6 +237,7 @@ export interface CreateGroupInput {
   name: string;
   description?: string;
   icon?: string;
+  category?: string;
 }
 
 export interface UpdateGroupInput {

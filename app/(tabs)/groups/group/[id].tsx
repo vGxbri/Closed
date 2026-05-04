@@ -24,6 +24,8 @@ import {
   IconName,
 } from "../../../../constants/icons";
 import { useAuth, useGroup } from "../../../../hooks";
+import { widgetsService } from "../../../../services/widgets.service";
+import { GroupWidgetWithDetails } from "../../../../types/database";
 
 import { BlurTargetView } from "expo-blur";
 import { ConfirmDialog, DialogType } from "../../../../components/ui/ConfirmDialog";
@@ -36,44 +38,9 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CARD_GAP = 14;
 const CARD_WIDTH = (SCREEN_WIDTH - 24 * 2 - CARD_GAP) / 2;
 
-// ─── Widget Config ─────────────────────────────────────────────────────
-interface WidgetConfig {
-  id: string;
-  name: string;
-  subtitle: string;
-  icon: keyof typeof Ionicons.glyphMap;
-}
-
-const PLACEHOLDER_WIDGETS: WidgetConfig[] = [
-  {
-    id: "expenses",
-    name: "Gastos",
-    subtitle: "Gastos compartidos",
-    icon: "wallet-outline",
-  },
-  {
-    id: "gallery",
-    name: "Galería",
-    subtitle: "Fotos del grupo",
-    icon: "images-outline",
-  },
-  {
-    id: "tasks",
-    name: "Tareas",
-    subtitle: "Lista compartida",
-    icon: "checkbox-outline",
-  },
-  {
-    id: "ai-daily",
-    name: "IA Daily",
-    subtitle: "Encuestas y retos",
-    icon: "sparkles-outline",
-  },
-];
-
 // ─── Widget Card ───────────────────────────────────────────────────────
 interface WidgetCardProps {
-  widget: WidgetConfig;
+  widget: GroupWidgetWithDetails;
   index: number;
   onPress: () => void;
 }
@@ -121,7 +88,7 @@ const WidgetCard = React.memo<WidgetCardProps>(({ widget, index, onPress }) => {
             cornerSmoothing={1}
           >
             <Ionicons
-              name={widget.icon}
+              name={(widget.widget.icon as keyof typeof Ionicons.glyphMap) || "grid-outline"}
               size={24}
               color={theme.colors.primary}
             />
@@ -133,7 +100,7 @@ const WidgetCard = React.memo<WidgetCardProps>(({ widget, index, onPress }) => {
               style={[styles.widgetName, { color: theme.colors.onSurface }]}
               numberOfLines={1}
             >
-              {widget.name}
+              {widget.widget.name}
             </Text>
             <Text
               style={[
@@ -142,7 +109,7 @@ const WidgetCard = React.memo<WidgetCardProps>(({ widget, index, onPress }) => {
               ]}
               numberOfLines={1}
             >
-              {widget.subtitle}
+              {widget.widget.subtitle}
             </Text>
           </View>
         </SquircleView>
@@ -235,10 +202,27 @@ export default function GroupDetailScreen() {
     isOwner,
   } = useGroup(id);
 
+  const [widgets, setWidgets] = useState<GroupWidgetWithDetails[]>([]);
+  const [isLoadingWidgets, setIsLoadingWidgets] = useState(true);
+
+  const fetchWidgets = useCallback(async () => {
+    if (!id) return;
+    try {
+      setIsLoadingWidgets(true);
+      const data = await widgetsService.getGroupWidgets(id as string);
+      setWidgets(data);
+    } catch (e) {
+      console.error("Error loading widgets", e);
+    } finally {
+      setIsLoadingWidgets(false);
+    }
+  }, [id]);
+
   useFocusEffect(
     React.useCallback(() => {
       refetch();
-    }, [refetch])
+      fetchWidgets();
+    }, [refetch, fetchWidgets])
   );
 
   const handleWidgetPress = useCallback(() => {
@@ -258,9 +242,6 @@ export default function GroupDetailScreen() {
   const handleInvite = useCallback(() => {
     setShowInviteModal(true);
   }, []);
-
-  // Placeholder widgets — in the future this would come from the group data
-  const widgets = useMemo(() => PLACEHOLDER_WIDGETS, []);
 
   // Loading state
   if (isLoading && !group) {

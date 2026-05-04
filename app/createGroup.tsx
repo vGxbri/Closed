@@ -141,6 +141,7 @@ export default function CreateGroupScreen() {
         name: name.trim(),
         description: `Un grupo de tipo ${groupType}`,
         icon: "home",
+        category: groupType,
       });
 
       if (newGroup) {

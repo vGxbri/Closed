@@ -136,6 +136,7 @@ export const groupsService = {
         name: input.name,
         description: input.description || null,
         icon: input.icon || '🏆',
+        category: input.category || 'Estándar',
         created_by: user.id,
         status: 'active',
         is_public: false,
