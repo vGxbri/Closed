@@ -25,7 +25,9 @@ import {
   groupIconOptions,
   IconName,
 } from "../../../../constants/icons";
-import { useGroup } from "../../../../hooks";
+import { useAuth, useGroup } from "../../../../hooks";
+import { MemberAvatar } from "../../../../components/MemberAvatar";
+import { MenuOption, OptionsMenu } from "../../../../components/ui/OptionsMenu";
 
 import {
   ConfirmDialog,
@@ -142,12 +144,15 @@ export default function GroupSettingsScreen() {
   const insets = useSafeAreaInsets();
   const theme = useTheme();
   const { showSnackbar } = useSnackbar();
+  const { user } = useAuth();
 
   const {
     group,
     isLoading,
     updateGroup,
     deleteGroup,
+    removeMember,
+    updateMemberRole,
     isAdmin,
     isOwner,
   } = useGroup(id);
@@ -174,6 +179,19 @@ export default function GroupSettingsScreen() {
 
   const hideDialog = () =>
     setDialogConfig((prev) => ({ ...prev, visible: false }));
+
+  const [optionsMenu, setOptionsMenu] = useState<{
+    visible: boolean;
+    title: string;
+    options: MenuOption[];
+  }>({
+    visible: false,
+    title: "",
+    options: [],
+  });
+
+  const hideOptionsMenu = () =>
+    setOptionsMenu((prev) => ({ ...prev, visible: false }));
 
   const backgroundRef = React.useRef(null);
 
@@ -565,6 +583,179 @@ export default function GroupSettingsScreen() {
                 />
               </Animated.View>
 
+              {/* ─── Section: Miembros ─── */}
+              <Animated.View
+                entering={FadeInDown.duration(400).delay(180)}
+                style={styles.section}
+              >
+                <Text
+                  style={[
+                    styles.sectionTitle,
+                    { color: theme.colors.onSurface },
+                  ]}
+                >
+                  Miembros ({group?.members.length || 0})
+                </Text>
+                <SquircleView
+                  style={[
+                    styles.settingsCard,
+                    {
+                      backgroundColor: theme.colors.surface,
+                      borderColor: theme.colors.outlineVariant,
+                      borderWidth: 1,
+                    },
+                  ]}
+                  cornerSmoothing={1}
+                >
+                  {group?.members.map((member, index) => {
+                    const isMemberOwner = member.role === 'owner';
+                    const isMe = user?.id === member.user_id;
+                    const canManage = (isOwner || (isAdmin && !isMemberOwner)) && !isMe;
+
+                    const showOptions = () => {
+                      const actionOptions: MenuOption[] = [];
+
+                      if (canManage) {
+                        if (member.role === 'member') {
+                          actionOptions.push({
+                            label: 'Hacer Administrador',
+                            icon: 'shield-checkmark-outline',
+                            action: () => {
+                              setDialogConfig({
+                                visible: true,
+                                title: "Hacer Administrador",
+                                message: `¿Quieres promover a ${member.display_name} a Administrador?`,
+                                confirmText: "Promover",
+                                type: "info",
+                                onConfirm: async () => {
+                                  try {
+                                    setSaving(true);
+                                    await updateMemberRole(member.user_id, 'admin');
+                                    showSnackbar("Miembro promovido a Administrador", "success");
+                                  } catch {
+                                    showSnackbar("Error al actualizar rol", "error");
+                                  } finally {
+                                    setSaving(false);
+                                  }
+                                }
+                              });
+                            }
+                          });
+                        } else if (member.role === 'admin') {
+                          actionOptions.push({
+                            label: 'Quitar Administrador',
+                            icon: 'shield-outline',
+                            action: () => {
+                              setDialogConfig({
+                                visible: true,
+                                title: "Quitar Administrador",
+                                message: `¿Quieres degradar a ${member.display_name} a miembro?`,
+                                confirmText: "Degradar",
+                                type: "warning",
+                                onConfirm: async () => {
+                                  try {
+                                    setSaving(true);
+                                    await updateMemberRole(member.user_id, 'member');
+                                    showSnackbar("Administrador degradado a miembro", "success");
+                                  } catch {
+                                    showSnackbar("Error al actualizar rol", "error");
+                                  } finally {
+                                    setSaving(false);
+                                  }
+                                }
+                              });
+                            }
+                          });
+                        }
+
+                        actionOptions.push({
+                          label: 'Expulsar del grupo',
+                          icon: 'person-remove-outline',
+                          isDestructive: true,
+                          action: () => {
+                            setDialogConfig({
+                              visible: true,
+                              title: "Expulsar miembro",
+                              message: `¿Seguro que quieres expulsar a ${member.display_name} del grupo?`,
+                              type: "error",
+                              confirmText: "Expulsar",
+                              onConfirm: async () => {
+                                try {
+                                  setSaving(true);
+                                  await removeMember(member.user_id);
+                                  showSnackbar("Miembro expulsado", "success");
+                                } catch {
+                                  showSnackbar("No se pudo expulsar al miembro", "error");
+                                } finally {
+                                  setSaving(false);
+                                }
+                              }
+                            });
+                          }
+                        });
+                      }
+
+                      if (actionOptions.length > 0) {
+                        setOptionsMenu({
+                          visible: true,
+                          title: `Gestionar a ${member.display_name}`,
+                          options: actionOptions
+                        });
+                      }
+                    };
+
+                    const isLast = index === (group?.members.length || 0) - 1;
+
+                    return (
+                      <View
+                        key={member.user_id}
+                        style={[
+                          styles.memberRow,
+                          !isLast && {
+                            borderBottomWidth: StyleSheet.hairlineWidth,
+                            borderBottomColor: theme.colors.outlineVariant,
+                          },
+                        ]}
+                      >
+                        <MemberAvatar user={member} size="sm" />
+                        <View style={styles.memberInfo}>
+                          <Text
+                            style={[
+                              styles.memberName,
+                              { color: theme.colors.onSurface },
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {member.display_name} {isMe ? "(Tú)" : ""}
+                          </Text>
+                          <Text
+                            style={[
+                              styles.memberRole,
+                              { color: theme.colors.onSurfaceVariant },
+                            ]}
+                          >
+                            {member.role === 'owner' ? 'Propietario' : member.role === 'admin' ? 'Administrador' : 'Miembro'}
+                          </Text>
+                        </View>
+
+                        {canManage && (
+                          <TouchableOpacity
+                            style={styles.optionsButton}
+                            onPress={showOptions}
+                          >
+                            <Ionicons
+                              name="ellipsis-horizontal"
+                              size={20}
+                              color={theme.colors.onSurfaceVariant}
+                            />
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    );
+                  })}
+                </SquircleView>
+              </Animated.View>
+
               {/* ─── Section: Permissions ─── */}
               <Animated.View
                 entering={FadeInDown.duration(400).delay(200)}
@@ -728,6 +919,12 @@ export default function GroupSettingsScreen() {
         onCancel={hideDialog}
         showCancel={true}
         blurTargetRef={backgroundRef}
+      />
+      <OptionsMenu
+        visible={optionsMenu.visible}
+        title={optionsMenu.title}
+        options={optionsMenu.options}
+        onDismiss={hideOptionsMenu}
       />
     </>
   );
@@ -912,6 +1109,30 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 1,
     letterSpacing: 0.1,
+  },
+
+  // Members
+  memberRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  memberInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  memberName: {
+    fontFamily: "Archivo-SemiBold",
+    fontSize: 14,
+  },
+  memberRole: {
+    fontFamily: "Archivo-Medium",
+    fontSize: 12,
+    marginTop: 2,
+  },
+  optionsButton: {
+    padding: 8,
   },
 
   // Toggle

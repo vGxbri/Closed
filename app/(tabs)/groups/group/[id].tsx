@@ -13,14 +13,11 @@ import {
 } from "react-native";
 import SquircleView from "react-native-fast-squircle";
 import { Text, useTheme } from "react-native-paper";
-import Animated, {
-  FadeIn,
-  FadeInDown,
-  FadeInUp,
-} from "react-native-reanimated";
+import Animated, { FadeIn } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { InviteModal } from "../../../../components/InviteModal";
 import { MemberAvatarsRow } from "../../../../components/MemberAvatar";
+import { MemberListBottomSheet } from "../../../../components/MemberListBottomSheet";
 import {
   defaultGroupIcon,
   getIconComponent,
@@ -86,7 +83,7 @@ const WidgetCard = React.memo<WidgetCardProps>(({ widget, index, onPress }) => {
 
   return (
     <Animated.View
-      entering={FadeInDown.duration(400).delay(200 + index * 80)}
+      entering={FadeIn.duration(400).delay(200 + index * 80)}
       style={styles.bentoItem}
     >
       <Pressable
@@ -194,6 +191,7 @@ export default function GroupDetailScreen() {
   const { showSnackbar } = useSnackbar();
   const { user } = useAuth();
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showMembersBottomSheet, setShowMembersBottomSheet] = useState(false);
 
   const [dialogConfig, setDialogConfig] = useState<{
     visible: boolean;
@@ -208,7 +206,7 @@ export default function GroupDetailScreen() {
     title: "",
     message: "",
     type: "info",
-    onConfirm: () => {},
+    onConfirm: () => { },
   });
 
   const [optionsMenu, setOptionsMenu] = useState<{
@@ -379,7 +377,17 @@ export default function GroupDetailScreen() {
                   color={theme.colors.onSurface}
                 />
               </TouchableOpacity>
-            ) : undefined
+            ) : (
+              <TouchableOpacity
+                onPress={() => setShowMembersBottomSheet(true)}
+              >
+                <Ionicons
+                  name="people-outline"
+                  size={24}
+                  color={theme.colors.onSurface}
+                />
+              </TouchableOpacity>
+            )
           }
         />
 
@@ -404,7 +412,7 @@ export default function GroupDetailScreen() {
           >
             {/* ─── Group Header ─── */}
             <Animated.View
-              entering={FadeInUp.duration(500)}
+              entering={FadeIn.duration(500)}
               style={styles.header}
             >
               {/* Icon + Name */}
@@ -460,7 +468,7 @@ export default function GroupDetailScreen() {
             </Animated.View>
 
             {/* ─── Members Row ─── */}
-            <Animated.View entering={FadeInDown.duration(400).delay(100)}>
+            <Animated.View entering={FadeIn.duration(400).delay(100)}>
               <Pressable
                 onPress={handleMembersPress}
                 style={({ pressed }) => [
@@ -492,7 +500,7 @@ export default function GroupDetailScreen() {
                       { color: theme.colors.primary },
                     ]}
                   >
-                    Invitar
+                    + Invitar
                   </Text>
                 </View>
                 <Ionicons
@@ -526,7 +534,7 @@ export default function GroupDetailScreen() {
 
                 {/* Add Widget Card */}
                 <Animated.View
-                  entering={FadeInDown.duration(400).delay(
+                  entering={FadeIn.duration(400).delay(
                     200 + widgets.length * 80
                   )}
                   style={{ width: "100%" }}
@@ -592,7 +600,7 @@ export default function GroupDetailScreen() {
             ) : (
               /* ─── Empty Widget State ─── */
               <Animated.View
-                entering={FadeInDown.duration(500).delay(200)}
+                entering={FadeIn.duration(500).delay(200)}
                 style={styles.emptyContainer}
               >
                 <SquircleView
@@ -685,6 +693,13 @@ export default function GroupDetailScreen() {
             onClose={() => setShowInviteModal(false)}
             inviteCode={group.invite_code}
             groupName={group.name}
+          />
+
+          {/* Members List Bottom Sheet */}
+          <MemberListBottomSheet
+            visible={showMembersBottomSheet}
+            onDismiss={() => setShowMembersBottomSheet(false)}
+            members={group.members}
           />
         </View>
       </BlurTargetView>
