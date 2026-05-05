@@ -28,6 +28,7 @@ export interface BottomSheetModalProps {
   maxHeight?: number | string;
   isScrolledToTop?: SharedValue<boolean>;
   contentStyle?: ViewStyle;
+  blurTarget?: React.RefObject<any>;
 }
 
 export const BottomSheetModal: React.FC<BottomSheetModalProps> = ({
@@ -37,6 +38,7 @@ export const BottomSheetModal: React.FC<BottomSheetModalProps> = ({
   maxHeight = SCREEN_HEIGHT * 0.85,
   isScrolledToTop,
   contentStyle,
+  blurTarget,
 }) => {
   const theme = useTheme();
   const [shouldRender, setShouldRender] = useState(false);
@@ -128,7 +130,8 @@ export const BottomSheetModal: React.FC<BottomSheetModalProps> = ({
               intensity={25}
               tint="dark"
               style={StyleSheet.absoluteFill}
-              blurMethod="dimezisBlurView"
+              blurMethod={blurTarget ? "dimezisBlurView" : undefined}
+              blurTarget={blurTarget}
             />
           </Animated.View>
         </Pressable>
@@ -141,7 +144,7 @@ export const BottomSheetModal: React.FC<BottomSheetModalProps> = ({
               {
                 backgroundColor: theme.colors.surface,
                 borderColor: theme.colors.outlineVariant,
-                maxHeight,
+                maxHeight: maxHeight as any,
               },
               sheetStyle,
               contentStyle,

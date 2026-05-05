@@ -15,6 +15,7 @@ import SquircleView from "react-native-fast-squircle";
 import { Text, useTheme } from "react-native-paper";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Image } from "expo-image";
 import { InviteModal } from "../../../../components/InviteModal";
 import { MemberAvatarsRow } from "../../../../components/MemberAvatar";
 import { MemberListBottomSheet } from "../../../../components/MemberListBottomSheet";
@@ -24,6 +25,7 @@ import {
   IconName,
 } from "../../../../constants/icons";
 import { useAuth, useGroup } from "../../../../hooks";
+import { galleryService } from "../../../../services/gallery.service";
 import { widgetsService } from "../../../../services/widgets.service";
 import { GroupWidgetWithDetails } from "../../../../types/database";
 
@@ -39,83 +41,302 @@ const CARD_GAP = 14;
 const CARD_WIDTH = (SCREEN_WIDTH - 24 * 2 - CARD_GAP) / 2;
 
 // ─── Widget Card ───────────────────────────────────────────────────────
+// Widget names that have special renderings
+const WIDGET_ARCHIVO = "Archivo";
+
 interface WidgetCardProps {
   widget: GroupWidgetWithDetails;
   index: number;
-  onPress: () => void;
+  onPress: (widget: GroupWidgetWithDetails) => void;
+  groupId: string;
 }
 
-const WidgetCard = React.memo<WidgetCardProps>(({ widget, index, onPress }) => {
-  const theme = useTheme();
+// Archive/Gallery Widget — 2x1 card with photo background + storage bar
+const STORAGE_LIMIT_BYTES = 1 * 1024 * 1024 * 1024; // 1 GB
 
-  return (
-    <Animated.View
-      entering={FadeIn.duration(400).delay(200 + index * 80)}
-      style={styles.bentoItem}
-    >
-      <Pressable
-        onPress={onPress}
-        style={({ pressed }) => [
-          {
-            opacity: pressed ? 0.92 : 1,
-            transform: [{ scale: pressed ? 0.97 : 1 }],
-          },
-        ]}
+const formatBytes = (bytes: number): string => {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+};
+
+const ArchivoWidgetCard = React.memo<WidgetCardProps>(
+  ({ widget, index, onPress, groupId }) => {
+    const theme = useTheme();
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    const [imageCount, setImageCount] = useState(0);
+    const [storageUsed, setStorageUsed] = useState(0);
+
+    useFocusEffect(
+      React.useCallback(() => {
+        let cancelled = false;
+        const load = async () => {
+          try {
+            const [url, count, used] = await Promise.all([
+              galleryService.getLatestImage(groupId),
+              galleryService.getImageCount(groupId),
+              galleryService.getStorageUsed(groupId),
+            ]);
+            if (!cancelled) {
+              setPreviewUrl(url);
+              setImageCount(count);
+              setStorageUsed(used);
+            }
+          } catch (e) {
+            console.error("Error loading gallery preview:", e);
+          }
+        };
+        load();
+        return () => { cancelled = true; };
+      }, [groupId])
+    );
+
+    const storageRatio = Math.min(storageUsed / STORAGE_LIMIT_BYTES, 1);
+
+    return (
+      <Animated.View
+        entering={FadeIn.duration(400).delay(200 + index * 80)}
+        style={styles.bentoItemWide}
       >
-        <SquircleView
-          style={[
-            styles.widgetCard,
+        <Pressable
+          onPress={() => onPress(widget)}
+          style={({ pressed }) => [
             {
-              backgroundColor: theme.colors.surface,
-              borderColor: theme.colors.outlineVariant,
-              borderWidth: 1,
+              opacity: pressed ? 0.92 : 1,
+              transform: [{ scale: pressed ? 0.97 : 1 }],
             },
           ]}
-          cornerSmoothing={1}
         >
-          {/* Icon */}
           <SquircleView
             style={[
-              styles.widgetIconContainer,
+              styles.archivoCard,
               {
-                backgroundColor: theme.dark
-                  ? "rgba(42,138,112,0.15)"
-                  : "rgba(42,138,112,0.08)",
-                borderColor: theme.colors.primary,
+                backgroundColor: previewUrl
+                  ? "transparent"
+                  : theme.colors.surfaceVariant,
+                borderColor: theme.colors.outlineVariant,
+                borderWidth: previewUrl ? 0 : 1,
+              },
+            ]}
+            cornerSmoothing={1}
+          >
+            {/* Background image */}
+            {previewUrl && (
+              <>
+                <Image
+                  source={{ uri: previewUrl }}
+                  style={StyleSheet.absoluteFillObject}
+                  contentFit="cover"
+                  transition={300}
+                />
+                {/* Dark overlay for text readability */}
+                <View
+                  style={[
+                    StyleSheet.absoluteFillObject,
+                    {
+                      backgroundColor: "rgba(0,0,0,0.4)",
+                      borderRadius: 22,
+                    },
+                  ]}
+                />
+              </>
+            )}
+
+            {/* Content overlay */}
+            <View style={styles.archivoContent}>
+              {/* Top row: icon + storage bar */}
+              <View style={styles.archivoTopRow}>
+                <SquircleView
+                  style={[
+                    styles.archivoIconBadge,
+                    {
+                      backgroundColor: previewUrl
+                        ? "rgba(255,255,255,0.2)"
+                        : theme.colors.surface,
+                      borderColor: previewUrl
+                        ? "rgba(255,255,255,0.3)"
+                        : theme.colors.outlineVariant,
+                      borderWidth: 1,
+                    },
+                  ]}
+                  cornerSmoothing={1}
+                >
+                  <Ionicons
+                    name="images-outline"
+                    size={18}
+                    color={previewUrl ? "#FFFFFF" : theme.colors.onSurfaceVariant}
+                  />
+                </SquircleView>
+
+                {/* Storage bar */}
+                <View style={styles.archivoStorageBlock}>
+                  <View
+                    style={[
+                      styles.archivoStorageBarBg,
+                      {
+                        backgroundColor: previewUrl
+                          ? "rgba(255,255,255,0.2)"
+                          : theme.colors.outlineVariant,
+                      },
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.archivoStorageBarFill,
+                        {
+                          width: `${Math.max(storageRatio * 100, 2)}%`,
+                          backgroundColor: storageRatio > 0.9
+                            ? "#FF6B6B"
+                            : storageRatio > 0.7
+                              ? "#FFA726"
+                              : previewUrl
+                                ? "rgba(255,255,255,0.85)"
+                                : theme.colors.primary,
+                        },
+                      ]}
+                    />
+                  </View>
+                  <Text
+                    style={[
+                      styles.archivoStorageLabel,
+                      {
+                        color: previewUrl
+                          ? "rgba(255,255,255,0.7)"
+                          : theme.colors.onSurfaceVariant,
+                      },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {formatBytes(storageUsed)} / 1 GB
+                  </Text>
+                </View>
+              </View>
+
+              {/* Bottom: text */}
+              <View style={styles.archivoTextBlock}>
+                <Text
+                  style={[
+                    styles.archivoTitle,
+                    {
+                      color: previewUrl ? "#FFFFFF" : theme.colors.onSurface,
+                    },
+                  ]}
+                  numberOfLines={1}
+                >
+                  Archivo
+                </Text>
+                <Text
+                  style={[
+                    styles.archivoSubtitle,
+                    {
+                      color: previewUrl
+                        ? "rgba(255,255,255,0.8)"
+                        : theme.colors.onSurfaceVariant,
+                    },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {imageCount > 0
+                    ? `${imageCount} ${imageCount === 1 ? "foto" : "fotos"}`
+                    : "Galería compartida"}
+                </Text>
+              </View>
+            </View>
+          </SquircleView>
+        </Pressable>
+      </Animated.View>
+    );
+  }
+);
+
+ArchivoWidgetCard.displayName = "ArchivoWidgetCard";
+
+// Generic Widget Card — standard 1x1 card
+const GenericWidgetCard = React.memo<WidgetCardProps>(
+  ({ widget, index, onPress }) => {
+    const theme = useTheme();
+
+    return (
+      <Animated.View
+        entering={FadeIn.duration(400).delay(200 + index * 80)}
+        style={styles.bentoItem}
+      >
+        <Pressable
+          onPress={() => onPress(widget)}
+          style={({ pressed }) => [
+            {
+              opacity: pressed ? 0.92 : 1,
+              transform: [{ scale: pressed ? 0.97 : 1 }],
+            },
+          ]}
+        >
+          <SquircleView
+            style={[
+              styles.widgetCard,
+              {
+                backgroundColor: theme.colors.surface,
+                borderColor: theme.colors.outlineVariant,
                 borderWidth: 1,
               },
             ]}
             cornerSmoothing={1}
           >
-            <Ionicons
-              name={(widget.widget.icon as keyof typeof Ionicons.glyphMap) || "grid-outline"}
-              size={24}
-              color={theme.colors.primary}
-            />
-          </SquircleView>
-
-          {/* Info */}
-          <View style={styles.widgetInfo}>
-            <Text
-              style={[styles.widgetName, { color: theme.colors.onSurface }]}
-              numberOfLines={1}
-            >
-              {widget.widget.name}
-            </Text>
-            <Text
+            {/* Icon */}
+            <SquircleView
               style={[
-                styles.widgetSubtitle,
-                { color: theme.colors.onSurfaceVariant },
+                styles.widgetIconContainer,
+                {
+                  backgroundColor: theme.colors.surfaceVariant,
+                  borderColor: theme.colors.outlineVariant,
+                  borderWidth: 1,
+                },
               ]}
-              numberOfLines={1}
+              cornerSmoothing={1}
             >
-              {widget.widget.subtitle}
-            </Text>
-          </View>
-        </SquircleView>
-      </Pressable>
-    </Animated.View>
-  );
+              <Ionicons
+                name={
+                  (widget.widget.icon as keyof typeof Ionicons.glyphMap) ||
+                  "grid-outline"
+                }
+                size={24}
+                color="#FFFFFF"
+              />
+            </SquircleView>
+
+            {/* Info */}
+            <View style={styles.widgetInfo}>
+              <Text
+                style={[styles.widgetName, { color: theme.colors.onSurface }]}
+                numberOfLines={1}
+              >
+                {widget.widget.name}
+              </Text>
+              <Text
+                style={[
+                  styles.widgetSubtitle,
+                  { color: theme.colors.onSurfaceVariant },
+                ]}
+                numberOfLines={1}
+              >
+                {widget.widget.subtitle}
+              </Text>
+            </View>
+          </SquircleView>
+        </Pressable>
+      </Animated.View>
+    );
+  }
+);
+
+GenericWidgetCard.displayName = "GenericWidgetCard";
+
+// Widget Card dispatcher — chooses the right card type
+const WidgetCard = React.memo<WidgetCardProps>((props) => {
+  if (props.widget.widget.name === WIDGET_ARCHIVO) {
+    return <ArchivoWidgetCard {...props} />;
+  }
+  return <GenericWidgetCard {...props} />;
 });
 
 WidgetCard.displayName = "WidgetCard";
@@ -137,7 +358,7 @@ const SkeletonCard = React.memo<SkeletonProps>(({ index }) => {
           styles.skeletonBlock,
           {
             backgroundColor: theme.colors.surfaceVariant,
-            borderColor: theme.colors.outlineVariant,
+            borderColor: theme.colors.onSurfaceVariant,
             borderWidth: 1,
           },
         ]}
@@ -225,13 +446,27 @@ export default function GroupDetailScreen() {
     }, [refetch, fetchWidgets])
   );
 
-  const handleWidgetPress = useCallback(() => {
+  const handleWidgetPress = useCallback((widget: GroupWidgetWithDetails) => {
+    if (widget.widget.name === "Archivo") {
+      router.push({
+        pathname: "/groups/group/gallery",
+        params: { id },
+      } as any);
+      return;
+    }
     showSnackbar("Próximamente", "info");
-  }, [showSnackbar]);
+  }, [router, id, showSnackbar]);
 
   const handleAddWidget = useCallback(() => {
-    showSnackbar("Próximamente — Explorar widgets", "info");
-  }, [showSnackbar]);
+    if (!isAdmin) {
+      showSnackbar("Solo los administradores pueden gestionar widgets", "info");
+      return;
+    }
+    router.push({
+      pathname: "/groups/group/widgets",
+      params: { id },
+    } as any);
+  }, [isAdmin, showSnackbar, router, id]);
 
   const handleMembersPress = useCallback(() => {
     if (!group) return;
@@ -402,19 +637,26 @@ export default function GroupDetailScreen() {
                   style={[
                     styles.groupIconContainer,
                     {
-                      backgroundColor: theme.dark
-                        ? "rgba(42,138,112,0.15)"
-                        : "rgba(42,138,112,0.08)",
-                      borderColor: theme.colors.primary,
-                      borderWidth: 1,
+                      backgroundColor: group.cover_image_url 
+                        ? "transparent" 
+                        : (theme.dark ? "rgba(42,138,112,0.15)" : "rgba(42,138,112,0.08)"),
+                      borderColor: group.cover_image_url ? "transparent" : theme.colors.primary,
+                      borderWidth: group.cover_image_url ? 0 : 1,
                     },
                   ]}
                   cornerSmoothing={1}
                 >
-                  {getIconComponent(
-                    (group.icon as IconName) || defaultGroupIcon,
-                    26,
-                    theme.colors.primary
+                  {group.cover_image_url ? (
+                    <Image
+                      source={{ uri: group.cover_image_url }}
+                      style={{ width: "100%", height: "100%", borderRadius: 16 }}
+                      contentFit="cover"
+                      transition={200}
+                    />
+                  ) : (
+                    <Text style={{ fontFamily: "Archivo-Bold", fontSize: 24, color: theme.colors.primary }}>
+                      {group.name.charAt(0).toUpperCase()}
+                    </Text>
                   )}
                 </SquircleView>
               </View>
@@ -510,10 +752,12 @@ export default function GroupDetailScreen() {
                     widget={widget}
                     index={index}
                     onPress={handleWidgetPress}
+                    groupId={id as string}
                   />
                 ))}
 
-                {/* Add Widget Card */}
+                {/* Add Widget Card — Admin only */}
+                {isAdmin && (
                 <Animated.View
                   entering={FadeIn.duration(400).delay(
                     200 + widgets.length * 80
@@ -533,7 +777,7 @@ export default function GroupDetailScreen() {
                       style={[
                         styles.addWidgetCard,
                         {
-                          borderColor: theme.colors.outlineVariant,
+                          borderColor: theme.colors.onSurfaceVariant,
                           borderWidth: 2,
                         },
                       ]}
@@ -543,9 +787,9 @@ export default function GroupDetailScreen() {
                         style={[
                           styles.addWidgetIconContainer,
                           {
-                            backgroundColor: theme.dark
-                              ? "rgba(255,255,255,0.06)"
-                              : "rgba(0,0,0,0.04)",
+                            backgroundColor: theme.colors.surfaceVariant,
+                            borderColor: theme.colors.outlineVariant,
+                            borderWidth: 1,
                           },
                         ]}
                         cornerSmoothing={1}
@@ -553,7 +797,7 @@ export default function GroupDetailScreen() {
                         <Ionicons
                           name="add"
                           size={24}
-                          color={theme.colors.onSurfaceVariant}
+                          color="#FFFFFF"
                         />
                       </SquircleView>
                       <View>
@@ -577,6 +821,7 @@ export default function GroupDetailScreen() {
                     </SquircleView>
                   </Pressable>
                 </Animated.View>
+                )}
               </View>
             ) : (
               /* ─── Empty Widget State ─── */
@@ -589,7 +834,7 @@ export default function GroupDetailScreen() {
                     styles.emptyCard,
                     {
                       backgroundColor: theme.colors.surface,
-                      borderColor: theme.colors.outlineVariant,
+                      borderColor: theme.colors.onSurfaceVariant,
                       borderWidth: 1,
                     },
                   ]}
@@ -599,9 +844,9 @@ export default function GroupDetailScreen() {
                     style={[
                       styles.emptyIconContainer,
                       {
-                        backgroundColor: theme.dark
-                          ? "rgba(42,138,112,0.15)"
-                          : "rgba(42,138,112,0.08)",
+                        backgroundColor: theme.colors.surfaceVariant,
+                        borderColor: theme.colors.outlineVariant,
+                        borderWidth: 1,
                       },
                     ]}
                     cornerSmoothing={1}
@@ -609,7 +854,7 @@ export default function GroupDetailScreen() {
                     <Ionicons
                       name="grid-outline"
                       size={36}
-                      color={theme.colors.primary}
+                      color="#FFFFFF"
                     />
                   </SquircleView>
 
@@ -627,10 +872,12 @@ export default function GroupDetailScreen() {
                       { color: theme.colors.onSurfaceVariant },
                     ]}
                   >
-                    Añade widgets para organizar tu grupo a tu manera. Gastos,
-                    galería, tareas y mucho más.
+                    {isAdmin
+                      ? "Añade widgets para organizar tu grupo a tu manera. Gastos, galería, tareas y mucho más."
+                      : "El administrador del grupo aún no ha añadido widgets."}
                   </Text>
 
+                  {isAdmin && (
                   <Pressable
                     onPress={handleAddWidget}
                     style={({ pressed }) => [
@@ -663,6 +910,7 @@ export default function GroupDetailScreen() {
                       </Text>
                     </SquircleView>
                   </Pressable>
+                  )}
                 </SquircleView>
               </Animated.View>
             )}
@@ -843,6 +1091,65 @@ const styles = StyleSheet.create({
   },
   bentoItem: {
     width: CARD_WIDTH,
+  },
+  bentoItemWide: {
+    width: "100%",
+  },
+
+  // Archivo (Gallery) Card — 2x1
+  archivoCard: {
+    borderRadius: 22,
+    height: 140,
+    overflow: "hidden",
+  },
+  archivoContent: {
+    flex: 1,
+    padding: 16,
+    justifyContent: "space-between",
+    zIndex: 1,
+  },
+  archivoIconBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  archivoTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  archivoStorageBlock: {
+    flex: 1,
+    gap: 4,
+  },
+  archivoStorageBarBg: {
+    height: 5,
+    borderRadius: 3,
+    overflow: "hidden",
+  },
+  archivoStorageBarFill: {
+    height: "100%",
+    borderRadius: 3,
+  },
+  archivoStorageLabel: {
+    fontFamily: "Archivo-Medium",
+    fontSize: 10,
+    letterSpacing: 0.3,
+  },
+  archivoTextBlock: {
+    gap: 2,
+  },
+  archivoTitle: {
+    fontFamily: "Archivo-Bold",
+    fontSize: 17,
+    letterSpacing: 0.2,
+  },
+  archivoSubtitle: {
+    fontFamily: "Archivo-Medium",
+    fontSize: 13,
+    letterSpacing: 0.1,
   },
 
   // Widget Card

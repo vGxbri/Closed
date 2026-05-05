@@ -30,6 +30,14 @@ export default function GroupsStackLayout() {
         options={{ title: "Unirse a grupo", presentation: "modal" }}
       />
       {/* Añade aquí las rutas de award si las has movido */}
+      <Stack.Screen
+        name="group/widgets"
+        options={{ title: "Explorar Widgets", presentation: "modal" }}
+      />
+      <Stack.Screen
+        name="group/gallery"
+        options={{ headerShown: false }}
+      />
     </Stack>
   );
 }

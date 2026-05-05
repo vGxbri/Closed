@@ -146,9 +146,9 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             ]}
           >
             <BlurView
-              intensity={40}
+              intensity={10}
               tint="dark"
-              blurMethod="dimezisBlurView"
+              blurMethod={blurTargetRef ? "dimezisBlurView" : undefined}
               blurTarget={blurTargetRef}
               style={StyleSheet.absoluteFill}
             />

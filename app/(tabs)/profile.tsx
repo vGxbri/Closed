@@ -502,7 +502,7 @@ export default function ProfileScreen() {
                   intensity={25}
                   tint="dark"
                   style={StyleSheet.absoluteFill}
-                  blurMethod="dimezisBlurView"
+                  blurMethod={backgroundRef ? "dimezisBlurView" : undefined}
                   blurTarget={backgroundRef}
                 />
               </Animated.View>

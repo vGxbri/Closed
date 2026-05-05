@@ -33,7 +33,7 @@ export const groupsService = {
     // Get member counts and details for each group
     const groupsWithDetails = await Promise.all(
       (memberships || [])
-        .filter(m => (m.group as unknown as Group)?.status !== 'deleted')
+        .filter(m => m.group && (m.group as unknown as Group).status !== 'deleted')
         .map(async (membership) => {
         const group = membership.group as unknown as Group;
         
@@ -136,6 +136,7 @@ export const groupsService = {
         name: input.name,
         description: input.description || null,
         icon: input.icon || '🏆',
+        cover_image_url: input.cover_image_url || null,
         category: input.category || 'Estándar',
         created_by: user.id,
         status: 'active',
@@ -167,6 +168,34 @@ export const groupsService = {
 
     if (error) throw error;
     return data;
+  },
+
+  /**
+   * Upload group cover image and return public URL
+   */
+  async uploadGroupCover(groupId: string, uri: string): Promise<string> {
+    const { decode } = await import('base64-arraybuffer');
+    const FileSystem = await import('expo-file-system/legacy');
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    const fileExt = uri.split('.').pop()?.toLowerCase() || 'jpg';
+    const fileName = `${groupId}/${Date.now()}.${fileExt}`;
+    const contentType = fileExt === 'png' ? 'image/png' : 'image/jpeg';
+
+    const base64 = await FileSystem.readAsStringAsync(uri, {
+      encoding: 'base64',
+    });
+
+    const { error } = await supabase.storage
+      .from('groups')
+      .upload(fileName, decode(base64), { contentType, upsert: true });
+
+    if (error) throw error;
+
+    const { data } = supabase.storage.from('groups').getPublicUrl(fileName);
+    return data.publicUrl;
   },
 
   /**

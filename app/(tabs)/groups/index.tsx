@@ -17,11 +17,7 @@ import Animated, {
   FadeInUp,
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
-import {
-  defaultGroupIcon,
-  getIconComponent,
-  IconName,
-} from "../../../constants/icons";
+import { Image } from "expo-image";
 import { useGroups } from "../../../hooks";
 import { GroupWithDetails } from "../../../types/database";
 
@@ -89,7 +85,6 @@ interface GroupCardItemProps {
 const GroupCardItem = React.memo<GroupCardItemProps>(
   ({ group, index, onPress }) => {
     const theme = useTheme();
-    const iconName = (group.icon as IconName) || defaultGroupIcon;
     const awardCount = group.awards?.length || 0;
 
     return (
@@ -117,21 +112,32 @@ const GroupCardItem = React.memo<GroupCardItemProps>(
             ]}
             cornerSmoothing={1}
           >
-            {/* Icon */}
+            {/* Icon / Cover Image */}
             <SquircleView
               style={[
                 styles.groupIconContainer,
                 {
-                  backgroundColor: theme.dark
-                    ? "rgba(42,138,112,0.15)"
-                    : "rgba(42,138,112,0.08)",
-                  borderColor: theme.colors.primary,
-                  borderWidth: 1,
+                  backgroundColor: group.cover_image_url 
+                    ? "transparent" 
+                    : (theme.dark ? "rgba(42,138,112,0.15)" : "rgba(42,138,112,0.08)"),
+                  borderColor: group.cover_image_url ? "transparent" : theme.colors.primary,
+                  borderWidth: group.cover_image_url ? 0 : 1,
                 },
               ]}
               cornerSmoothing={1}
             >
-              {getIconComponent(iconName, 22, theme.colors.primary)}
+              {group.cover_image_url ? (
+                <Image
+                  source={{ uri: group.cover_image_url }}
+                  style={{ width: "100%", height: "100%", borderRadius: 14 }}
+                  contentFit="cover"
+                  transition={200}
+                />
+              ) : (
+                <Text style={{ fontFamily: "Archivo-Bold", fontSize: 20, color: theme.colors.primary }}>
+                  {group.name.charAt(0).toUpperCase()}
+                </Text>
+              )}
             </SquircleView>
 
             {/* Group Info */}

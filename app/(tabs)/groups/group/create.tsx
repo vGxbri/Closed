@@ -11,22 +11,27 @@ import {
   View,
 } from "react-native";
 import SquircleView from "react-native-fast-squircle";
-import { ActivityIndicator, Text, TextInput, useTheme } from "react-native-paper";
+import {
+  Button,
+  Surface,
+  ActivityIndicator,
+  Text,
+  TextInput,
+  useTheme,
+} from "react-native-paper";
 import Animated, {
   FadeIn,
   FadeInDown,
   FadeInUp,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import {
-  defaultGroupIcon,
-  getIconComponent,
-  groupIconOptions,
-  IconName,
-} from "../../../../constants/icons";
+import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
 import { groupsService } from "../../../../services";
 import { CustomHeader } from "../../../../components/ui/CustomHeader";
 import { useSnackbar } from "../../../../components/ui/SnackbarContext";
+import { ConfirmDialog, DialogType } from "../../../../components/ui/ConfirmDialog";
+import { BlurTargetView } from "expo-blur";
 
 // ─── Group Categories ──────────────────────────────────────────────────
 interface CategoryOption {
@@ -72,9 +77,67 @@ export default function CreateGroupScreen() {
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [selectedIcon, setSelectedIcon] = useState<IconName>(defaultGroupIcon);
+  const [coverImageUri, setCoverImageUri] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState("Estándar");
   const [loading, setLoading] = useState(false);
+
+  const backgroundRef = React.useRef(null);
+  const [dialogConfig, setDialogConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    type: DialogType;
+    confirmText?: string;
+    cancelText?: string;
+    onConfirm: () => void;
+  }>({
+    visible: false,
+    title: "",
+    message: "",
+    type: "info",
+    onConfirm: () => {},
+  });
+
+  const hideDialog = () =>
+    setDialogConfig((prev) => ({ ...prev, visible: false }));
+
+  const hasUnsavedChanges = 
+    name.trim() !== "" || 
+    description.trim() !== "" || 
+    coverImageUri !== null || 
+    selectedCategory !== "Estándar";
+
+  const handlePickPhoto = useCallback(async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      setCoverImageUri(result.assets[0].uri);
+    }
+  }, []);
+
+  const handleBack = useCallback(() => {
+    if (hasUnsavedChanges && !loading) {
+      setDialogConfig({
+        visible: true,
+        title: "Descartar cambios",
+        message: "¿Estás seguro de que quieres salir? Los datos introducidos se perderán.",
+        type: "warning",
+        confirmText: "Salir",
+        cancelText: "Cancelar",
+        onConfirm: () => {
+          hideDialog();
+          router.back();
+        },
+      });
+    } else {
+      router.back();
+    }
+  }, [hasUnsavedChanges, loading, router]);
 
   const handleCreate = useCallback(async () => {
     if (!name.trim()) {
@@ -87,12 +150,16 @@ export default function CreateGroupScreen() {
 
       const newGroup = await groupsService.createGroup({
         name: name.trim(),
-        description: description.trim() || undefined,
-        icon: selectedIcon,
+        description: description.trim(),
         category: selectedCategory,
       });
 
-      showSnackbar("¡Grupo creado!", "success");
+      if (coverImageUri) {
+        const publicUrl = await groupsService.uploadGroupCover(newGroup.id, coverImageUri);
+        await groupsService.updateGroup(newGroup.id, { cover_image_url: publicUrl });
+      }
+
+      showSnackbar("Grupo creado con éxito", "success");
       router.replace({
         pathname: "/groups/group/[id]",
         params: { id: newGroup.id },
@@ -105,18 +172,20 @@ export default function CreateGroupScreen() {
     } finally {
       setLoading(false);
     }
-  }, [name, description, selectedIcon, selectedCategory, showSnackbar, router]);
+  }, [name, description, coverImageUri, selectedCategory, showSnackbar, router]);
 
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <View
+      <BlurTargetView
+        ref={backgroundRef}
         style={[styles.container, { backgroundColor: theme.colors.background }]}
       >
         <CustomHeader
           title=""
           showBackButton={true}
+          onBackPress={handleBack}
           rightAction={
             <TouchableOpacity
               onPress={handleCreate}
@@ -206,21 +275,34 @@ export default function CreateGroupScreen() {
                 ]}
                 cornerSmoothing={1}
               >
-                <SquircleView
-                  style={[
-                    styles.previewIconContainer,
-                    {
-                      backgroundColor: theme.dark
-                        ? "rgba(42,138,112,0.15)"
-                        : "rgba(42,138,112,0.08)",
-                      borderColor: theme.colors.primary,
-                      borderWidth: 1,
-                    },
-                  ]}
-                  cornerSmoothing={1}
-                >
-                  {getIconComponent(selectedIcon, 32, theme.colors.primary)}
-                </SquircleView>
+                <Pressable onPress={handlePickPhoto} style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}>
+                  <SquircleView
+                    style={[
+                      styles.previewIconContainer,
+                      {
+                        backgroundColor: coverImageUri 
+                          ? "transparent" 
+                          : (theme.dark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)"),
+                      },
+                    ]}
+                    cornerSmoothing={1}
+                  >
+                    {coverImageUri ? (
+                      <Image
+                        source={{ uri: coverImageUri }}
+                        style={{ width: "100%", height: "100%", borderRadius: 16 }}
+                        contentFit="cover"
+                        transition={200}
+                      />
+                    ) : (
+                      <Ionicons
+                        name="camera-outline"
+                        size={28}
+                        color={theme.colors.onSurfaceVariant}
+                      />
+                    )}
+                  </SquircleView>
+                </Pressable>
                 <Text
                   style={[
                     styles.previewName,
@@ -383,63 +465,7 @@ export default function CreateGroupScreen() {
               </SquircleView>
             </Animated.View>
 
-            {/* ─── Section: Icon Selector ─── */}
-            <Animated.View
-              entering={FadeInDown.duration(400).delay(160)}
-              style={styles.section}
-            >
-              <Text
-                style={[
-                  styles.sectionTitle,
-                  { color: theme.colors.onSurface },
-                ]}
-              >
-                Icono
-              </Text>
-              <SquircleView
-                style={[
-                  styles.iconGrid,
-                  {
-                    backgroundColor: theme.colors.surface,
-                    borderColor: theme.colors.outlineVariant,
-                    borderWidth: 1,
-                  },
-                ]}
-                cornerSmoothing={1}
-              >
-                {groupIconOptions.map((iconName) => {
-                  const isSelected = selectedIcon === iconName;
-                  return (
-                    <TouchableOpacity
-                      key={iconName}
-                      style={[
-                        styles.iconButton,
-                        {
-                          backgroundColor: isSelected
-                            ? theme.dark
-                              ? "rgba(42,138,112,0.2)"
-                              : "rgba(42,138,112,0.1)"
-                            : "transparent",
-                          borderColor: isSelected
-                            ? theme.colors.primary
-                            : theme.colors.outlineVariant,
-                        },
-                      ]}
-                      onPress={() => setSelectedIcon(iconName)}
-                      activeOpacity={0.7}
-                    >
-                      {getIconComponent(
-                        iconName,
-                        24,
-                        isSelected
-                          ? theme.colors.primary
-                          : theme.colors.onSurfaceVariant
-                      )}
-                    </TouchableOpacity>
-                  );
-                })}
-              </SquircleView>
-            </Animated.View>
+
 
             {/* ─── Section: Details ─── */}
             <Animated.View
@@ -538,7 +564,20 @@ export default function CreateGroupScreen() {
             </Animated.View>
           </ScrollView>
         </KeyboardAvoidingView>
-      </View>
+      </BlurTargetView>
+
+      <ConfirmDialog
+        visible={dialogConfig.visible}
+        title={dialogConfig.title}
+        message={dialogConfig.message}
+        type={dialogConfig.type}
+        confirmText={dialogConfig.confirmText}
+        cancelText={dialogConfig.cancelText}
+        onConfirm={dialogConfig.onConfirm}
+        onCancel={hideDialog}
+        showCancel={true}
+        blurTargetRef={backgroundRef}
+      />
     </>
   );
 }

@@ -22,6 +22,7 @@ interface OptionsMenuProps {
   title: string;
   options: MenuOption[];
   onDismiss: () => void;
+  blurTarget?: React.RefObject<any>;
 }
 
 export const OptionsMenu: React.FC<OptionsMenuProps> = ({
@@ -29,6 +30,7 @@ export const OptionsMenu: React.FC<OptionsMenuProps> = ({
   title,
   options,
   onDismiss,
+  blurTarget,
 }) => {
   const theme = useTheme();
   const opacityAnim = React.useRef(new Animated.Value(0)).current;
@@ -91,7 +93,8 @@ export const OptionsMenu: React.FC<OptionsMenuProps> = ({
               intensity={25}
               tint="dark"
               style={StyleSheet.absoluteFill}
-              blurMethod="dimezisBlurView"
+              blurMethod={blurTarget ? "dimezisBlurView" : undefined}
+              blurTarget={blurTarget}
             />
           </Animated.View>
         </Pressable>

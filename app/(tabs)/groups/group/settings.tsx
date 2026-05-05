@@ -19,10 +19,9 @@ import Animated, {
   FadeInUp,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
 import {
-  defaultGroupIcon,
-  getIconComponent,
-  groupIconOptions,
   IconName,
 } from "../../../../constants/icons";
 import { useAuth, useGroup } from "../../../../hooks";
@@ -35,6 +34,7 @@ import {
 } from "../../../../components/ui/ConfirmDialog";
 import { CustomHeader } from "../../../../components/ui/CustomHeader";
 import { useSnackbar } from "../../../../components/ui/SnackbarContext";
+import { groupsService } from "../../../../services";
 
 // ─── Toggle Row Component ───────────────────────────────────────────────
 interface ToggleRowProps {
@@ -159,7 +159,7 @@ export default function GroupSettingsScreen() {
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [icon, setIcon] = useState<IconName>(defaultGroupIcon);
+  const [coverImageUri, setCoverImageUri] = useState<string | null>(null);
 
   const [dialogConfig, setDialogConfig] = useState<{
     visible: boolean;
@@ -205,11 +205,52 @@ export default function GroupSettingsScreen() {
     if (group) {
       setName(group.name);
       setDescription(group.description || "");
-      setIcon((group.icon as IconName) || defaultGroupIcon);
+      setCoverImageUri(group.cover_image_url || null);
       setAllowMemberNominations(group.settings.allow_member_nominations);
       setAllowMemberVoting(group.settings.allow_member_voting);
     }
   }, [group]);
+
+  const hasUnsavedChanges = 
+    group && (
+      name.trim() !== group.name ||
+      description.trim() !== (group.description || "") ||
+      coverImageUri !== (group.cover_image_url || null) ||
+      allowMemberNominations !== group.settings.allow_member_nominations ||
+      allowMemberVoting !== group.settings.allow_member_voting
+    );
+
+  const handlePickPhoto = useCallback(async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      setCoverImageUri(result.assets[0].uri);
+    }
+  }, []);
+
+  const handleBack = useCallback(() => {
+    if (hasUnsavedChanges && !saving) {
+      setDialogConfig({
+        visible: true,
+        title: "Descartar cambios",
+        message: "Tienes cambios sin guardar. ¿Seguro que quieres salir?",
+        type: "warning",
+        confirmText: "Salir sin guardar",
+        cancelText: "Cancelar",
+        onConfirm: () => {
+          hideDialog();
+          router.back();
+        },
+      });
+    } else {
+      router.back();
+    }
+  }, [hasUnsavedChanges, saving, router]);
 
   const handleSave = useCallback(async () => {
     if (!name.trim()) {
@@ -219,12 +260,21 @@ export default function GroupSettingsScreen() {
 
     try {
       setSaving(true);
+      let finalCoverUrl = group?.cover_image_url;
+
+      if (coverImageUri && coverImageUri !== group?.cover_image_url) {
+        // Only upload if it's a local uri (starts with file:// or similar)
+        if (!coverImageUri.startsWith('http')) {
+           finalCoverUrl = await groupsService.uploadGroupCover(group!.id, coverImageUri);
+        }
+      }
+
       await updateGroup({
         name: name.trim(),
-        description: description.trim() || null,
-        icon,
+        description: description.trim(),
+        cover_image_url: finalCoverUrl || undefined,
         settings: {
-          ...group?.settings,
+          ...group!.settings,
           allow_member_nominations: allowMemberNominations,
           allow_member_voting: allowMemberVoting,
         },
@@ -242,7 +292,7 @@ export default function GroupSettingsScreen() {
   }, [
     name,
     description,
-    icon,
+    coverImageUri,
     group,
     allowMemberNominations,
     allowMemberVoting,
@@ -276,22 +326,78 @@ export default function GroupSettingsScreen() {
   // ─── Loading state ─────────────────────────────────────────────
   if (isLoading) {
     return (
-      <View
-        style={[
-          styles.centerContainer,
-          { backgroundColor: theme.colors.background },
-        ]}
-      >
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-        <Text
-          style={[
-            styles.loadingText,
-            { color: theme.colors.onSurfaceVariant },
-          ]}
-        >
-          Cargando...
-        </Text>
-      </View>
+      <>
+        <Stack.Screen options={{ headerShown: false }} />
+        <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+          <CustomHeader title="" showBackButton={true} />
+          
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={[
+              styles.content,
+              { paddingBottom: 120 + insets.bottom },
+            ]}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Title Skeleton */}
+            <Animated.View entering={FadeIn.duration(400)} style={styles.titleBlock}>
+              <View style={{ width: 160, height: 44, borderRadius: 8, backgroundColor: theme.colors.surfaceVariant, marginBottom: 8 }} />
+              <View style={{ width: 200, height: 16, borderRadius: 4, backgroundColor: theme.colors.surfaceVariant }} />
+            </Animated.View>
+
+            <View style={[styles.divider, { backgroundColor: theme.colors.outlineVariant }]} />
+
+            {/* Preview Card Skeleton */}
+            <Animated.View entering={FadeIn.duration(400).delay(50)}>
+              <SquircleView
+                style={[
+                  styles.previewCard,
+                  {
+                    backgroundColor: theme.colors.surface,
+                    borderColor: theme.colors.outlineVariant,
+                    borderWidth: 1,
+                  },
+                ]}
+                cornerSmoothing={1}
+              >
+                <SquircleView
+                  style={[
+                    styles.previewIconContainer,
+                    { backgroundColor: theme.colors.surfaceVariant }
+                  ]}
+                  cornerSmoothing={1}
+                />
+                <View style={{ width: 140, height: 22, borderRadius: 11, backgroundColor: theme.colors.surfaceVariant, marginTop: 14 }} />
+                <View style={{ width: 220, height: 16, borderRadius: 8, backgroundColor: theme.colors.surfaceVariant, marginTop: 10 }} />
+              </SquircleView>
+            </Animated.View>
+
+            {/* Icon Selector Skeleton */}
+            <Animated.View entering={FadeIn.duration(400).delay(100)} style={styles.section}>
+              <View style={{ width: 100, height: 18, borderRadius: 9, backgroundColor: theme.colors.surfaceVariant, marginBottom: 12 }} />
+              <SquircleView
+                style={[
+                  styles.iconGrid,
+                  {
+                    backgroundColor: theme.colors.surface,
+                    borderColor: theme.colors.outlineVariant,
+                    borderWidth: 1,
+                    height: 156, // Approximate height of the icon grid
+                  },
+                ]}
+                cornerSmoothing={1}
+              />
+            </Animated.View>
+
+            {/* Details Skeleton */}
+            <Animated.View entering={FadeIn.duration(400).delay(150)} style={styles.section}>
+              <View style={{ width: 100, height: 18, borderRadius: 9, backgroundColor: theme.colors.surfaceVariant, marginBottom: 12 }} />
+              <View style={{ width: "100%", height: 56, borderRadius: 16, backgroundColor: theme.colors.surfaceVariant, marginBottom: 14 }} />
+              <View style={{ width: "100%", height: 80, borderRadius: 16, backgroundColor: theme.colors.surfaceVariant }} />
+            </Animated.View>
+          </ScrollView>
+        </View>
+      </>
     );
   }
 
@@ -364,6 +470,7 @@ export default function GroupSettingsScreen() {
         <CustomHeader
           title=""
           showBackButton={true}
+          onBackPress={handleBack}
           rightAction={
             <TouchableOpacity
               onPress={handleSave}
@@ -447,21 +554,34 @@ export default function GroupSettingsScreen() {
                   ]}
                   cornerSmoothing={1}
                 >
-                  <SquircleView
-                    style={[
-                      styles.previewIconContainer,
-                      {
-                        backgroundColor: theme.dark
-                          ? "rgba(42,138,112,0.15)"
-                          : "rgba(42,138,112,0.08)",
-                        borderColor: theme.colors.primary,
-                        borderWidth: 1,
-                      },
-                    ]}
-                    cornerSmoothing={1}
-                  >
-                    {getIconComponent(icon, 32, theme.colors.primary)}
-                  </SquircleView>
+                  <Pressable onPress={handlePickPhoto} style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}>
+                    <SquircleView
+                      style={[
+                        styles.previewIconContainer,
+                        {
+                          backgroundColor: coverImageUri 
+                            ? "transparent" 
+                            : (theme.dark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)"),
+                        },
+                      ]}
+                      cornerSmoothing={1}
+                    >
+                      {coverImageUri ? (
+                        <Image
+                          source={{ uri: coverImageUri }}
+                          style={{ width: "100%", height: "100%", borderRadius: 16 }}
+                          contentFit="cover"
+                          transition={200}
+                        />
+                      ) : (
+                        <Ionicons
+                          name="camera-outline"
+                          size={28}
+                          color={theme.colors.onSurfaceVariant}
+                        />
+                      )}
+                    </SquircleView>
+                  </Pressable>
                   <Text
                     style={[
                       styles.previewName,
@@ -482,64 +602,6 @@ export default function GroupSettingsScreen() {
                       {description}
                     </Text>
                   ) : null}
-                </SquircleView>
-              </Animated.View>
-
-              {/* ─── Section: Icon Selector ─── */}
-              <Animated.View
-                entering={FadeInDown.duration(400).delay(120)}
-                style={styles.section}
-              >
-                <Text
-                  style={[
-                    styles.sectionTitle,
-                    { color: theme.colors.onSurface },
-                  ]}
-                >
-                  Icono
-                </Text>
-                <SquircleView
-                  style={[
-                    styles.iconGrid,
-                    {
-                      backgroundColor: theme.colors.surface,
-                      borderColor: theme.colors.outlineVariant,
-                      borderWidth: 1,
-                    },
-                  ]}
-                  cornerSmoothing={1}
-                >
-                  {groupIconOptions.map((iconName) => {
-                    const isSelected = icon === iconName;
-                    return (
-                      <TouchableOpacity
-                        key={iconName}
-                        style={[
-                          styles.iconButton,
-                          {
-                            backgroundColor: isSelected
-                              ? theme.dark
-                                ? "rgba(42,138,112,0.2)"
-                                : "rgba(42,138,112,0.1)"
-                              : "transparent",
-                            borderColor: isSelected
-                              ? theme.colors.primary
-                              : theme.colors.outlineVariant,
-                          },
-                        ]}
-                        onPress={() => setIcon(iconName)}
-                        activeOpacity={0.7}
-                      >
-                        {getIconComponent(
-                          iconName,
-                          24,
-                          isSelected
-                            ? theme.colors.primary
-                            : theme.colors.onSurfaceVariant
-                        )}
-                      </TouchableOpacity>
-                    );
-                  })}
                 </SquircleView>
               </Animated.View>
 

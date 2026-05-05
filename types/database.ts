@@ -199,6 +199,27 @@ export interface Notification {
   created_at: string;
 }
 
+export interface GalleryImage {
+  id: string;
+  group_id: string;
+  uploaded_by: string;
+  media_url: string;
+  media_type: 'image' | 'video';
+  thumbnail_url: string | null;
+  caption: string | null;
+  file_size: number | null;
+  width: number | null;
+  height: number | null;
+  created_at: string;
+}
+
+export interface GalleryImageWithUser extends GalleryImage {
+  uploader?: {
+    display_name: string;
+    avatar_url: string | null;
+  };
+}
+
 // View types
 export interface GroupMemberView extends GroupMember {
   display_name: string;
@@ -238,12 +259,14 @@ export interface CreateGroupInput {
   description?: string;
   icon?: string;
   category?: string;
+  cover_image_url?: string;
 }
 
 export interface UpdateGroupInput {
   name?: string;
   description?: string | null;
   icon?: string;
+  cover_image_url?: string;
   settings?: Partial<GroupSettings>;
 }
 

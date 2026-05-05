@@ -1201,7 +1201,10 @@ export default function AwardDetailScreen() {
                     { backgroundColor: theme.colors.surfaceVariant },
                   ]}
                   onPress={() =>
-                    router.push(`/home/award/edit?id=${id}&groupId=${groupId}`)
+                    router.push({
+                      pathname: "/groups/award/edit",
+                      params: { id, groupId },
+                    } as any)
                   }
                 >
                   <Ionicons
@@ -1440,6 +1443,7 @@ export default function AwardDetailScreen() {
         onClose={() => setShowStartVotingModal(false)}
         onConfirm={handleStartVoting}
         award={award}
+        blurTarget={backgroundRef}
       />
 
       <Modal
@@ -1476,6 +1480,7 @@ export default function AwardDetailScreen() {
         onClose={() => setShowTextModal(false)}
         onConfirm={handleSubmitTextNomination}
         actionLoading={actionLoading}
+        blurTarget={backgroundRef}
       />
 
       <MemberSelectMenu
@@ -1498,6 +1503,7 @@ export default function AwardDetailScreen() {
         onConfirm={handleSubmitAudioNomination}
         audioFileName={tempAudio?.name || "Audio"}
         actionLoading={actionLoading}
+        blurTarget={backgroundRef}
       />
 
       <ConfirmDialog
@@ -1528,6 +1534,7 @@ interface StartVotingModalProps {
     customTime: string,
   ) => void;
   award: AwardWithNominees | null;
+  blurTarget?: React.RefObject<any>;
 }
 
 function StartVotingModal({
@@ -1535,6 +1542,7 @@ function StartVotingModal({
   onClose,
   onConfirm,
   award,
+  blurTarget,
 }: StartVotingModalProps) {
   const theme = useTheme();
   const opacityAnim = useRef(new Animated.Value(0)).current;
@@ -1625,7 +1633,8 @@ function StartVotingModal({
               intensity={25}
               tint="dark"
               style={StyleSheet.absoluteFill}
-              blurMethod="dimezisBlurView"
+              blurMethod={blurTarget ? "dimezisBlurView" : undefined}
+              blurTarget={blurTarget}
             />
           </Animated.View>
         </Pressable>
@@ -1933,6 +1942,7 @@ interface TextNominationModalProps {
   onClose: () => void;
   onConfirm: (text: string) => void;
   actionLoading: boolean;
+  blurTarget?: React.RefObject<any>;
 }
 
 function TextNominationModal({
@@ -1940,6 +1950,7 @@ function TextNominationModal({
   onClose,
   onConfirm,
   actionLoading,
+  blurTarget,
 }: TextNominationModalProps) {
   const theme = useTheme();
   const opacityAnim = useRef(new Animated.Value(0)).current;
@@ -2010,7 +2021,7 @@ function TextNominationModal({
 
   if (!shouldRender) return null;
 
-  if (!shouldRender) return null;
+
 
   const canSubmit = charCount > 0;
 
@@ -2026,7 +2037,8 @@ function TextNominationModal({
               intensity={25}
               tint="dark"
               style={StyleSheet.absoluteFill}
-              blurMethod="dimezisBlurView"
+              blurMethod={blurTarget ? "dimezisBlurView" : undefined}
+              blurTarget={blurTarget}
             />
           </Animated.View>
         </Pressable>
@@ -2205,6 +2217,7 @@ interface AudioTitleModalProps {
   onConfirm: (title: string) => void;
   audioFileName: string;
   actionLoading: boolean;
+  blurTarget?: React.RefObject<any>;
 }
 
 function AudioTitleModal({
@@ -2213,6 +2226,7 @@ function AudioTitleModal({
   onConfirm,
   audioFileName,
   actionLoading,
+  blurTarget,
 }: AudioTitleModalProps) {
   const theme = useTheme();
   const opacityAnim = useRef(new Animated.Value(0)).current;
@@ -2297,7 +2311,8 @@ function AudioTitleModal({
               intensity={25}
               tint="dark"
               style={StyleSheet.absoluteFill}
-              blurMethod="dimezisBlurView"
+              blurMethod={blurTarget ? "dimezisBlurView" : undefined}
+              blurTarget={blurTarget}
             />
           </Animated.View>
         </Pressable>
