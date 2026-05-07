@@ -27,20 +27,17 @@
         "android.permission.MODIFY_AUDIO_SETTINGS"
       ]
     },
-    "web": {
-      "output": "static",
-      "favicon": "./assets/images/favicon.png"
-    },
     "plugins": [
       "expo-video",
       "expo-audio",
+      "expo-asset",
+      "expo-sharing",
       [
         "@react-native-google-signin/google-signin",
         {
           "iosUrlScheme": "com.googleusercontent.apps.YOUR_IOS_CLIENT_ID_REVERSED"
         }
       ],
-      "expo-asset",
       [
         "expo-build-properties",
         {
@@ -58,8 +55,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "13a6e5ff-3900-4e8b-a119-e513e6693829"
+        "projectId": "ea61171c-c75f-47ef-822f-0377ce3f889b"
       }
-    }
+    },
+    "owner": "vgxbri"
   }
 }

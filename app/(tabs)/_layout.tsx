@@ -63,6 +63,12 @@ function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const bottomMargin = insets.bottom > 0 ? insets.bottom + 12 : 36;
   const gradientHeight = bottomMargin + 64 + 60; // Tab bar height is 64, plus some padding above
 
+  const currentRoute = state.routes[state.index];
+  const currentOptions = descriptors[currentRoute.key].options;
+  const isHidden = currentOptions.tabBarStyle?.display === "none";
+
+  if (isHidden) return null;
+
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
       <View
