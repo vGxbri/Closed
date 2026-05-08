@@ -113,6 +113,23 @@ export function useGroup(groupId: string | undefined) {
     return newCode;
   };
 
+  const updateMyMembership = async (updates: { group_display_name?: string | null; group_avatar_url?: string | null; group_bio?: string | null; }) => {
+    if (!groupId) throw new Error('No group ID');
+    await groupsService.updateMyMembership(groupId, updates);
+    await fetchGroup(); // Refresh
+  };
+
+  const uploadMemberAvatar = async (uri: string) => {
+    if (!groupId) throw new Error('No group ID');
+    return await groupsService.uploadMemberAvatar(groupId, uri);
+  };
+
+  const transferOwnership = async (newOwnerId: string) => {
+    if (!groupId) throw new Error('No group ID');
+    await groupsService.transferOwnership(groupId, newOwnerId);
+    await fetchGroup();
+  };
+
   return {
     group,
     isLoading,
@@ -124,6 +141,9 @@ export function useGroup(groupId: string | undefined) {
     updateMemberRole,
     removeMember,
     regenerateInviteCode,
+    updateMyMembership,
+    uploadMemberAvatar,
+    transferOwnership,
     isAdmin: group?.my_role === 'admin' || group?.my_role === 'owner',
     isOwner: group?.my_role === 'owner',
   };

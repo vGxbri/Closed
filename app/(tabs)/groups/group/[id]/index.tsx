@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { Stack, useGlobalSearchParams, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import {
   Dimensions,
@@ -16,24 +16,24 @@ import { Text, useTheme } from "react-native-paper";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
-import { InviteModal } from "../../../../components/InviteModal";
-import { MemberAvatarsRow } from "../../../../components/MemberAvatar";
-import { MemberListBottomSheet } from "../../../../components/MemberListBottomSheet";
+import { InviteModal } from "@/components/InviteModal";
+import { MemberAvatarsRow } from "@/components/MemberAvatar";
+import { MemberListBottomSheet } from "@/components/MemberListBottomSheet";
 import {
   defaultGroupIcon,
   getIconComponent,
   IconName,
-} from "../../../../constants/icons";
-import { useAuth, useGroup } from "../../../../hooks";
-import { galleryService } from "../../../../services/gallery.service";
-import { widgetsService } from "../../../../services/widgets.service";
-import { GroupWidgetWithDetails } from "../../../../types/database";
+} from "@/constants/icons";
+import { useAuth, useGroup } from "@/hooks";
+import { galleryService } from "@/services/gallery.service";
+import { widgetsService } from "@/services/widgets.service";
+import { GroupWidgetWithDetails } from "@/types/database";
 
 import { BlurTargetView } from "expo-blur";
-import { ConfirmDialog, DialogType } from "../../../../components/ui/ConfirmDialog";
-import { CustomHeader } from "../../../../components/ui/CustomHeader";
-import { MenuOption, OptionsMenu } from "../../../../components/ui/OptionsMenu";
-import { useSnackbar } from "../../../../components/ui/SnackbarContext";
+import { ConfirmDialog, DialogType } from "@/components/ui/ConfirmDialog";
+import { CustomHeader } from "@/components/ui/CustomHeader";
+import { MenuOption, OptionsMenu } from "@/components/ui/OptionsMenu";
+import { useSnackbar } from "@/components/ui/SnackbarContext";
 
 // ─── Constants ─────────────────────────────────────────────────────────
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -372,7 +372,7 @@ SkeletonCard.displayName = "SkeletonCard";
 
 // ─── Main Screen ───────────────────────────────────────────────────────
 export default function GroupDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id } = useGlobalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const theme = useTheme();

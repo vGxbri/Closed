@@ -4,7 +4,7 @@ import {
   ThemeProvider,
 } from "@react-navigation/native";
 import { useFonts } from "expo-font";
-import { Stack } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
@@ -20,7 +20,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { SnackbarProvider } from "../components/ui/SnackbarContext";
 import { customColors, customColorsDark } from "../constants/Colors";
-import { AuthProvider } from "../hooks/useAuth";
+import { AuthProvider, useAuth } from "../hooks/useAuth";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -28,6 +28,45 @@ SplashScreen.preventAutoHideAsync();
 const fontConfig = {
   fontFamily: "Archivo-Regular",
 };
+
+
+function RootLayoutNav({ paperTheme, navigationTheme, colorScheme }: any) {
+  const { isAuthenticated, isLoading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.replace("/auth/login");
+    }
+  }, [isAuthenticated, isLoading]);
+
+  return (
+    <ThemeProvider value={navigationTheme}>
+      <PaperProvider theme={paperTheme}>
+        <SnackbarProvider>
+          <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              animation: "fade",
+              contentStyle: {
+                backgroundColor: paperTheme.colors.background,
+              },
+            }}
+          >
+            <Stack.Screen name="(tabs)" options={{ gestureEnabled: false }} />
+            <Stack.Screen name="auth" options={{ gestureEnabled: false }} />
+            <Stack.Screen name="index" options={{ gestureEnabled: false }} />
+            <Stack.Screen
+              name="chooseGroup"
+              options={{ gestureEnabled: false }}
+            />
+          </Stack>
+        </SnackbarProvider>
+      </PaperProvider>
+    </ThemeProvider>
+  );
+}
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -119,39 +158,11 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <AuthProvider>
         <SafeAreaProvider>
-          <ThemeProvider value={navigationTheme}>
-            <PaperProvider theme={paperTheme}>
-              <SnackbarProvider>
-                <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
-                <Stack
-                  screenOptions={{
-                    headerShown: false,
-                    animation: "fade",
-                    contentStyle: {
-                      backgroundColor: paperTheme.colors.background,
-                    },
-                  }}
-                >
-                  <Stack.Screen
-                    name="(tabs)"
-                    options={{ gestureEnabled: false }}
-                  />
-                  <Stack.Screen
-                    name="auth"
-                    options={{ gestureEnabled: false }}
-                  />
-                  <Stack.Screen
-                    name="index"
-                    options={{ gestureEnabled: false }}
-                  />
-                  <Stack.Screen
-                    name="chooseGroup"
-                    options={{ gestureEnabled: false }}
-                  />
-                </Stack>
-              </SnackbarProvider>
-            </PaperProvider>
-          </ThemeProvider>
+          <RootLayoutNav
+            paperTheme={paperTheme}
+            navigationTheme={navigationTheme}
+            colorScheme={colorScheme}
+          />
         </SafeAreaProvider>
       </AuthProvider>
     </GestureHandlerRootView>

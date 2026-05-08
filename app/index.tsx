@@ -90,8 +90,8 @@ export default function Index() {
     return <Redirect href="/theSplit" />;
   }
 
-  // 4. Authenticated, Profile, Groups -> Send to Home Tabs
-  return <Redirect href="/(tabs)/home" />;
+  // 4. Authenticated, Profile, Groups -> Send to Groups List
+  return <Redirect href="/(tabs)/groups" />;
 }
 
 const styles = StyleSheet.create({

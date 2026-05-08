@@ -13,6 +13,7 @@ import Animated, {
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
+  useAnimatedKeyboard,
   withSpring,
   withTiming,
   SharedValue,
@@ -109,10 +110,20 @@ export const BottomSheetModal: React.FC<BottomSheetModalProps> = ({
       }
     });
 
+  const keyboard = useAnimatedKeyboard();
+
   // Animated styles
-  const sheetStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }],
-  }));
+  const sheetStyle = useAnimatedStyle(() => {
+    // When translateY is 0 (open), offset is 100% of keyboard height.
+    // When translateY is SCREEN_HEIGHT (closed), offset is 0%.
+    const progress = 1 - (translateY.value / SCREEN_HEIGHT);
+    return {
+      transform: [
+        { translateY: translateY.value },
+        { translateY: -keyboard.height.value * progress },
+      ],
+    };
+  });
 
   const backdropStyle = useAnimatedStyle(() => ({
     opacity: backdropOpacity.value,

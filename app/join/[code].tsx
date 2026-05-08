@@ -1,10 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
 import {
   StyleSheet,
-  View
+  View,
 } from "react-native";
+import { BlurTargetView } from "expo-blur";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Button,
@@ -19,7 +20,7 @@ import { useAuth } from "../../hooks";
 import { groupsService } from "../../services";
 import { Group } from "../../types/database";
 
-import { DialogType } from "../../components/ui/ConfirmDialog";
+import { ConfirmDialog, DialogType } from "../../components/ui/ConfirmDialog";
 
 type JoinState = "loading" | "preview" | "joining" | "success" | "error" | "already_member";
 
@@ -29,6 +30,7 @@ export default function JoinGroupScreen() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const backgroundRef = useRef(null);
   
   const [state, setState] = useState<JoinState>("loading");
   const [group, setGroup] = useState<Group | null>(null);
@@ -107,7 +109,7 @@ export default function JoinGroupScreen() {
       
       setTimeout(() => {
         router.replace({
-          pathname: "/home/group/[id]",
+          pathname: "/(tabs)/groups/group/[id]",
           params: { id: joinedGroup.id }
         });
       }, 1500);
@@ -127,7 +129,7 @@ export default function JoinGroupScreen() {
   const handleGoToGroup = () => {
     if (group) {
       router.replace({
-        pathname: "/home/group/[id]",
+        pathname: "/(tabs)/groups/group/[id]",
         params: { id: group.id }
       });
     }
@@ -299,7 +301,8 @@ export default function JoinGroupScreen() {
 
   // Preview state (default)
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <BlurTargetView ref={backgroundRef} style={{ flex: 1 }}>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <View style={styles.content}>
         <View style={styles.centerContent}>
           {/* Preview Card */}
@@ -391,6 +394,20 @@ export default function JoinGroupScreen() {
         </Button>
       </Surface>
     </SafeAreaView>
+      
+    <ConfirmDialog
+        visible={dialogConfig.visible}
+        title={dialogConfig.title}
+        message={dialogConfig.message}
+        type={dialogConfig.type}
+        confirmText={dialogConfig.confirmText}
+        cancelText={dialogConfig.cancelText}
+        onConfirm={dialogConfig.onConfirm}
+        onCancel={hideDialog}
+        showCancel={dialogConfig.showCancel}
+        blurTargetRef={backgroundRef}
+      />
+    </BlurTargetView>
   );
 }
 

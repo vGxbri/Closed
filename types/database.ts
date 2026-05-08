@@ -80,6 +80,9 @@ export interface GroupMember {
   invited_by: string | null;
   joined_at: string;
   updated_at: string;
+  group_display_name?: string | null;
+  group_avatar_url?: string | null;
+  group_bio?: string | null;
 }
 
 export interface Widget {
@@ -213,6 +216,22 @@ export interface GalleryImage {
   created_at: string;
 }
 
+export interface Message {
+  id: string;
+  group_id: string;
+  sender_id: string;
+  content: string;
+  type: 'text' | 'image' | 'video' | 'system';
+  metadata: any;
+  is_edited: boolean;
+  created_at: string;
+}
+
+export interface MessageView extends Message {
+  sender_name: string;
+  sender_avatar: string | null;
+}
+
 export interface GalleryImageWithUser extends GalleryImage {
   uploader?: {
     display_name: string;
@@ -225,6 +244,8 @@ export interface GroupMemberView extends GroupMember {
   display_name: string;
   username: string | null;
   avatar_url: string | null;
+  group_bio?: string | null;
+  user_bio?: string | null;
 }
 
 export interface AwardWithStats extends Award {
@@ -343,6 +364,11 @@ export interface Database {
         Insert: Omit<Notification, 'id' | 'created_at'>;
         Update: Partial<Omit<Notification, 'id' | 'created_at'>>;
       };
+      messages: {
+        Row: Message;
+        Insert: Omit<Message, 'id' | 'created_at'>;
+        Update: Partial<Omit<Message, 'id' | 'created_at'>>;
+      };
     };
     Views: {
       group_members_view: {
@@ -350,6 +376,9 @@ export interface Database {
       };
       awards_with_stats: {
         Row: AwardWithStats;
+      };
+      messages_view: {
+        Row: MessageView;
       };
     };
     Functions: {

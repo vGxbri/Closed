@@ -8,7 +8,6 @@ import { VideoView, useVideoPlayer } from "expo-video";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Dimensions,
   FlatList,
   Pressable,
@@ -44,6 +43,7 @@ import { useSnackbar } from "../../../../components/ui/SnackbarContext";
 import { useAuth, useGroup } from "../../../../hooks";
 import { galleryService } from "../../../../services/gallery.service";
 import { GalleryImageWithUser } from "../../../../types/database";
+import { ConfirmDialog, DialogType } from "../../../../components/ui/ConfirmDialog";
 
 const AnimatedImage = Animated.createAnimatedComponent(Image);
 
@@ -563,7 +563,23 @@ export default function GalleryScreen() {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedImageIds, setSelectedImageIds] = useState<string[]>([]);
 
+  // Estado del Diálogo de Confirmación
+  const [confirmDialog, setConfirmDialog] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    type?: DialogType;
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    type: 'confirm'
+  });
+
   const navigation = useNavigation();
+  const backgroundRef = useRef(null);
 
   useEffect(() => {
     const parent = navigation.getParent();
@@ -639,24 +655,23 @@ export default function GalleryScreen() {
   }, [id, showSnackbar, fetchImages]);
 
   const handleDelete = useCallback(async (image: GalleryImageWithUser) => {
-    Alert.alert("Eliminar foto", "¿Estás seguro de que quieres eliminar esta foto?", [
-      { text: "Cancelar", style: "cancel" },
-      {
-        text: "Eliminar",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await galleryService.deleteImage(image.id, image.media_url);
-            setImages((prev) => prev.filter((i) => i.id !== image.id));
-            setViewerVisible(false);
-            showSnackbar("Foto eliminada", "success");
-          } catch (error) {
-            console.error("Error deleting image:", error);
-            showSnackbar("Error al eliminar la foto", "error");
-          }
-        },
+    setConfirmDialog({
+      visible: true,
+      title: "Eliminar foto",
+      message: "¿Estás seguro de que quieres eliminar esta foto? Esta acción no se puede deshacer.",
+      type: "error",
+      onConfirm: async () => {
+        try {
+          await galleryService.deleteImage(image.id, image.media_url);
+          setImages((prev) => prev.filter((i) => i.id !== image.id));
+          setViewerVisible(false);
+          showSnackbar("Foto eliminada", "success");
+        } catch (error) {
+          console.error("Error deleting image:", error);
+          showSnackbar("Error al eliminar la foto", "error");
+        }
       },
-    ]);
+    });
   }, [showSnackbar]);
 
   const canDeleteImage = useCallback((image: GalleryImageWithUser) => {
@@ -734,44 +749,47 @@ export default function GalleryScreen() {
 
   const handleDeleteSelected = () => {
     if (selectedImageIds.length === 0) return;
-    Alert.alert(
-      "Borrar selección",
-      `¿Estás seguro de que quieres eliminar ${selectedImageIds.length} archivo(s)?`,
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Eliminar",
-          style: "destructive",
-          onPress: async () => {
-            const toDelete = images.filter(img => selectedImageIds.includes(img.id));
-            const unauthorized = toDelete.filter(img => !canDeleteImage(img));
+    
+    setConfirmDialog({
+      visible: true,
+      title: "Borrar selección",
+      message: `¿Estás seguro de que quieres eliminar ${selectedImageIds.length} archivo(s)?`,
+      type: "error",
+      onConfirm: async () => {
+        const toDelete = images.filter(img => selectedImageIds.includes(img.id));
+        const unauthorized = toDelete.filter(img => !canDeleteImage(img));
 
-            if (unauthorized.length > 0) {
-              Alert.alert("Aviso", "Solo puedes borrar los archivos que tú has subido o debes ser administrador del grupo.");
-              return;
-            }
-
-            try {
-              for (const img of toDelete) {
-                await galleryService.deleteImage(img.id, img.media_url);
-              }
-              setImages(prev => prev.filter(img => !selectedImageIds.includes(img.id)));
-              setSelectedImageIds([]);
-              setIsSelectionMode(false);
-              showSnackbar(`${toDelete.length} archivo(s) eliminado(s)`, "success");
-            } catch (error) {
-              showSnackbar("Error al eliminar", "error");
-            }
-          }
+        if (unauthorized.length > 0) {
+          setConfirmDialog({
+            visible: true,
+            title: "Aviso",
+            message: "Solo puedes borrar los archivos que tú has subido o debes ser administrador del grupo.",
+            type: "warning",
+            onConfirm: () => {},
+          });
+          return;
         }
-      ]
-    );
+
+        try {
+          for (const img of toDelete) {
+            await galleryService.deleteImage(img.id, img.media_url);
+          }
+          setImages(prev => prev.filter(img => !selectedImageIds.includes(img.id)));
+          setSelectedImageIds([]);
+          setIsSelectionMode(false);
+          showSnackbar(`${toDelete.length} archivo(s) eliminado(s)`, "success");
+        } catch (error) {
+          showSnackbar("Error al eliminar", "error");
+        }
+      }
+    });
   };
 
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
-      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <BlurTargetView ref={backgroundRef} style={{ flex: 1 }}>
+        <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <CustomHeader
           title=""
           showBackButton={true}
@@ -940,6 +958,19 @@ export default function GalleryScreen() {
         onClose={() => setViewerVisible(false)}
         onDelete={handleDelete}
         canDelete={canDeleteImage}
+      />
+    </BlurTargetView>
+
+      <ConfirmDialog
+        visible={confirmDialog.visible}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        type={confirmDialog.type}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={() => setConfirmDialog(prev => ({ ...prev, visible: false }))}
+        confirmText="Aceptar"
+        cancelText="Cancelar"
+        blurTargetRef={backgroundRef}
       />
     </>
   );

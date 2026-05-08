@@ -1,8 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
+import { BlurTargetView } from "expo-blur";
+import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useRef } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
-  Dimensions,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -17,13 +18,12 @@ import Animated, {
   FadeInUp,
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Image } from "expo-image";
-import { useGroups } from "../../../hooks";
+
+import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
+import { useAuth, useGroups } from "../../../hooks";
 import { GroupWithDetails } from "../../../types/database";
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CARD_GAP = 14;
-const CARD_WIDTH = (SCREEN_WIDTH - 24 * 2 - CARD_GAP) / 2;
 
 // ─── Skeleton Placeholder ───────────────────────────────────────────────
 interface SkeletonCardProps {
@@ -117,8 +117,8 @@ const GroupCardItem = React.memo<GroupCardItemProps>(
               style={[
                 styles.groupIconContainer,
                 {
-                  backgroundColor: group.cover_image_url 
-                    ? "transparent" 
+                  backgroundColor: group.cover_image_url
+                    ? "transparent"
                     : (theme.dark ? "rgba(42,138,112,0.15)" : "rgba(42,138,112,0.08)"),
                   borderColor: group.cover_image_url ? "transparent" : theme.colors.primary,
                   borderWidth: group.cover_image_url ? 0 : 1,
@@ -218,18 +218,10 @@ export default function GroupsScreen() {
   const router = useRouter();
   const theme = useTheme();
   const { groups, isLoading, refetch } = useGroups();
-  const hasRedirected = useRef(false);
+  const backgroundRef = useRef(null);
+  const { signOut } = useAuth();
 
-  // Auto-redirect: if user has exactly 1 group, go straight into it to skip the selection screen
-  useEffect(() => {
-    if (!isLoading && groups.length === 1 && !hasRedirected.current) {
-      hasRedirected.current = true;
-      router.replace({
-        pathname: "/groups/group/[id]",
-        params: { id: groups[0].id },
-      } as any);
-    }
-  }, [isLoading, groups, router]);
+  const [showSignOutDialog, setShowSignOutDialog] = useState(false);
 
   const handleGroupPress = useCallback(
     (groupId: string) => {
@@ -257,16 +249,9 @@ export default function GroupsScreen() {
     []
   );
 
-  // If only 1 group, don't render the screen (auto-redirect handles it)
-  if (!isLoading && groups.length === 1) {
-    return null;
-  }
-
   return (
-    <View
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
-    >
-      <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
+    <BlurTargetView ref={backgroundRef} style={{ flex: 1 }}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]} edges={["top", "left", "right"]}>
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           refreshControl={
@@ -333,7 +318,7 @@ export default function GroupsScreen() {
               </Pressable>
 
               <Pressable
-                onPress={handleCreateGroup}
+                onPress={() => setShowSignOutDialog(true)}
                 style={({ pressed }) => [
                   {
                     opacity: pressed ? 0.7 : 1,
@@ -345,12 +330,14 @@ export default function GroupsScreen() {
                   style={[
                     styles.headerButton,
                     {
-                      backgroundColor: theme.colors.primary,
+                      backgroundColor: theme.colors.errorContainer,
+                      borderColor: theme.colors.outlineVariant,
+                      borderWidth: 1,
                     },
                   ]}
                   cornerSmoothing={1}
                 >
-                  <Ionicons name="add" size={22} color={theme.colors.onPrimary} />
+                  <Ionicons name="log-out-outline" size={20} color={theme.colors.onSurfaceVariant} />
                 </SquircleView>
               </Pressable>
             </View>
@@ -526,7 +513,26 @@ export default function GroupsScreen() {
           )}
         </ScrollView>
       </SafeAreaView>
-    </View>
+
+      {/* Sign Out Dialog */}
+      <ConfirmDialog
+        visible={showSignOutDialog}
+        title="¿Cerrar sesión?"
+        message="Tendrás que volver a iniciar sesión para acceder a tus grupos."
+        type="error"
+        confirmText="Cerrar sesión"
+        cancelText="Cancelar"
+        onConfirm={async () => {
+          try {
+            await signOut();
+          } catch (error) {
+            console.error("Error signing out:", error);
+          }
+        }}
+        onCancel={() => setShowSignOutDialog(false)}
+        blurTargetRef={backgroundRef}
+      />
+    </BlurTargetView>
   );
 }
 
@@ -588,20 +594,18 @@ const styles = StyleSheet.create({
 
   // Bento Grid
   bentoGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
+    flexDirection: "column",
     gap: CARD_GAP,
   },
   bentoItem: {
-    width: CARD_WIDTH,
+    width: "100%",
   },
 
   // Group Card
   groupCard: {
     borderRadius: 22,
     padding: 16,
-    aspectRatio: 1,
+    aspectRatio: 2.5,
     justifyContent: "space-between",
   },
   groupIconContainer: {

@@ -5,17 +5,41 @@ import React, { useState } from "react";
 import { Alert, StyleSheet, TouchableOpacity, View } from "react-native";
 import { Avatar, Button, Surface, Text, TextInput, useTheme } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { BlurTargetView } from "expo-blur";
 import { useAuth } from "../hooks/useAuth";
 import { supabase } from "../lib/supabase";
+import { ConfirmDialog, DialogType } from "../components/ui/ConfirmDialog";
 
 export default function ProfileSetup() {
   const router = useRouter();
   const theme = useTheme();
   const { user, updateProfile, isProfileLoading } = useAuth();
+  const backgroundRef = React.useRef(null);
 
   const [displayName, setDisplayName] = useState("");
   const [image, setImage] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+
+  // Dialog state
+  const [dialogConfig, setDialogConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    type: DialogType;
+  }>({
+    visible: false,
+    title: "",
+    message: "",
+    type: "info",
+  });
+
+  const showDialog = (title: string, message: string, type: DialogType = "error") => {
+    setDialogConfig({ visible: true, title, message, type });
+  };
+
+  const hideDialog = () => {
+    setDialogConfig(prev => ({ ...prev, visible: false }));
+  };
 
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
@@ -50,7 +74,7 @@ export default function ProfileSetup() {
       const { data } = supabase.storage.from("avatars").getPublicUrl(filePath);
       setImage(data.publicUrl);
     } catch (error) {
-      Alert.alert("Error uploading image", (error as Error).message);
+      showDialog("Error al subir imagen", (error as Error).message);
     } finally {
       setIsUploading(false);
     }
@@ -58,7 +82,7 @@ export default function ProfileSetup() {
 
   const handleContinue = async () => {
     if (!displayName.trim()) {
-      Alert.alert("Por favor, ingresa un nombre o apodo.");
+      showDialog("Nombre requerido", "Por favor, ingresa un nombre o apodo.", "warning");
       return;
     }
 
@@ -70,74 +94,88 @@ export default function ProfileSetup() {
       router.replace("/");
     } catch (error) {
       console.error(error);
-      Alert.alert("Error al actualizar el perfil", (error as Error).message);
+      showDialog("Error al actualizar el perfil", (error as Error).message);
     }
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.content}>
-          <View style={styles.header}>
-            <Text variant="displaySmall" style={[styles.title, { color: theme.colors.onSurface }]}>
-              ¡Hola!
-            </Text>
-            <Text variant="bodyLarge" style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }]}>
-              ¿Cómo quieres que te llamen?
-            </Text>
+    <BlurTargetView ref={backgroundRef} style={{ flex: 1 }}>
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.content}>
+            <View style={styles.header}>
+              <Text variant="displaySmall" style={[styles.title, { color: theme.colors.onSurface }]}>
+                ¡Hola!
+              </Text>
+              <Text variant="bodyLarge" style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }]}>
+                ¿Cómo quieres que te llamen?
+              </Text>
+            </View>
+
+            <View style={styles.avatarContainer}>
+              <TouchableOpacity onPress={pickImage}>
+                {image ? (
+                  <Avatar.Image size={120} source={{ uri: image }} />
+                ) : (
+                  <Surface 
+                    style={[styles.avatarPlaceholder, { backgroundColor: theme.colors.surfaceVariant }]} 
+                    elevation={2}
+                  >
+                    <Text variant="displayMedium" style={{ color: theme.colors.primary }}>
+                      {displayName.charAt(0).toUpperCase() || "?"}
+                    </Text>
+                  </Surface>
+                )}
+                <View style={[styles.editBadge, { backgroundColor: theme.colors.background, borderColor: theme.colors.outline }]}>
+                  <Text style={styles.editBadgeText}>✏️</Text>
+                </View>
+              </TouchableOpacity>
+              <Text variant="bodyMedium" style={[styles.photoHint, { color: theme.colors.primary }]}>
+                Toca para cambiar tu foto
+              </Text>
+            </View>
+
+            <TextInput
+              label="Nombre o Apodo"
+              value={displayName}
+              onChangeText={setDisplayName}
+              mode="outlined"
+              style={styles.input}
+              outlineColor={theme.colors.outline}
+              activeOutlineColor={theme.colors.primary}
+              textColor={theme.colors.onSurface}
+              placeholder="Ej: Gabri"
+              placeholderTextColor={theme.colors.onSurfaceVariant}
+            />
+
+            <View style={styles.spacer} />
+
+            <Button
+              mode="contained"
+              onPress={handleContinue}
+              loading={isProfileLoading || isUploading}
+              disabled={isProfileLoading || isUploading || !displayName.trim()}
+              style={styles.button}
+              contentStyle={styles.buttonContent}
+            >
+              Continuar
+            </Button>
           </View>
-
-          <View style={styles.avatarContainer}>
-            <TouchableOpacity onPress={pickImage}>
-              {image ? (
-                <Avatar.Image size={120} source={{ uri: image }} />
-              ) : (
-                <Surface 
-                  style={[styles.avatarPlaceholder, { backgroundColor: theme.colors.surfaceVariant }]} 
-                  elevation={2}
-                >
-                  <Text variant="displayMedium" style={{ color: theme.colors.primary }}>
-                    {displayName.charAt(0).toUpperCase() || "?"}
-                  </Text>
-                </Surface>
-              )}
-              <View style={[styles.editBadge, { backgroundColor: theme.colors.background, borderColor: theme.colors.outline }]}>
-                <Text style={styles.editBadgeText}>✏️</Text>
-              </View>
-            </TouchableOpacity>
-            <Text variant="bodyMedium" style={[styles.photoHint, { color: theme.colors.primary }]}>
-              Toca para cambiar tu foto
-            </Text>
-          </View>
-
-          <TextInput
-            label="Nombre o Apodo"
-            value={displayName}
-            onChangeText={setDisplayName}
-            mode="outlined"
-            style={styles.input}
-            outlineColor={theme.colors.outline}
-            activeOutlineColor={theme.colors.primary}
-            textColor={theme.colors.onSurface}
-            placeholder="Ej: Gabri"
-            placeholderTextColor={theme.colors.onSurfaceVariant}
-          />
-
-          <View style={styles.spacer} />
-
-          <Button
-            mode="contained"
-            onPress={handleContinue}
-            loading={isProfileLoading || isUploading}
-            disabled={isProfileLoading || isUploading || !displayName.trim()}
-            style={styles.button}
-            contentStyle={styles.buttonContent}
-          >
-            Continuar
-          </Button>
-        </View>
-      </SafeAreaView>
-    </View>
+        </SafeAreaView>
+        
+        <ConfirmDialog
+          visible={dialogConfig.visible}
+          title={dialogConfig.title}
+          message={dialogConfig.message}
+          type={dialogConfig.type}
+          onConfirm={hideDialog}
+          onCancel={hideDialog}
+          confirmText="Entendido"
+          showCancel={false}
+          blurTargetRef={backgroundRef}
+        />
+      </View>
+    </BlurTargetView>
   );
 }
 

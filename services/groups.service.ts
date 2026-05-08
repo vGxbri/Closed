@@ -320,6 +320,32 @@ export const groupsService = {
   },
 
   /**
+   * Transfer ownership to another member
+   */
+  async transferOwnership(groupId: string, newOwnerId: string): Promise<void> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    // 1. Make the other user the new owner
+    const { error: newOwnerError } = await supabase
+      .from('group_members')
+      .update({ role: 'owner' })
+      .eq('group_id', groupId)
+      .eq('user_id', newOwnerId);
+
+    if (newOwnerError) throw newOwnerError;
+
+    // 2. Demote current owner to admin
+    const { error: demoteError } = await supabase
+      .from('group_members')
+      .update({ role: 'admin' })
+      .eq('group_id', groupId)
+      .eq('user_id', user.id);
+
+    if (demoteError) throw demoteError;
+  },
+
+  /**
    * Remove a member from a group
    */
   async removeMember(groupId: string, userId: string): Promise<void> {
@@ -365,5 +391,49 @@ export const groupsService = {
 
     if (error) throw error;
     return data || [];
+  },
+
+  /**
+   * Update the current user's membership (e.g. group_display_name, group_avatar_url)
+   */
+  async updateMyMembership(groupId: string, updates: { group_display_name?: string | null; group_avatar_url?: string | null; group_bio?: string | null; }): Promise<void> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    const { error } = await supabase
+      .from('group_members')
+      .update(updates)
+      .eq('group_id', groupId)
+      .eq('user_id', user.id);
+
+    if (error) throw error;
+  },
+
+  /**
+   * Upload member avatar image and return public URL
+   */
+  async uploadMemberAvatar(groupId: string, uri: string): Promise<string> {
+    const { decode } = await import('base64-arraybuffer');
+    const FileSystem = await import('expo-file-system/legacy');
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    const fileExt = uri.split('.').pop()?.toLowerCase() || 'jpg';
+    const fileName = `${groupId}/avatars/${user.id}_${Date.now()}.${fileExt}`;
+    const contentType = fileExt === 'png' ? 'image/png' : 'image/jpeg';
+
+    const base64 = await FileSystem.readAsStringAsync(uri, {
+      encoding: 'base64',
+    });
+
+    const { error } = await supabase.storage
+      .from('groups')
+      .upload(fileName, decode(base64), { contentType, upsert: true });
+
+    if (error) throw error;
+
+    const { data } = supabase.storage.from('groups').getPublicUrl(fileName);
+    return data.publicUrl;
   },
 };

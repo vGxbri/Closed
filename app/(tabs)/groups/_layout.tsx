@@ -20,7 +20,7 @@ export default function GroupsStackLayout() {
         name="index"
         options={{ headerShown: false, gestureEnabled: false }}
       />
-      <Stack.Screen name="group/[id]" options={{ title: "Grupo" }} />
+      <Stack.Screen name="group/[id]" options={{ headerShown: false }} />
       <Stack.Screen
         name="group/create"
         options={{ title: "Crear Grupo", presentation: "modal" }}
