@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
-import { Image } from 'expo-image';
 import { Stack, useGlobalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -9,37 +9,33 @@ import {
   Pressable,
   StyleSheet,
   TextInput,
-  View,
+  View
 } from 'react-native';
+
 import SquircleView from 'react-native-fast-squircle';
 import { Text, useTheme } from 'react-native-paper';
 import Animated, {
   FadeIn,
-  SlideInDown,
+  FadeInDown,
+  FadeOut,
   useAnimatedKeyboard,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
-  withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { CustomHeader } from '@/components/ui/CustomHeader';
+import { MessageBubble, QUICK_EMOJIS } from '@/components/chat/MessageBubble';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { BottomSheetModal } from '@/components/ui/BottomSheetModal';
 import { useAuth, useGroup } from '@/hooks';
 import { messagesService } from '@/services';
 import { MessageView } from '@/types/database';
 
-// Height of the floating tab bar + its bottom margin
-// Must stay in sync with _layout.tsx FloatingTabBar
 const FLOATING_TAB_BAR_HEIGHT = 64;
-const FLOATING_TAB_BAR_EXTRA_MARGIN = 16; // margin below the bar
+const FLOATING_TAB_BAR_EXTRA_MARGIN = 16;
 
-// ─── Helpers ────────────────────────────────────────────────────────────
-const formatTime = (dateStr: string): string => {
-  const date = new Date(dateStr);
-  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-};
-
+// ─── Date helpers ───────────────────────────────────────────────────────
 const formatDateSeparator = (dateStr: string): string => {
   const date = new Date(dateStr);
   const now = new Date();
@@ -47,22 +43,17 @@ const formatDateSeparator = (dateStr: string): string => {
   const msgDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   const diff = today.getTime() - msgDate.getTime();
   const dayMs = 86400000;
-
   if (diff < dayMs) return 'Hoy';
   if (diff < dayMs * 2) return 'Ayer';
   if (diff < dayMs * 7) {
-    const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-    return days[date.getDay()];
+    return ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'][date.getDay()];
   }
   return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
 };
 
 const isSameDay = (a: string, b: string): boolean => {
-  const da = new Date(a);
-  const db = new Date(b);
-  return da.getFullYear() === db.getFullYear() &&
-    da.getMonth() === db.getMonth() &&
-    da.getDate() === db.getDate();
+  const da = new Date(a), db = new Date(b);
+  return da.getFullYear() === db.getFullYear() && da.getMonth() === db.getMonth() && da.getDate() === db.getDate();
 };
 
 // ─── Date Separator ─────────────────────────────────────────────────────
@@ -71,10 +62,7 @@ const DateSeparator = React.memo(({ dateStr }: { dateStr: string }) => {
   return (
     <View style={styles.dateSeparator}>
       <View style={[styles.dateLine, { backgroundColor: theme.colors.outlineVariant }]} />
-      <SquircleView
-        style={[styles.dateBadge, { backgroundColor: theme.colors.surfaceVariant }]}
-        cornerSmoothing={1}
-      >
+      <SquircleView style={[styles.dateBadge, { backgroundColor: theme.colors.surfaceVariant }]} cornerSmoothing={1}>
         <Text style={[styles.dateText, { color: theme.colors.onSurfaceVariant }]}>
           {formatDateSeparator(dateStr)}
         </Text>
@@ -83,155 +71,31 @@ const DateSeparator = React.memo(({ dateStr }: { dateStr: string }) => {
     </View>
   );
 });
-
 DateSeparator.displayName = 'DateSeparator';
 
-// ─── Message Bubble ─────────────────────────────────────────────────────
-interface MessageBubbleProps {
-  message: MessageView;
-  isMine: boolean;
-  showAvatar: boolean;
-  showName: boolean;
-  isOptimistic?: boolean;
-}
-
-const MessageBubble = React.memo(({
-  message,
-  isMine,
-  showAvatar,
-  showName,
-  isOptimistic,
-}: MessageBubbleProps) => {
-  const theme = useTheme();
-
-  const bubbleBg = useMemo(() =>
-    isMine ? theme.colors.primary : theme.colors.surfaceVariant,
-    [isMine, theme.colors.primary, theme.colors.surfaceVariant]
-  );
-
-  const textColor = useMemo(() =>
-    isMine ? theme.colors.onPrimary : theme.colors.onSurfaceVariant,
-    [isMine, theme.colors.onPrimary, theme.colors.onSurfaceVariant]
-  );
-
-  return (
-    <Animated.View
-      entering={FadeIn.duration(250)}
-      style={[
-        styles.messageRow,
-        isMine ? styles.myMessageRow : styles.theirMessageRow,
-      ]}
-    >
-      {/* Avatar slot (keeps alignment even when hidden) */}
-      {!isMine && (
-        <View style={styles.avatarSlot}>
-          {showAvatar ? (
-            <Image
-              source={message.sender_avatar || undefined}
-              style={styles.avatar}
-              contentFit="cover"
-              placeholder={undefined}
-            />
-          ) : null}
-        </View>
-      )}
-
-      <View style={[
-        styles.bubbleColumn,
-        isMine ? styles.myBubbleColumn : styles.theirBubbleColumn,
-      ]}>
-        {/* Sender name */}
-        {!isMine && showName && (
-          <Text style={[styles.senderName, { color: theme.colors.primary }]}>
-            {message.sender_name}
-          </Text>
-        )}
-
-        {/* Bubble */}
-        <SquircleView
-          style={[
-            styles.bubble,
-            { backgroundColor: bubbleBg },
-            isMine ? styles.myBubble : styles.theirBubble,
-            isOptimistic && { opacity: 0.7 },
-          ]}
-          cornerSmoothing={1}
-        >
-          <Text style={[styles.messageText, { color: textColor }]}>
-            {message.content}
-          </Text>
-        </SquircleView>
-
-        {/* Timestamp */}
-        <View style={[styles.metaRow, isMine ? styles.myMeta : styles.theirMeta]}>
-          <Text style={[styles.timestamp, { color: theme.colors.outline }]}>
-            {formatTime(message.created_at)}
-          </Text>
-          {isOptimistic && (
-            <Ionicons
-              name="time-outline"
-              size={10}
-              color={theme.colors.outline}
-              style={{ marginLeft: 4 }}
-            />
-          )}
-        </View>
-      </View>
-    </Animated.View>
-  );
-});
-
-MessageBubble.displayName = 'MessageBubble';
-
-// ─── Skeleton Loading ───────────────────────────────────────────────────
+// ─── Skeleton ───────────────────────────────────────────────────────────
 const MessageSkeleton = React.memo(({ index }: { index: number }) => {
   const theme = useTheme();
   const isMine = index % 3 === 0;
   const width = [180, 220, 140, 260, 160][index % 5];
-
   return (
-    <Animated.View
-      entering={FadeIn.duration(400).delay(index * 60)}
-      style={[
-        styles.messageRow,
-        isMine ? styles.myMessageRow : styles.theirMessageRow,
-      ]}
-    >
-      {!isMine && (
-        <View style={styles.avatarSlot}>
-          <View style={[styles.avatar, { backgroundColor: theme.colors.surfaceVariant }]} />
-        </View>
-      )}
-      <View style={[styles.bubbleColumn, isMine ? styles.myBubbleColumn : styles.theirBubbleColumn]}>
-        {!isMine && (
-          <View
-            style={[styles.skeletonName, { backgroundColor: theme.colors.surfaceVariant }]}
-          />
-        )}
-        <SquircleView
-          style={[
-            styles.bubble,
-            {
-              backgroundColor: theme.colors.surfaceVariant,
-              width,
-              height: 36,
-            },
-            isMine ? styles.myBubble : styles.theirBubble,
-          ]}
-          cornerSmoothing={1}
-        />
-      </View>
+    <Animated.View entering={FadeIn.duration(400).delay(index * 60)}
+      style={[styles.skRow, isMine ? styles.skMine : styles.skTheirs]}>
+      {!isMine && <View style={[styles.skAvatar, { backgroundColor: theme.colors.surfaceVariant }]} />}
+      <SquircleView
+        style={[styles.skBubble, { backgroundColor: theme.colors.surfaceVariant, width }]}
+        cornerSmoothing={1}
+      />
     </Animated.View>
   );
 });
-
 MessageSkeleton.displayName = 'MessageSkeleton';
 
 // ─── Main Screen ────────────────────────────────────────────────────────
 export default function MessagesScreen() {
   const { id } = useGlobalSearchParams<{ id: string }>();
   const { user } = useAuth();
-  const { group } = useGroup(id as string);
+  const { group, isAdmin } = useGroup(id as string);
   const theme = useTheme();
   const insets = useSafeAreaInsets();
 
@@ -239,35 +103,33 @@ export default function MessagesScreen() {
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
+  const [optimisticIds, setOptimisticIds] = useState<Set<string>>(new Set());
+
+  // Reply state
+  const [replyTo, setReplyTo] = useState<MessageView | null>(null);
+  // Edit state
+  const [editingMessage, setEditingMessage] = useState<MessageView | null>(null);
+
+  // Context menu / action sheet state
+  const [contextMessage, setContextMessage] = useState<MessageView | null>(null);
+  const [showReactionPicker, setShowReactionPicker] = useState(false);
+
+  // Delete confirmation
+  const [deleteTarget, setDeleteTarget] = useState<MessageView | null>(null);
+
   const flatListRef = useRef<FlatList>(null);
   const inputRef = useRef<TextInput>(null);
 
-  // Calculate bottom padding bounds
   const bottomMargin = insets.bottom > 0 ? insets.bottom + 12 : 36;
   const maxPadding = bottomMargin + FLOATING_TAB_BAR_HEIGHT + FLOATING_TAB_BAR_EXTRA_MARGIN;
-
   const keyboard = useAnimatedKeyboard();
 
-  const animatedKeyboardStyle = useAnimatedStyle(() => {
-    // Keyboard height is strictly 0 when closed, and > 0 when open.
-    // On iOS, this perfectly tracks the interactive keyboard gesture.
-    const kbHeight = keyboard.height.value;
-    
-    // Base extra padding when keyboard is open so it doesn't touch the screen edge
-    const extraPadding = Platform.OS === 'ios' ? 8 : 8;
-    
-    return {
-      paddingBottom: Math.max(maxPadding, kbHeight + extraPadding),
-    };
-  });
+  const animatedKeyboardStyle = useAnimatedStyle(() => ({
+    paddingBottom: Math.max(maxPadding, keyboard.height.value + 8),
+  }));
 
-  // Optimistic message IDs (track which messages are still sending)
-  const [optimisticIds, setOptimisticIds] = useState<Set<string>>(new Set());
-
-  // ─── Send button animation ──────────────────────
   const sendScale = useSharedValue(1);
   const hasText = inputText.trim().length > 0;
-
   const sendAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: sendScale.value }],
   }));
@@ -275,68 +137,85 @@ export default function MessagesScreen() {
   // ─── Load messages ──────────────────────────────
   useEffect(() => {
     if (!id) { setIsLoading(false); return; }
+    let mounted = true;
 
-    let isMounted = true;
-
-    const loadMessages = async () => {
+    const load = async () => {
       try {
         const data = await messagesService.getMessages(id as string);
-        if (isMounted) setMessages(data);
-      } catch (error) {
-        console.error('Error loading messages:', error);
+        if (mounted) setMessages(data);
+      } catch (e) {
+        console.error('Error loading messages:', e);
       } finally {
-        if (isMounted) setIsLoading(false);
+        if (mounted) setIsLoading(false);
       }
     };
+    load();
 
-    loadMessages();
-
-    // Subscribe to realtime updates
-    const subscription = messagesService.subscribeToMessages(
-      id as string,
-      (newMessage) => {
-        if (!isMounted) return;
+    // Realtime messages
+    const msgSub = messagesService.subscribeToMessages(id as string, {
+      onNewMessage: (msg) => {
+        if (!mounted) return;
         setMessages((prev) => {
-          // Replace optimistic message if it exists, or prepend
-          const withoutOptimistic = prev.filter(
-            (m) => !(m.id.startsWith('optimistic-') && m.sender_id === newMessage.sender_id && m.content === newMessage.content)
+          const withoutOpt = prev.filter(
+            (m) => !(m.id.startsWith('optimistic-') && m.sender_id === msg.sender_id && m.content === msg.content)
           );
-          // Don't add if already present (by real ID)
-          if (withoutOptimistic.some((m) => m.id === newMessage.id)) return withoutOptimistic;
-          return [newMessage, ...withoutOptimistic];
-        });
-        // Remove from optimistic set
-        setOptimisticIds((prev) => {
-          const next = new Set(prev);
-          // We can't match by ID since optimistic IDs are different, so we just clear after receiving
-          return next;
+          if (withoutOpt.some((m) => m.id === msg.id)) return withoutOpt;
+          return [msg, ...withoutOpt];
         });
       },
-    );
+      onMessageUpdated: (msg) => {
+        if (!mounted) return;
+        setMessages((prev) => prev.map((m) => (m.id === msg.id ? msg : m)));
+      },
+      onMessageDeleted: () => { },
+    });
+
+    // Realtime reactions
+    const reactSub = messagesService.subscribeToReactions(id as string, async (messageId) => {
+      if (!mounted) return;
+      const updated = await messagesService.refreshMessage(messageId);
+      if (updated) {
+        setMessages((prev) => prev.map((m) => (m.id === messageId ? updated : m)));
+      }
+    });
 
     return () => {
-      isMounted = false;
-      subscription.unsubscribe();
+      mounted = false;
+      msgSub.unsubscribe();
+      reactSub.unsubscribe();
     };
   }, [id]);
 
-  // ─── Send message ──────────────────────────────
+  // ─── Send / Edit ──────────────────────────────
   const handleSend = useCallback(async () => {
     if (!inputText.trim() || isSending || !id || !user) return;
-
     const text = inputText.trim();
+
+    // If editing
+    if (editingMessage) {
+      try {
+        setIsSending(true);
+        await messagesService.editMessage(editingMessage.id, text);
+        setEditingMessage(null);
+        setInputText('');
+      } catch (e) {
+        console.error('Error editing:', e);
+      } finally {
+        setIsSending(false);
+      }
+      return;
+    }
+
+    // Normal send
     setInputText('');
     setIsSending(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
-    // Animate send button
     sendScale.value = withSpring(0.8, { damping: 15 }, () => {
       sendScale.value = withSpring(1, { damping: 10 });
     });
 
-    // Optimistic message
     const optimisticId = `optimistic-${Date.now()}`;
-    const optimisticMessage: MessageView = {
+    const optimisticMsg: MessageView = {
       id: optimisticId,
       group_id: id as string,
       sender_id: user.id,
@@ -344,69 +223,120 @@ export default function MessagesScreen() {
       type: 'text',
       metadata: null,
       is_edited: false,
+      is_deleted: false,
+      reply_to_id: replyTo?.id || null,
       created_at: new Date().toISOString(),
       sender_name: user.user_metadata?.display_name || 'Tú',
       sender_avatar: user.user_metadata?.avatar_url || null,
+      reply_to_content: replyTo?.content?.slice(0, 100) || null,
+      reply_to_sender_name: replyTo?.sender_name || null,
+      reactions: [],
     };
 
-    setMessages((prev) => [optimisticMessage, ...prev]);
+    setMessages((prev) => [optimisticMsg, ...prev]);
     setOptimisticIds((prev) => new Set(prev).add(optimisticId));
+    setReplyTo(null);
 
     try {
-      await messagesService.sendMessage(id as string, text);
-    } catch (error) {
-      console.error('Error sending message:', error);
-      // Remove optimistic message on failure, restore input
+      await messagesService.sendMessage(id as string, text, 'text', replyTo?.id);
+    } catch (e) {
+      console.error('Error sending:', e);
       setMessages((prev) => prev.filter((m) => m.id !== optimisticId));
-      setOptimisticIds((prev) => {
-        const next = new Set(prev);
-        next.delete(optimisticId);
-        return next;
-      });
       setInputText(text);
     } finally {
       setIsSending(false);
     }
-  }, [inputText, isSending, id, user, sendScale]);
+  }, [inputText, isSending, id, user, editingMessage, replyTo, sendScale]);
 
-  // ─── Render helpers ──────────────────────────────
+  // ─── Actions ──────────────────────────────────
+  const handleReply = useCallback((msg: MessageView) => {
+    setReplyTo(msg);
+    setEditingMessage(null);
+    setContextMessage(null);
+    inputRef.current?.focus();
+  }, []);
+
+  const handleStartEdit = useCallback((msg: MessageView) => {
+    setEditingMessage(msg);
+    setInputText(msg.content);
+    setReplyTo(null);
+    setContextMessage(null);
+    inputRef.current?.focus();
+  }, []);
+
+  const handleDelete = useCallback(async () => {
+    if (!deleteTarget) return;
+    try {
+      await messagesService.deleteMessage(deleteTarget.id, isAdmin);
+    } catch (e) {
+      console.error('Error deleting:', e);
+    }
+    setDeleteTarget(null);
+  }, [deleteTarget, isAdmin]);
+
+  const handleReaction = useCallback(async (messageId: string, emoji: string) => {
+    try {
+      await messagesService.toggleReaction(messageId, emoji);
+    } catch (e) {
+      console.error('Error toggling reaction:', e);
+    }
+  }, []);
+
+  const handleLongPress = useCallback((msg: MessageView) => {
+    setContextMessage(msg);
+    setShowReactionPicker(false);
+  }, []);
+
+  const handleCancelReply = useCallback(() => { setReplyTo(null); }, []);
+  const handleCancelEdit = useCallback(() => {
+    setEditingMessage(null);
+    setInputText('');
+  }, []);
+
+  // ─── Render item ──────────────────────────────
   const renderItem = useCallback(({ item, index }: { item: MessageView; index: number }) => {
     const isMine = item.sender_id === user?.id;
-    const prevMessage = messages[index + 1]; // +1 because list is inverted
-    const nextMessage = messages[index - 1];
+    const prevMsg = messages[index + 1];
+    const nextMsg = messages[index - 1];
+    const isLastInGroup = !nextMsg || nextMsg.sender_id !== item.sender_id;
+    const isFirstInGroup = !prevMsg || prevMsg.sender_id !== item.sender_id;
 
-    // Show avatar only when it's the last message in a group from the same sender
-    const isLastInGroup = !nextMessage || nextMessage.sender_id !== item.sender_id;
-    // Show name when it's the first message in a group from the same sender
-    const isFirstInGroup = !prevMessage || prevMessage.sender_id !== item.sender_id;
+    // Date separator (inverted list: check against previous = older message)
+    const showDate = !prevMsg || !isSameDay(item.created_at, prevMsg.created_at);
 
     return (
-      <MessageBubble
-        message={item}
-        isMine={isMine}
-        showAvatar={!isMine && isLastInGroup}
-        showName={!isMine && isFirstInGroup}
-        isOptimistic={optimisticIds.has(item.id)}
-      />
+      <>
+        <MessageBubble
+          message={item}
+          isMine={isMine}
+          showAvatar={!isMine && isLastInGroup}
+          showName={!isMine && isFirstInGroup}
+          isOptimistic={optimisticIds.has(item.id)}
+          currentUserId={user?.id || ''}
+          isAdmin={isAdmin}
+          canEdit={messagesService.canEdit(item, user?.id || '')}
+          onReply={handleReply}
+          onEdit={handleStartEdit}
+          onDelete={(m) => setDeleteTarget(m)}
+          onReaction={handleReaction}
+          onLongPress={handleLongPress}
+        />
+        {showDate && <DateSeparator dateStr={item.created_at} />}
+      </>
     );
-  }, [user?.id, messages, optimisticIds]);
+  }, [user?.id, messages, optimisticIds, isAdmin, handleReply, handleStartEdit, handleReaction, handleLongPress]);
 
   const keyExtractor = useCallback((item: MessageView) => item.id, []);
 
-  // ─── Empty state ──────────────────────────────
+  // ─── Empty & Loading ──────────────────────────
   const EmptyComponent = useMemo(() => {
     if (isLoading) return null;
     return (
       <View style={styles.emptyContainer}>
-        <SquircleView
-          style={[styles.emptyIconBg, { backgroundColor: theme.colors.surfaceVariant }]}
-          cornerSmoothing={1}
-        >
+        <SquircleView style={[styles.emptyIconBg, { backgroundColor: theme.colors.surfaceVariant }]} cornerSmoothing={1}>
           <Ionicons name="chatbubbles-outline" size={36} color={theme.colors.primary} />
         </SquircleView>
-        <Text style={[styles.emptyTitle, { color: theme.colors.onSurface }]}>
-          Sin mensajes aún
-        </Text>
+        <Text style={[styles.emptyTitle, { color: theme.colors.onSurface }]}>Sin mensajes aún</Text>
         <Text style={[styles.emptySubtitle, { color: theme.colors.onSurfaceVariant }]}>
           ¡Escribe algo para empezar la conversación!
         </Text>
@@ -414,12 +344,9 @@ export default function MessagesScreen() {
     );
   }, [isLoading, theme]);
 
-  // ─── Skeleton list ──────────────────────────────
   const SkeletonList = useMemo(() => (
     <View style={styles.skeletonContainer}>
-      {Array.from({ length: 8 }).map((_, i) => (
-        <MessageSkeleton key={i} index={i} />
-      ))}
+      {Array.from({ length: 8 }).map((_, i) => <MessageSkeleton key={i} index={i} />)}
     </View>
   ), []);
 
@@ -427,17 +354,8 @@ export default function MessagesScreen() {
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      {/* Header */}
-      <CustomHeader title={group?.name || 'Mensajes'} showBackButton={true} />
-
-      {/* Separator line below header to visually detach it from the input area */}
-      <View style={[styles.headerSeparator, { backgroundColor: theme.colors.outlineVariant }]} />
-
       <Animated.View style={[styles.keyboardView, animatedKeyboardStyle]}>
-        {/* Messages list */}
-        {isLoading ? (
-          SkeletonList
-        ) : (
+        {isLoading ? SkeletonList : (
           <FlatList
             ref={flatListRef}
             data={messages}
@@ -449,34 +367,39 @@ export default function MessagesScreen() {
             keyboardDismissMode="interactive"
             keyboardShouldPersistTaps="handled"
             ListEmptyComponent={EmptyComponent}
-            // Performance optimizations
             maxToRenderPerBatch={15}
             windowSize={10}
             removeClippedSubviews={Platform.OS === 'android'}
           />
         )}
 
+        {/* ─── Reply / Edit Preview Bar ─── */}
+        {(replyTo || editingMessage) && (
+          <Animated.View
+            entering={FadeInDown.duration(200)}
+            exiting={FadeOut.duration(150)}
+            style={[styles.previewBar, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.outlineVariant }]}
+          >
+            <View style={[styles.previewAccent, { backgroundColor: editingMessage ? theme.colors.tertiary : theme.colors.primary }]} />
+            <View style={styles.previewContent}>
+              <Text style={[styles.previewLabel, { color: editingMessage ? theme.colors.tertiary : theme.colors.primary }]}>
+                {editingMessage ? '✏️ Editando mensaje' : `↩ ${replyTo?.sender_name}`}
+              </Text>
+              <Text style={[styles.previewText, { color: theme.colors.onSurfaceVariant }]} numberOfLines={1}>
+                {editingMessage ? editingMessage.content : replyTo?.content}
+              </Text>
+            </View>
+            <Pressable onPress={editingMessage ? handleCancelEdit : handleCancelReply} hitSlop={12}>
+              <Ionicons name="close-circle" size={22} color={theme.colors.outline} />
+            </Pressable>
+          </Animated.View>
+        )}
+
         {/* ─── Input Area ─── */}
-        <Animated.View
-          style={[
-            styles.inputContainer,
-            {
-              backgroundColor: theme.colors.background,
-              paddingBottom: 8, // The wrapper Animated.View handles the dynamic padding
-              borderTopColor: theme.colors.outlineVariant,
-            },
-          ]}
-        >
+        <View style={[styles.inputContainer, { backgroundColor: theme.colors.background, borderTopColor: theme.colors.background }]}>
           <View style={styles.inputRow}>
             <SquircleView
-              style={[
-                styles.inputWrapper,
-                {
-                  backgroundColor: theme.colors.surfaceVariant,
-                  borderColor: theme.colors.outlineVariant,
-                  borderWidth: 1,
-                },
-              ]}
+              style={[styles.inputWrapper, { backgroundColor: theme.colors.surfaceVariant, borderColor: theme.colors.outlineVariant, borderWidth: 1 }]}
               cornerSmoothing={1}
             >
               <TextInput
@@ -492,7 +415,6 @@ export default function MessagesScreen() {
               />
             </SquircleView>
 
-            {/* Send button */}
             <Animated.View style={sendAnimatedStyle}>
               <Pressable
                 onPress={handleSend}
@@ -500,230 +422,198 @@ export default function MessagesScreen() {
                 style={({ pressed }) => [
                   styles.sendButton,
                   {
-                    backgroundColor: hasText
-                      ? theme.colors.primary
-                      : theme.colors.surfaceVariant,
+                    backgroundColor: hasText ? theme.colors.primaryContainer : theme.colors.surfaceVariant,
+                    borderColor: hasText ? `${theme.colors.primary}90` : "transparent",
+                    borderWidth: 1,
                     opacity: pressed ? 0.85 : 1,
                     transform: [{ scale: pressed ? 0.92 : 1 }],
                   },
                 ]}
               >
                 <Ionicons
-                  name="arrow-up"
+                  name={editingMessage ? 'checkmark' : 'arrow-up'}
                   size={20}
-                  color={hasText ? theme.colors.onPrimary : theme.colors.outline}
+                  color={hasText ? theme.colors.onSurface : theme.colors.outline}
                 />
               </Pressable>
             </Animated.View>
           </View>
-        </Animated.View>
+        </View>
       </Animated.View>
+
+      {/* ─── Context Menu (Bottom Sheet style) ─── */}
+      <BottomSheetModal
+        visible={!!contextMessage}
+        onDismiss={() => setContextMessage(null)}
+        contentStyle={styles.contextSheet}
+      >
+        {contextMessage && (
+          <View>
+            {/* Display the selected message so it's not covered */}
+            <View style={{ marginBottom: 20, paddingHorizontal: 4 }} pointerEvents="none">
+              <MessageBubble
+                message={contextMessage}
+                isMine={contextMessage.sender_id === user?.id}
+                showAvatar={contextMessage.sender_id !== user?.id}
+                showName={contextMessage.sender_id !== user?.id}
+                currentUserId={user?.id || ''}
+                isAdmin={isAdmin}
+                canEdit={false}
+                onReply={() => {}}
+                onEdit={() => {}}
+                onDelete={() => {}}
+                onReaction={() => {}}
+                onLongPress={() => {}}
+              />
+            </View>
+
+            {/* Quick reactions row */}
+            <View style={styles.quickReactionsRow}>
+              {QUICK_EMOJIS.map((emoji) => (
+                <Pressable
+                  key={emoji}
+                  onPress={() => {
+                    handleReaction(contextMessage.id, emoji);
+                    setContextMessage(null);
+                  }}
+                  style={({ pressed }) => [styles.quickReactionBtn, { transform: [{ scale: pressed ? 0.85 : 1 }] }]}
+                >
+                  <Text style={styles.quickReactionEmoji}>{emoji}</Text>
+                </Pressable>
+              ))}
+            </View>
+
+            <View style={[styles.contextDivider, { backgroundColor: theme.colors.outlineVariant }]} />
+
+            {/* Actions */}
+            <ContextAction icon="arrow-undo-outline" label="Responder" onPress={() => { handleReply(contextMessage); }} />
+            <ContextAction icon="copy-outline" label="Copiar" onPress={() => {
+              Clipboard.setStringAsync(contextMessage.content);
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              setContextMessage(null);
+            }} />
+            {messagesService.canEdit(contextMessage, user?.id || '') && (
+              <ContextAction icon="pencil-outline" label="Editar" onPress={() => { handleStartEdit(contextMessage); }} />
+            )}
+            {(contextMessage.sender_id === user?.id || isAdmin) && !contextMessage.is_deleted && (
+              <ContextAction icon="trash-outline" label="Eliminar" destructive onPress={() => {
+                setDeleteTarget(contextMessage);
+                setContextMessage(null);
+              }} />
+            )}
+          </View>
+        )}
+      </BottomSheetModal>
+
+      {/* Delete confirmation */}
+      <ConfirmDialog
+        visible={!!deleteTarget}
+        title="Eliminar mensaje"
+        message="El mensaje será eliminado para todos los miembros del grupo."
+        type="error"
+        confirmText="Eliminar"
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+        showCancel={true}
+      />
     </View>
   );
 }
 
-// ─── Styles ──────────────────────────────────────────────────────────────
+// ─── Context Action Component ───────────────────────────────────────────
+const ContextAction = React.memo(({
+  icon, label, onPress, destructive,
+}: {
+  icon: string; label: string; onPress: () => void; destructive?: boolean;
+}) => {
+  const theme = useTheme();
+  const color = destructive ? theme.colors.error : theme.colors.onSurface;
+  return (
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.contextAction, { opacity: pressed ? 0.7 : 1 }]}>
+      <Ionicons name={icon as any} size={20} color={color} />
+      <Text style={[styles.contextActionLabel, { color }]}>{label}</Text>
+    </Pressable>
+  );
+});
+ContextAction.displayName = 'ContextAction';
+
+// ─── Styles ─────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  headerSeparator: {
-    height: StyleSheet.hairlineWidth,
-    width: '100%',
-  },
+  container: { flex: 1 },
+  keyboardView: { flex: 1 },
+  headerSeparator: { height: StyleSheet.hairlineWidth, width: '100%' },
 
-  // ─── List ──────────────────────
-  listContent: {
-    paddingHorizontal: 12,
-    paddingTop: 8,
-    paddingBottom: 4,
-    flexGrow: 1,
-  },
+  listContent: { paddingHorizontal: 12, paddingTop: 8, paddingBottom: 4, flexGrow: 1 },
 
-  // ─── Date separator ───────────
-  dateSeparator: {
+  // Date separator
+  dateSeparator: { flexDirection: 'row', alignItems: 'center', marginVertical: 16, paddingHorizontal: 8 },
+  dateLine: { flex: 1, height: StyleSheet.hairlineWidth },
+  dateBadge: { paddingHorizontal: 14, paddingVertical: 5, borderRadius: 12, marginHorizontal: 10 },
+  dateText: { fontFamily: 'Archivo-Medium', fontSize: 11, letterSpacing: 0.3 },
+
+  // Preview bar
+  previewBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 16,
-    paddingHorizontal: 8,
-  },
-  dateLine: {
-    flex: 1,
-    height: StyleSheet.hairlineWidth,
-  },
-  dateBadge: {
     paddingHorizontal: 14,
-    paddingVertical: 5,
-    borderRadius: 12,
-    marginHorizontal: 10,
-  },
-  dateText: {
-    fontFamily: 'Archivo-Medium',
-    fontSize: 11,
-    letterSpacing: 0.3,
-  },
-
-  // ─── Message row ──────────────
-  messageRow: {
-    flexDirection: 'row',
-    marginVertical: 2,
-    paddingHorizontal: 4,
-  },
-  myMessageRow: {
-    justifyContent: 'flex-end',
-  },
-  theirMessageRow: {
-    justifyContent: 'flex-start',
-  },
-
-  // ─── Avatar ───────────────────
-  avatarSlot: {
-    width: 32,
-    marginRight: 8,
-    alignSelf: 'flex-end',
-    marginBottom: 18, // align with bubble bottom
-  },
-  avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-  },
-
-  // ─── Bubble ───────────────────
-  bubbleColumn: {
-    maxWidth: '78%',
-  },
-  myBubbleColumn: {
-    alignItems: 'flex-end',
-  },
-  theirBubbleColumn: {
-    alignItems: 'flex-start',
-  },
-  senderName: {
-    fontFamily: 'Archivo-Bold',
-    fontSize: 12,
-    marginBottom: 3,
-    marginLeft: 6,
-  },
-  bubble: {
-    paddingHorizontal: 16,
     paddingVertical: 10,
-    borderRadius: 20,
-    minHeight: 36,
-  },
-  myBubble: {
-    borderBottomRightRadius: 6,
-  },
-  theirBubble: {
-    borderBottomLeftRadius: 6,
-  },
-  messageText: {
-    fontFamily: 'Archivo-Medium',
-    fontSize: 15,
-    lineHeight: 21,
-  },
-
-  // ─── Meta row ─────────────────
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 3,
-    marginBottom: 4,
-  },
-  myMeta: {
-    marginRight: 6,
-    justifyContent: 'flex-end',
-  },
-  theirMeta: {
-    marginLeft: 6,
-  },
-  timestamp: {
-    fontFamily: 'Archivo-Medium',
-    fontSize: 10,
-    letterSpacing: 0.2,
-  },
-
-  // ─── Input area ───────────────
-  inputContainer: {
-    paddingHorizontal: 12,
-    paddingTop: 8,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 8,
-  },
-  inputWrapper: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 24,
-    minHeight: 44,
-  },
-  input: {
-    flex: 1,
-    fontFamily: 'Archivo-Medium',
-    fontSize: 15,
-    lineHeight: 20,
-    maxHeight: 120,
-    paddingTop: Platform.OS === 'ios' ? 4 : 2,
-    paddingBottom: Platform.OS === 'ios' ? 4 : 2,
-  },
-  sendButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 2,
-  },
+  previewAccent: { width: 3, height: '100%', borderRadius: 2, marginRight: 10, minHeight: 30 },
+  previewContent: { flex: 1, marginRight: 10 },
+  previewLabel: { fontFamily: 'Archivo-Bold', fontSize: 12 },
+  previewText: { fontFamily: 'Archivo-Medium', fontSize: 13, marginTop: 2 },
 
-  // ─── Empty state ──────────────
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+  // Input
+  inputContainer: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 8, borderTopWidth: StyleSheet.hairlineWidth },
+  inputRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
+  inputWrapper: { flex: 1, flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 24, minHeight: 44 },
+  input: { flex: 1, fontFamily: 'Archivo-Medium', fontSize: 15, lineHeight: 20, maxHeight: 120, paddingTop: Platform.OS === 'ios' ? 4 : 2, paddingBottom: Platform.OS === 'ios' ? 4 : 2 },
+  sendButton: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginBottom: 2 },
+
+  // Empty
+  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  emptyIconBg: { width: 72, height: 72, borderRadius: 22, justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
+  emptyTitle: { fontFamily: 'Archivo-Bold', fontSize: 17, marginBottom: 6 },
+  emptySubtitle: { fontFamily: 'Archivo-Medium', fontSize: 14, textAlign: 'center', lineHeight: 20, paddingHorizontal: 32 },
+
+  // Skeleton
+  skeletonContainer: { flex: 1, paddingHorizontal: 12, paddingTop: 12, flexDirection: 'column-reverse', justifyContent: 'flex-start' },
+  skRow: { flexDirection: 'row', marginVertical: 4 },
+  skMine: { justifyContent: 'flex-end' },
+  skTheirs: { justifyContent: 'flex-start' },
+  skAvatar: { width: 32, height: 32, borderRadius: 16, marginRight: 8 },
+  skBubble: { height: 36, borderRadius: 18 },
+
+
+  contextSheet: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: 16,
+    paddingBottom: 32,
+    paddingHorizontal: 20,
   },
-  emptyIconBg: {
-    width: 72,
-    height: 72,
+  quickReactionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  quickReactionBtn: {
+    width: 44,
+    height: 44,
     borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
   },
-  emptyTitle: {
-    fontFamily: 'Archivo-Bold',
-    fontSize: 17,
-    marginBottom: 6,
+  quickReactionEmoji: { fontSize: 26 },
+  contextDivider: { height: StyleSheet.hairlineWidth, marginVertical: 12 },
+  contextAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 4,
   },
-  emptySubtitle: {
-    fontFamily: 'Archivo-Medium',
-    fontSize: 14,
-    textAlign: 'center',
-    lineHeight: 20,
-    paddingHorizontal: 32,
-  },
-
-  // ─── Skeleton ─────────────────
-  skeletonContainer: {
-    flex: 1,
-    paddingHorizontal: 12,
-    paddingTop: 12,
-    flexDirection: 'column-reverse',
-    justifyContent: 'flex-start',
-  },
-  skeletonName: {
-    width: 80,
-    height: 10,
-    borderRadius: 5,
-    marginBottom: 4,
-    marginLeft: 6,
-  },
+  contextActionLabel: { fontFamily: 'Archivo-Medium', fontSize: 16 },
 });

@@ -224,12 +224,31 @@ export interface Message {
   type: 'text' | 'image' | 'video' | 'system';
   metadata: any;
   is_edited: boolean;
+  is_deleted: boolean;
+  reply_to_id: string | null;
   created_at: string;
+}
+
+export interface ReactionGroup {
+  emoji: string;
+  count: number;
+  user_ids: string[];
 }
 
 export interface MessageView extends Message {
   sender_name: string;
   sender_avatar: string | null;
+  reply_to_content: string | null;
+  reply_to_sender_name: string | null;
+  reactions: ReactionGroup[];
+}
+
+export interface MessageReaction {
+  id: string;
+  message_id: string;
+  user_id: string;
+  emoji: string;
+  created_at: string;
 }
 
 export interface GalleryImageWithUser extends GalleryImage {

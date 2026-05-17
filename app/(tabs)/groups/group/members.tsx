@@ -15,7 +15,7 @@ import {
   useTheme
 } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { MemberAvatar } from "../../../../components/MemberAvatar";
+import { UserAvatar } from "../../../../components/ui/UserAvatar";
 import { ConfirmDialog, DialogType } from "../../../../components/ui/ConfirmDialog";
 import { CustomHeader } from "../../../../components/ui/CustomHeader";
 import { MenuOption, OptionsMenu } from "../../../../components/ui/OptionsMenu";
@@ -200,7 +200,11 @@ export default function GroupMembersScreen() {
                     !isLast && { borderBottomWidth: 1, borderBottomColor: theme.colors.surfaceVariant }
                   ]}
                 >
-                  <MemberAvatar user={member} size="md" />
+                  <UserAvatar 
+                    uri={member.avatar_url} 
+                    name={member.display_name} 
+                    size="md" 
+                  />
                   <View style={styles.memberInfo}>
                     <Text variant="bodyLarge" style={{ fontWeight: "600", color: theme.colors.onSurface }}>
                       {member.display_name} {isMe ? "(Tú)" : ""}

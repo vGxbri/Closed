@@ -1,11 +1,11 @@
 import { supabase } from '../lib/supabase';
 import {
-    CreateGroupInput,
-    Group,
-    GroupMemberView,
-    GroupWithDetails,
-    MemberRole,
-    UpdateGroupInput,
+  CreateGroupInput,
+  Group,
+  GroupMemberView,
+  GroupWithDetails,
+  MemberRole,
+  UpdateGroupInput,
 } from '../types/database';
 
 export const groupsService = {
@@ -35,33 +35,33 @@ export const groupsService = {
       (memberships || [])
         .filter(m => m.group && (m.group as unknown as Group).status !== 'deleted')
         .map(async (membership) => {
-        const group = membership.group as unknown as Group;
-        
-        // Get members
-        const { data: members, error: membersError } = await supabase
-          .from('group_members_view')
-          .select('*')
-          .eq('group_id', group.id);
+          const group = membership.group as unknown as Group;
 
-        if (membersError) throw membersError;
+          // Get members
+          const { data: members, error: membersError } = await supabase
+            .from('group_members_view')
+            .select('*')
+            .eq('group_id', group.id);
 
-        // Get awards
-        const { data: awards, error: awardsError } = await supabase
-          .from('awards_with_stats')
-          .select('*')
-          .eq('group_id', group.id)
-          .neq('status', 'archived');
+          if (membersError) throw membersError;
 
-        if (awardsError) throw awardsError;
+          // Get awards
+          const { data: awards, error: awardsError } = await supabase
+            .from('awards_with_stats')
+            .select('*')
+            .eq('group_id', group.id)
+            .neq('status', 'archived');
 
-        return {
-          ...group,
-          members: members || [],
-          member_count: members?.length || 0,
-          awards: awards || [],
-          my_role: membership.role as MemberRole,
-        };
-      })
+          if (awardsError) throw awardsError;
+
+          return {
+            ...group,
+            members: members || [],
+            member_count: members?.length || 0,
+            awards: awards || [],
+            my_role: membership.role as MemberRole,
+          };
+        })
     );
 
     return groupsWithDetails;
@@ -104,13 +104,13 @@ export const groupsService = {
 
     if (membersError) throw membersError;
 
-        // Get awards
-        const { data: awards, error: awardsError } = await supabase
-          .from('awards_with_stats')
-          .select('*')
-          .eq('group_id', groupId)
-          .neq('status', 'archived')
-          .order('created_at', { ascending: false });
+    // Get awards
+    const { data: awards, error: awardsError } = await supabase
+      .from('awards_with_stats')
+      .select('*')
+      .eq('group_id', groupId)
+      .neq('status', 'archived')
+      .order('created_at', { ascending: false });
 
     if (awardsError) throw awardsError;
 
@@ -209,7 +209,7 @@ export const groupsService = {
       .select();
 
     if (error) throw error;
-    
+
     if (!data || data.length === 0) {
       throw new Error('No tienes permiso para eliminar este grupo o el grupo no existe');
     }
@@ -365,7 +365,7 @@ export const groupsService = {
     // Generate new code
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let newCode = '';
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < 6; i++) {
       newCode += chars.charAt(Math.floor(Math.random() * chars.length));
     }
 

@@ -34,6 +34,7 @@ import {
 } from "../../../../components/ui/ConfirmDialog";
 import { CustomHeader } from "../../../../components/ui/CustomHeader";
 import { useSnackbar } from "../../../../components/ui/SnackbarContext";
+import { UserAvatar } from "../../../../components/ui/UserAvatar";
 import { groupsService } from "../../../../services";
 
 // ─── Toggle Row Component ───────────────────────────────────────────────
@@ -314,7 +315,7 @@ export default function GroupSettingsScreen() {
           setSaving(true);
           await deleteGroup();
           router.dismissAll();
-          router.replace("/(tabs)/home");
+          router.replace("/(tabs)/groups");
         } catch {
           setSaving(false);
           showSnackbar("No se pudo eliminar el grupo", "error");
@@ -555,32 +556,12 @@ export default function GroupSettingsScreen() {
                   cornerSmoothing={1}
                 >
                   <Pressable onPress={handlePickPhoto} style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}>
-                    <SquircleView
-                      style={[
-                        styles.previewIconContainer,
-                        {
-                          backgroundColor: coverImageUri 
-                            ? "transparent" 
-                            : (theme.dark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)"),
-                        },
-                      ]}
-                      cornerSmoothing={1}
-                    >
-                      {coverImageUri ? (
-                        <Image
-                          source={{ uri: coverImageUri }}
-                          style={{ width: "100%", height: "100%", borderRadius: 16 }}
-                          contentFit="cover"
-                          transition={200}
-                        />
-                      ) : (
-                        <Ionicons
-                          name="camera-outline"
-                          size={28}
-                          color={theme.colors.onSurfaceVariant}
-                        />
-                      )}
-                    </SquircleView>
+                    <UserAvatar
+                      uri={coverImageUri}
+                      name={name.trim() || "Nombre del grupo"}
+                      size={64}
+                      borderRadius={20}
+                    />
                   </Pressable>
                   <Text
                     style={[

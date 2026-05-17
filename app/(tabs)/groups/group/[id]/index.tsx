@@ -1,7 +1,16 @@
+import { InviteModal } from "@/components/InviteModal";
+import { MemberAvatarsRow } from "@/components/MemberAvatar";
+import { MemberListBottomSheet } from "@/components/MemberListBottomSheet";
+import { UserAvatar } from "@/components/ui/UserAvatar";
+import { useAuth, useGroup } from "@/hooks";
+import { galleryService } from "@/services/gallery.service";
+import { widgetsService } from "@/services/widgets.service";
+import { GroupWidgetWithDetails } from "@/types/database";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
-import { Stack, useGlobalSearchParams, useLocalSearchParams, useRouter } from "expo-router";
-import React, { useCallback, useMemo, useState } from "react";
+import { Image } from "expo-image";
+import { Stack, useGlobalSearchParams, useRouter } from "expo-router";
+import React, { useCallback, useState } from "react";
 import {
   Dimensions,
   Pressable,
@@ -15,25 +24,12 @@ import SquircleView from "react-native-fast-squircle";
 import { Text, useTheme } from "react-native-paper";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Image } from "expo-image";
-import { InviteModal } from "@/components/InviteModal";
-import { MemberAvatarsRow } from "@/components/MemberAvatar";
-import { MemberListBottomSheet } from "@/components/MemberListBottomSheet";
-import {
-  defaultGroupIcon,
-  getIconComponent,
-  IconName,
-} from "@/constants/icons";
-import { useAuth, useGroup } from "@/hooks";
-import { galleryService } from "@/services/gallery.service";
-import { widgetsService } from "@/services/widgets.service";
-import { GroupWidgetWithDetails } from "@/types/database";
 
-import { BlurTargetView } from "expo-blur";
 import { ConfirmDialog, DialogType } from "@/components/ui/ConfirmDialog";
 import { CustomHeader } from "@/components/ui/CustomHeader";
 import { MenuOption, OptionsMenu } from "@/components/ui/OptionsMenu";
 import { useSnackbar } from "@/components/ui/SnackbarContext";
+import { BlurTargetView } from "expo-blur";
 
 // ─── Constants ─────────────────────────────────────────────────────────
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -358,12 +354,51 @@ const SkeletonCard = React.memo<SkeletonProps>(({ index }) => {
           styles.skeletonBlock,
           {
             backgroundColor: theme.colors.surfaceVariant,
-            borderColor: theme.colors.onSurfaceVariant,
+            borderColor: theme.colors.outlineVariant,
             borderWidth: 1,
+            flexDirection: "row",
+            alignItems: "center",
+            paddingHorizontal: 16,
+            gap: 16,
           },
         ]}
         cornerSmoothing={1}
-      />
+      >
+        {/* Icon placeholder */}
+        <View
+          style={{
+            width: 48,
+            height: 48,
+            borderRadius: 16,
+            backgroundColor: theme.dark
+              ? "rgba(255,255,255,0.06)"
+              : "rgba(0,0,0,0.06)",
+          }}
+        />
+        {/* Text placeholders */}
+        <View style={{ flex: 1, gap: 8 }}>
+          <View
+            style={{
+              height: 14,
+              borderRadius: 7,
+              width: "60%",
+              backgroundColor: theme.dark
+                ? "rgba(255,255,255,0.08)"
+                : "rgba(0,0,0,0.06)",
+            }}
+          />
+          <View
+            style={{
+              height: 12,
+              borderRadius: 6,
+              width: "40%",
+              backgroundColor: theme.dark
+                ? "rgba(255,255,255,0.05)"
+                : "rgba(0,0,0,0.04)",
+            }}
+          />
+        </View>
+      </SquircleView>
     </Animated.View>
   );
 });
@@ -633,32 +668,12 @@ export default function GroupDetailScreen() {
             >
               {/* Icon + Name */}
               <View style={styles.headerTitleRow}>
-                <SquircleView
-                  style={[
-                    styles.groupIconContainer,
-                    {
-                      backgroundColor: group.cover_image_url 
-                        ? "transparent" 
-                        : (theme.dark ? "rgba(42,138,112,0.15)" : "rgba(42,138,112,0.08)"),
-                      borderColor: group.cover_image_url ? "transparent" : theme.colors.primary,
-                      borderWidth: group.cover_image_url ? 0 : 1,
-                    },
-                  ]}
-                  cornerSmoothing={1}
-                >
-                  {group.cover_image_url ? (
-                    <Image
-                      source={{ uri: group.cover_image_url }}
-                      style={{ width: "100%", height: "100%", borderRadius: 16 }}
-                      contentFit="cover"
-                      transition={200}
-                    />
-                  ) : (
-                    <Text style={{ fontFamily: "Archivo-Bold", fontSize: 24, color: theme.colors.primary }}>
-                      {group.name.charAt(0).toUpperCase()}
-                    </Text>
-                  )}
-                </SquircleView>
+                <UserAvatar
+                  uri={group.cover_image_url}
+                  name={group.name}
+                  size={64}
+                  borderRadius={16}
+                />
               </View>
 
               <Text
@@ -758,69 +773,69 @@ export default function GroupDetailScreen() {
 
                 {/* Add Widget Card — Admin only */}
                 {isAdmin && (
-                <Animated.View
-                  entering={FadeIn.duration(400).delay(
-                    200 + widgets.length * 80
-                  )}
-                  style={{ width: "100%" }}
-                >
-                  <Pressable
-                    onPress={handleAddWidget}
-                    style={({ pressed }) => [
-                      {
-                        opacity: pressed ? 0.8 : 1,
-                        transform: [{ scale: pressed ? 0.98 : 1 }],
-                      },
-                    ]}
+                  <Animated.View
+                    entering={FadeIn.duration(400).delay(
+                      200 + widgets.length * 80
+                    )}
+                    style={{ width: "100%" }}
                   >
-                    <SquircleView
-                      style={[
-                        styles.addWidgetCard,
+                    <Pressable
+                      onPress={handleAddWidget}
+                      style={({ pressed }) => [
                         {
-                          borderColor: theme.colors.onSurfaceVariant,
-                          borderWidth: 2,
+                          opacity: pressed ? 0.8 : 1,
+                          transform: [{ scale: pressed ? 0.98 : 1 }],
                         },
                       ]}
-                      cornerSmoothing={1}
                     >
                       <SquircleView
                         style={[
-                          styles.addWidgetIconContainer,
+                          styles.addWidgetCard,
                           {
-                            backgroundColor: theme.colors.surfaceVariant,
-                            borderColor: theme.colors.outlineVariant,
-                            borderWidth: 1,
+                            borderColor: theme.colors.onSurfaceVariant,
+                            borderWidth: 2,
                           },
                         ]}
                         cornerSmoothing={1}
                       >
-                        <Ionicons
-                          name="add"
-                          size={24}
-                          color="#FFFFFF"
-                        />
+                        <SquircleView
+                          style={[
+                            styles.addWidgetIconContainer,
+                            {
+                              backgroundColor: theme.colors.surfaceVariant,
+                              borderColor: theme.colors.outlineVariant,
+                              borderWidth: 1,
+                            },
+                          ]}
+                          cornerSmoothing={1}
+                        >
+                          <Ionicons
+                            name="add"
+                            size={24}
+                            color="#FFFFFF"
+                          />
+                        </SquircleView>
+                        <View>
+                          <Text
+                            style={[
+                              styles.addWidgetTitle,
+                              { color: theme.colors.onSurfaceVariant },
+                            ]}
+                          >
+                            Explorar widgets
+                          </Text>
+                          <Text
+                            style={[
+                              styles.addWidgetSubtitle,
+                              { color: theme.colors.outline },
+                            ]}
+                          >
+                            Personaliza tu grupo
+                          </Text>
+                        </View>
                       </SquircleView>
-                      <View>
-                        <Text
-                          style={[
-                            styles.addWidgetTitle,
-                            { color: theme.colors.onSurfaceVariant },
-                          ]}
-                        >
-                          Explorar widgets
-                        </Text>
-                        <Text
-                          style={[
-                            styles.addWidgetSubtitle,
-                            { color: theme.colors.outline },
-                          ]}
-                        >
-                          Personaliza tu grupo
-                        </Text>
-                      </View>
-                    </SquircleView>
-                  </Pressable>
-                </Animated.View>
+                    </Pressable>
+                  </Animated.View>
                 )}
               </View>
             ) : (
@@ -834,7 +849,7 @@ export default function GroupDetailScreen() {
                     styles.emptyCard,
                     {
                       backgroundColor: theme.colors.surface,
-                      borderColor: theme.colors.onSurfaceVariant,
+                      borderColor: theme.colors.outlineVariant,
                       borderWidth: 1,
                     },
                   ]}
@@ -845,7 +860,7 @@ export default function GroupDetailScreen() {
                       styles.emptyIconContainer,
                       {
                         backgroundColor: theme.colors.surfaceVariant,
-                        borderColor: theme.colors.outlineVariant,
+                        borderColor: theme.colors.outline,
                         borderWidth: 1,
                       },
                     ]}
@@ -878,38 +893,38 @@ export default function GroupDetailScreen() {
                   </Text>
 
                   {isAdmin && (
-                  <Pressable
-                    onPress={handleAddWidget}
-                    style={({ pressed }) => [
-                      styles.emptyButton,
-                      {
-                        opacity: pressed ? 0.9 : 1,
-                        transform: [{ scale: pressed ? 0.97 : 1 }],
-                      },
-                    ]}
-                  >
-                    <SquircleView
-                      style={[
-                        styles.emptyButtonInner,
-                        { backgroundColor: theme.colors.primary },
+                    <Pressable
+                      onPress={handleAddWidget}
+                      style={({ pressed }) => [
+                        styles.emptyButton,
+                        {
+                          opacity: pressed ? 0.9 : 1,
+                          transform: [{ scale: pressed ? 0.97 : 1 }],
+                        },
                       ]}
-                      cornerSmoothing={1}
                     >
-                      <Ionicons
-                        name="add"
-                        size={20}
-                        color={theme.colors.onPrimary}
-                      />
-                      <Text
+                      <SquircleView
                         style={[
-                          styles.emptyButtonText,
-                          { color: theme.colors.onPrimary },
+                          styles.emptyButtonInner,
+                          { backgroundColor: theme.colors.primary },
                         ]}
+                        cornerSmoothing={1}
                       >
-                        Explorar widgets
-                      </Text>
-                    </SquircleView>
-                  </Pressable>
+                        <Ionicons
+                          name="add"
+                          size={20}
+                          color={theme.colors.onPrimary}
+                        />
+                        <Text
+                          style={[
+                            styles.emptyButtonText,
+                            { color: theme.colors.onPrimary },
+                          ]}
+                        >
+                          Explorar widgets
+                        </Text>
+                      </SquircleView>
+                    </Pressable>
                   )}
                 </SquircleView>
               </Animated.View>

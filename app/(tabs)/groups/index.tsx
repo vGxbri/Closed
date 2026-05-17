@@ -20,8 +20,10 @@ import Animated, {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
+import { UserAvatar } from "../../../components/ui/UserAvatar";
 import { useAuth, useGroups } from "../../../hooks";
 import { GroupWithDetails } from "../../../types/database";
+import { getOptimizedMediaUrl } from "../../../lib/storage";
 
 const CARD_GAP = 14;
 
@@ -113,32 +115,12 @@ const GroupCardItem = React.memo<GroupCardItemProps>(
             cornerSmoothing={1}
           >
             {/* Icon / Cover Image */}
-            <SquircleView
-              style={[
-                styles.groupIconContainer,
-                {
-                  backgroundColor: group.cover_image_url
-                    ? "transparent"
-                    : (theme.dark ? "rgba(42,138,112,0.15)" : "rgba(42,138,112,0.08)"),
-                  borderColor: group.cover_image_url ? "transparent" : theme.colors.primary,
-                  borderWidth: group.cover_image_url ? 0 : 1,
-                },
-              ]}
-              cornerSmoothing={1}
-            >
-              {group.cover_image_url ? (
-                <Image
-                  source={{ uri: group.cover_image_url }}
-                  style={{ width: "100%", height: "100%", borderRadius: 14 }}
-                  contentFit="cover"
-                  transition={200}
-                />
-              ) : (
-                <Text style={{ fontFamily: "Archivo-Bold", fontSize: 20, color: theme.colors.primary }}>
-                  {group.name.charAt(0).toUpperCase()}
-                </Text>
-              )}
-            </SquircleView>
+            <UserAvatar
+              uri={group.cover_image_url}
+              name={group.name}
+              size={44}
+              borderRadius={14}
+            />
 
             {/* Group Info */}
             <View style={styles.groupInfo}>
@@ -231,7 +213,7 @@ export default function GroupsScreen() {
   );
 
   const handleCreateGroup = useCallback(
-    () => router.push("/groups/group/create" as any),
+    () => router.push("/createGroup" as any),
     [router]
   );
 

@@ -61,6 +61,10 @@ function RootLayoutNav({ paperTheme, navigationTheme, colorScheme }: any) {
               name="chooseGroup"
               options={{ gestureEnabled: false }}
             />
+            <Stack.Screen
+              name="createGroup"
+              options={{ presentation: "modal", gestureEnabled: false }}
+            />
           </Stack>
         </SnackbarProvider>
       </PaperProvider>

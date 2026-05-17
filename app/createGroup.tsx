@@ -61,6 +61,7 @@ export default function CreateGroupScreen() {
   const [step, setStep] = useState(1);
   const [selectedType, setSelectedType] = useState("");
   const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [maxStepReached, setMaxStepReached] = useState(1);
@@ -139,15 +140,19 @@ export default function CreateGroupScreen() {
 
       const newGroup = await groupsService.createGroup({
         name: name.trim(),
-        description: `Un grupo de tipo ${groupType}`,
-        icon: "home",
+        description: description.trim() || `Un grupo de tipo ${groupType}`,
         category: groupType,
       });
 
+      if (newGroup && photoUri) {
+        const publicUrl = await groupsService.uploadGroupCover(newGroup.id, photoUri);
+        await groupsService.updateGroup(newGroup.id, { cover_image_url: publicUrl });
+      }
+
       if (newGroup) {
         router.replace({
-          pathname: "/(tabs)/home",
-          params: { groupId: newGroup.id },
+          pathname: "/groups/group/[id]",
+          params: { id: newGroup.id },
         });
       }
     } catch (error) {
@@ -155,7 +160,7 @@ export default function CreateGroupScreen() {
     } finally {
       setLoading(false);
     }
-  }, [name, selectedType, router]);
+  }, [name, description, photoUri, selectedType, router]);
 
   const renderStepOne = () => (
     <Animated.View
@@ -309,8 +314,25 @@ export default function CreateGroupScreen() {
                     borderWidth: 1,
                   }}
                   contentStyle={styles.inputContent}
-                  returnKeyType="done"
+                  returnKeyType="next"
                   autoFocus
+                />
+                <TextInput
+                  label="Descripción (opcional)"
+                  placeholder="Describe tu grupo..."
+                  value={description}
+                  onChangeText={setDescription}
+                  mode="outlined"
+                  multiline
+                  numberOfLines={2}
+                  left={<TextInput.Icon icon="text" />}
+                  style={styles.input}
+                  outlineStyle={{
+                    borderColor: theme.colors.outlineVariant,
+                    borderRadius: 20,
+                    borderWidth: 1,
+                  }}
+                  contentStyle={styles.inputContent}
                 />
                 <CTAButton
                   title="Continuar"

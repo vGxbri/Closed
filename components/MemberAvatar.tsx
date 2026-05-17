@@ -1,8 +1,8 @@
-import { Image } from 'expo-image';
 import React from 'react';
 import { StyleSheet, Text, View, ViewStyle } from 'react-native';
-import { Colors } from '../constants/Colors';
 import { GroupMemberView, Profile } from '../types/database';
+import { Colors } from '../constants/Colors';
+import { UserAvatar } from './ui/UserAvatar';
 
 // Accept either a Profile or a GroupMemberView (which has display_name instead of name)
 type UserLike = Profile | GroupMemberView | { id: string; display_name: string; avatar_url?: string | null };
@@ -13,28 +13,6 @@ interface MemberAvatarProps {
   showName?: boolean;
   style?: ViewStyle;
 }
-
-const avatarColors = [
-  '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', 
-  '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F',
-];
-
-const getAvatarColor = (name: string) => {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return avatarColors[Math.abs(hash) % avatarColors.length];
-};
-
-const getInitials = (name: string) => {
-  return name
-    .split(' ')
-    .map(part => part[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
-};
 
 const getUserName = (user: UserLike): string => {
   return user.display_name || 'Usuario';
@@ -47,37 +25,14 @@ export const MemberAvatar: React.FC<MemberAvatarProps> = ({
   style,
 }) => {
   const name = getUserName(user);
-  const sizeValue = size === 'sm' ? 32 : size === 'md' ? 40 : size === 'lg' ? 56 : 100;
-  const fontSize = size === 'sm' ? 12 : size === 'md' ? 14 : size === 'lg' ? 20 : 32;
-  const backgroundColor = getAvatarColor(name);
 
   return (
     <View style={[styles.container, style]}>
-      <View
-        style={[
-          styles.avatar,
-          {
-            width: sizeValue,
-            height: sizeValue,
-            borderRadius: sizeValue / 2,
-            backgroundColor,
-            overflow: 'hidden',
-          },
-        ]}
-      >
-        {user.avatar_url ? (
-          <Image
-            source={{ uri: user.avatar_url }}
-            style={{ width: '100%', height: '100%' }}
-            contentFit="cover"
-            transition={200}
-          />
-        ) : (
-          <Text style={[styles.initials, { fontSize }]}>
-            {getInitials(name)}
-          </Text>
-        )}
-      </View>
+      <UserAvatar
+        uri={user.avatar_url}
+        name={name}
+        size={size}
+      />
       {showName && (
         <Text style={styles.name} numberOfLines={1}>
           {name}

@@ -1,7 +1,8 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import SquircleView from 'react-native-fast-squircle';
+import { getOptimizedMediaUrl } from '../../lib/storage';
 
 // ─── Palette for initials-based avatars ──────────────────────────────────
 const AVATAR_COLORS = [
@@ -32,8 +33,8 @@ interface UserAvatarProps {
   uri: string | null | undefined;
   /** User's display name — used for initials and color. */
   name: string;
-  /** Diameter in dp. Defaults to 48. */
-  size?: number;
+  /** Diameter in dp or a named size. Defaults to 48 (md). */
+  size?: number | 'sm' | 'md' | 'lg' | 'xl';
   /** Corner radius. Defaults to size/2 (circle). */
   borderRadius?: number;
 }
@@ -45,43 +46,46 @@ const UserAvatar = React.memo<UserAvatarProps>(({
   size = 48,
   borderRadius,
 }) => {
-  const radius = borderRadius ?? size / 2;
-  const initials = useMemo(() => getInitials(name), [name]);
-  const bgColor = useMemo(() => AVATAR_COLORS[hashStringToIndex(name)], [name]);
-  const fontSize = Math.round(size * 0.38);
+  const [imageError, setImageError] = useState(false);
 
-  if (uri) {
-    return (
-      <SquircleView
-        style={[
-          styles.container,
-          { width: size, height: size, borderRadius: radius },
-        ]}
-        cornerSmoothing={1}
-      >
-        <Image
-          source={uri}
-          style={{ width: size, height: size, borderRadius: radius }}
-          contentFit="cover"
-          transition={200}
-        />
-      </SquircleView>
-    );
-  }
+  const sizeValue = useMemo(() => {
+    if (typeof size === 'number') return size;
+    switch (size) {
+      case 'sm': return 32;
+      case 'md': return 48;
+      case 'lg': return 64;
+      case 'xl': return 100;
+      default: return 48;
+    }
+  }, [size]);
 
+  const radius = borderRadius ?? sizeValue * 0.35;
+  const initials = useMemo(() => getInitials(name || 'Usuario'), [name]);
+  const bgColor = useMemo(() => AVATAR_COLORS[hashStringToIndex(name || 'Usuario')], [name]);
+  const fontSize = Math.round(sizeValue * 0.38);
+
+  const handleImageError = useCallback(() => {
+    setImageError(true);
+  }, []);
+
+  const hasValidImage = uri && uri.trim() !== '' && !imageError;
+
+  // Always render initials as base layer; image overlays on top when available.
+  // This ensures the avatar is NEVER empty, even if the image fails to load.
   return (
     <SquircleView
       style={[
         styles.container,
         {
-          width: size,
-          height: size,
+          width: sizeValue,
+          height: sizeValue,
           borderRadius: radius,
           backgroundColor: bgColor,
         },
       ]}
       cornerSmoothing={1}
     >
+      {/* Initials — always rendered as fallback */}
       <Text
         style={[
           styles.initials,
@@ -90,6 +94,20 @@ const UserAvatar = React.memo<UserAvatarProps>(({
       >
         {initials}
       </Text>
+
+      {/* Image — overlays on top when a valid URI exists */}
+      {hasValidImage && (
+        <Image
+          source={getOptimizedMediaUrl(uri, { width: Math.max(100, sizeValue * 2) }) || uri}
+          style={[
+            StyleSheet.absoluteFill,
+            { width: sizeValue, height: sizeValue, borderRadius: radius },
+          ]}
+          contentFit="cover"
+          transition={200}
+          onError={handleImageError}
+        />
+      )}
     </SquircleView>
   );
 });

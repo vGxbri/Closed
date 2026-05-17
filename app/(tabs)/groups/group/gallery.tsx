@@ -5,14 +5,13 @@ import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { Stack, useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import { VideoView, useVideoPlayer } from "expo-video";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Dimensions,
   FlatList,
   Pressable,
   ScrollView,
-  StatusBar,
   StyleSheet,
   TouchableOpacity,
   View
@@ -44,6 +43,7 @@ import { useAuth, useGroup } from "../../../../hooks";
 import { galleryService } from "../../../../services/gallery.service";
 import { GalleryImageWithUser } from "../../../../types/database";
 import { ConfirmDialog, DialogType } from "../../../../components/ui/ConfirmDialog";
+import { getOptimizedMediaUrl } from "../../../../lib/storage";
 
 const AnimatedImage = Animated.createAnimatedComponent(Image);
 
@@ -89,7 +89,7 @@ const MasonryGrid = React.memo<MasonryProps>(({ images, onImagePress, isSelectio
       {columns.map((col, colIndex) => (
         <View key={`col-${colIndex}`} style={styles.masonryColumn}>
           {col.map((image, index) => {
-            const height = useMemo(() => getSimulatedHeight(image.id), [image.id]);
+            const height = getSimulatedHeight(image.id);
             const isSelected = selectedImageIds.includes(image.id);
 
             return (
@@ -105,11 +105,10 @@ const MasonryGrid = React.memo<MasonryProps>(({ images, onImagePress, isSelectio
                 >
                   <View>
                     <AnimatedImage
-                      source={{ uri: image.media_url }}
+                      source={{ uri: getOptimizedMediaUrl(image.media_url, { width: 400 }) || image.media_url }}
                       style={[styles.masonryImage, { height }]}
                       contentFit="cover"
                       transition={200}
-                      sharedTransitionTag={!isSelectionMode ? `gallery-${image.id}` : undefined}
                     />
 
                     {/* Indicador de vídeo */}
@@ -348,10 +347,9 @@ const ViewerItem = React.memo(({ item, isVisible, showUI, onToggleUI }: { item: 
       ) : (
         <Pressable style={styles.imagePressable} onPress={() => onToggleUI()}>
           <AnimatedImage
-            source={{ uri: item.media_url }}
+            source={{ uri: getOptimizedMediaUrl(item.media_url, { width: 1080 }) || item.media_url }}
             style={styles.viewerImage}
             contentFit="contain"
-            sharedTransitionTag={`gallery-${item.id}`}
           />
         </Pressable>
       )}
@@ -373,26 +371,20 @@ interface ViewerProps {
 
 const MediaViewer = React.memo<ViewerProps>(({ visible, images, initialIndex, onClose, onDelete, canDelete }) => {
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showUI, setShowUI] = useState(true);
+  const [isClosing, setIsClosing] = useState(false);
   const flatListRef = useRef<FlatList>(null);
 
   const translateY = useSharedValue(0);
   const scale = useSharedValue(1);
   const backgroundOpacity = useSharedValue(1);
 
+  // Reset state when opening
   useEffect(() => {
     if (visible) {
-      StatusBar.setHidden(true, "fade");
       setShowUI(true);
-    } else {
-      StatusBar.setHidden(false, "fade");
-    }
-  }, [visible]);
-
-  useEffect(() => {
-    if (visible) {
+      setIsClosing(false);
       setCurrentIndex(initialIndex);
       translateY.value = 0;
       scale.value = 1;
@@ -414,7 +406,13 @@ const MediaViewer = React.memo<ViewerProps>(({ visible, images, initialIndex, on
 
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 50 }).current;
 
+  const handleClose = useCallback(() => {
+    setIsClosing(false);
+    onClose();
+  }, [onClose]);
+
   const panGesture = Gesture.Pan()
+    .enabled(visible && !isClosing)
     .activeOffsetY([-10, 10])
     .failOffsetX([-20, 20])
     .onUpdate((event) => {
@@ -424,11 +422,12 @@ const MediaViewer = React.memo<ViewerProps>(({ visible, images, initialIndex, on
     })
     .onEnd((event) => {
       if (Math.abs(event.translationY) > 120 || Math.abs(event.velocityY) > 800) {
+        runOnJS(setIsClosing)(true);
         const destY = event.translationY + event.velocityY * 0.2;
         translateY.value = withTiming(destY, { duration: 250 });
         scale.value = withTiming(0.4, { duration: 250 });
         backgroundOpacity.value = withTiming(0, { duration: 250 }, (finished) => {
-          if (finished) runOnJS(onClose)();
+          if (finished) runOnJS(handleClose)();
         });
       } else {
         translateY.value = withTiming(0, { duration: 250 });
@@ -455,83 +454,91 @@ const MediaViewer = React.memo<ViewerProps>(({ visible, images, initialIndex, on
     transform: [{ translateY: withTiming(showUI ? 0 : 20, { duration: 200 }) }]
   }));
 
-  if (!visible || images.length === 0) return null;
+  if (images.length === 0) return null;
 
   const currentImage = images[currentIndex] || images[0];
   const hasDeletePermission = currentImage ? canDelete(currentImage) : false;
-
   const toggleUI = (force?: boolean) => setShowUI(prev => force !== undefined ? force : !prev);
 
   return (
-    <View style={[StyleSheet.absoluteFill, { zIndex: 1000, elevation: 100 }]}>
-      <Animated.View style={[StyleSheet.absoluteFill, animatedBackgroundStyle]}>
-        <BlurTargetView style={StyleSheet.absoluteFill} />
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.95)" }]} />
-      </Animated.View>
+    <View
+      style={[
+        StyleSheet.absoluteFill,
+        { zIndex: visible ? 1000 : -1, elevation: visible ? 100 : 0 }
+      ]}
+      pointerEvents={visible ? "auto" : "none"}
+    >
+      {visible && (
+        <>
+          <Animated.View style={[StyleSheet.absoluteFill, animatedBackgroundStyle]}>
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.95)" }]} />
+          </Animated.View>
 
-      <Animated.View style={[{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 10 }, animatedBackgroundStyle, topUIStyle]} pointerEvents={showUI ? "box-none" : "none"}>
-        <Animated.View entering={FadeInUp.duration(400)} style={[styles.viewerTopBar, { paddingTop: Math.max(insets.top, 20) + 8 }]}>
-          <TouchableOpacity onPress={onClose} style={styles.viewerCloseBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-            <Ionicons name="close" size={26} color="#FFFFFF" />
-          </TouchableOpacity>
+          <Animated.View style={[{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 10 }, animatedBackgroundStyle, topUIStyle]} pointerEvents={showUI ? "box-none" : "none"}>
+            <Animated.View entering={FadeInUp.duration(400)} style={[styles.viewerTopBar, { paddingTop: Math.max(insets.top, 20) + 8 }]}>
+              <TouchableOpacity onPress={handleClose} style={styles.viewerCloseBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+                <Ionicons name="close" size={26} color="#FFFFFF" />
+              </TouchableOpacity>
 
-          <View style={styles.viewerTopInfo}>
-            {currentImage.uploader && <Text style={styles.viewerAuthor}>{currentImage.uploader.display_name}</Text>}
-            <Text style={styles.viewerDate}>
-              {new Date(currentImage.created_at).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}
-            </Text>
-          </View>
+              <View style={styles.viewerTopInfo}>
+                {currentImage.uploader && <Text style={styles.viewerAuthor}>{currentImage.uploader.display_name}</Text>}
+                <Text style={styles.viewerDate}>
+                  {new Date(currentImage.created_at).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}
+                </Text>
+              </View>
 
-          {hasDeletePermission && (
-            <TouchableOpacity onPress={() => onDelete(currentImage)} style={styles.viewerDeleteBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-              <Ionicons name="trash-outline" size={20} color="#FF6B6B" />
-            </TouchableOpacity>
-          )}
-        </Animated.View>
-      </Animated.View>
+              {hasDeletePermission && (
+                <TouchableOpacity onPress={() => onDelete(currentImage)} style={styles.viewerDeleteBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+                  <Ionicons name="trash-outline" size={20} color="#FF6B6B" />
+                </TouchableOpacity>
+              )}
+            </Animated.View>
+          </Animated.View>
 
-      <GestureDetector gesture={panGesture}>
-        <Animated.View style={[{ flex: 1 }, animatedImageStyle]}>
-          <FlatList
-            ref={flatListRef}
-            data={images}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            keyExtractor={(item) => item.id}
-            onViewableItemsChanged={onViewableItemsChanged}
-            viewabilityConfig={viewabilityConfig}
-            getItemLayout={(data, index) => ({ length: SCREEN_WIDTH, offset: SCREEN_WIDTH * index, index })}
-            initialScrollIndex={initialIndex >= 0 && initialIndex < images.length ? initialIndex : 0}
-            renderItem={({ item, index }) => (
-              <ViewerItem
-                item={item}
-                isVisible={index === currentIndex}
-                showUI={showUI}
-                onToggleUI={toggleUI}
+          <GestureDetector gesture={panGesture}>
+            <Animated.View style={[{ flex: 1 }, animatedImageStyle]}>
+              <FlatList
+                ref={flatListRef}
+                data={images}
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                keyExtractor={(item) => item.id}
+                onViewableItemsChanged={onViewableItemsChanged}
+                viewabilityConfig={viewabilityConfig}
+                getItemLayout={(data, index) => ({ length: SCREEN_WIDTH, offset: SCREEN_WIDTH * index, index })}
+                initialScrollIndex={initialIndex >= 0 && initialIndex < images.length ? initialIndex : 0}
+                renderItem={({ item, index }) => (
+                  <ViewerItem
+                    item={item}
+                    isVisible={index === currentIndex}
+                    showUI={showUI}
+                    onToggleUI={toggleUI}
+                  />
+                )}
               />
-            )}
-          />
-        </Animated.View>
-      </GestureDetector>
+            </Animated.View>
+          </GestureDetector>
 
-      <Animated.View style={[{ position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 10 }, animatedBackgroundStyle, bottomUIStyle]} pointerEvents={showUI ? "box-none" : "none"}>
-        <Animated.View entering={FadeInDown.duration(400)} style={[styles.viewerBottomBar, { paddingBottom: Math.max(insets.bottom, 20) + 20 }]}>
-          {currentImage.caption ? (
-            <Text style={styles.viewerCaption}>{currentImage.caption}</Text>
-          ) : (
-            <View style={styles.viewerMetadataRow}>
-              <View style={styles.viewerMetadataItem}>
-                <Ionicons name={currentImage.media_type === "video" ? "videocam-outline" : "image-outline"} size={14} color="rgba(255,255,255,0.5)" />
-                <Text style={styles.viewerMetadataText}>{formatBytes(currentImage.file_size || 0)}</Text>
-              </View>
-              <View style={styles.viewerMetadataItem}>
-                <Text style={styles.viewerMetadataText}>{currentIndex + 1} de {images.length}</Text>
-              </View>
-            </View>
-          )}
-        </Animated.View>
-      </Animated.View>
+          <Animated.View style={[{ position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 10 }, animatedBackgroundStyle, bottomUIStyle]} pointerEvents={showUI ? "box-none" : "none"}>
+            <Animated.View entering={FadeInDown.duration(400)} style={[styles.viewerBottomBar, { paddingBottom: Math.max(insets.bottom, 20) + 20 }]}>
+              {currentImage.caption ? (
+                <Text style={styles.viewerCaption}>{currentImage.caption}</Text>
+              ) : (
+                <View style={styles.viewerMetadataRow}>
+                  <View style={styles.viewerMetadataItem}>
+                    <Ionicons name={currentImage.media_type === "video" ? "videocam-outline" : "image-outline"} size={14} color="rgba(255,255,255,0.5)" />
+                    <Text style={styles.viewerMetadataText}>{formatBytes(currentImage.file_size || 0)}</Text>
+                  </View>
+                  <View style={styles.viewerMetadataItem}>
+                    <Text style={styles.viewerMetadataText}>{currentIndex + 1} de {images.length}</Text>
+                  </View>
+                </View>
+              )}
+            </Animated.View>
+          </Animated.View>
+        </>
+      )}
     </View>
   );
 });
@@ -950,6 +957,7 @@ export default function GalleryScreen() {
           </View>
         )}
       </View>
+      </BlurTargetView>
 
       <MediaViewer
         visible={viewerVisible}
@@ -959,7 +967,6 @@ export default function GalleryScreen() {
         onDelete={handleDelete}
         canDelete={canDeleteImage}
       />
-    </BlurTargetView>
 
       <ConfirmDialog
         visible={confirmDialog.visible}

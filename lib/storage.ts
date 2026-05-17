@@ -161,3 +161,40 @@ export async function deleteMediaFromStorage(
  * Legacy alias for deleteMediaFromStorage
  */
 export const deleteImageFromStorage = deleteMediaFromStorage;
+
+/**
+ * Transforms a Supabase public storage URL into an Image Transformation URL.
+ * Requires Supabase Image Transformations to be enabled.
+ */
+export function getOptimizedMediaUrl(
+  url: string | null | undefined,
+  options: { width?: number; height?: number; resize?: 'cover' | 'contain' | 'fill' } = {}
+): string | undefined {
+  if (!url) return undefined;
+  
+  // Only process urls from our supabase project and standard object/public path
+  // If it's already a render URL or from another source, return as is.
+  if (url.includes('/object/public/') && url.includes('supabase.co')) {
+    // Only optimize images, not videos
+    const isVideo = url.toLowerCase().match(/\.(mp4|mov|webm|m4v)$/);
+    if (isVideo) return url;
+
+    let optimizedUrl = url.replace('/object/public/', '/render/image/public/');
+    
+    const params: string[] = [];
+    if (options.width) params.push(`width=${options.width}`);
+    if (options.height) params.push(`height=${options.height}`);
+    if (options.resize) params.push(`resize=${options.resize}`);
+    params.push('format=webp');
+    params.push('quality=80');
+
+    if (params.length > 0) {
+      const queryString = params.join('&');
+      optimizedUrl += url.includes('?') ? `&${queryString}` : `?${queryString}`;
+    }
+    
+    return optimizedUrl;
+  }
+  
+  return url;
+}

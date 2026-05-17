@@ -92,7 +92,7 @@ CREATE TABLE public.groups (
   is_public BOOLEAN DEFAULT false, -- For future public groups feature
   
   -- Invite system
-  invite_code TEXT UNIQUE NOT NULL DEFAULT upper(substr(md5(random()::text), 1, 8)),
+  invite_code TEXT UNIQUE NOT NULL DEFAULT upper(substr(md5(random()::text), 1, 6)),
   invite_code_expires_at TIMESTAMPTZ, -- NULL = never expires
   
   -- Settings (JSON for flexibility)
@@ -160,7 +160,7 @@ CREATE TABLE public.group_invitations (
   
   -- Invite details
   invite_email TEXT, -- For email invitations
-  invite_code TEXT NOT NULL DEFAULT upper(substr(md5(random()::text), 1, 12)),
+  invite_code TEXT NOT NULL DEFAULT upper(substr(md5(random()::text), 1, 6)),
   
   -- Status
   status invitation_status DEFAULT 'pending' NOT NULL,
@@ -544,7 +544,7 @@ CREATE TRIGGER group_creator_trigger
   FOR EACH ROW EXECUTE FUNCTION add_group_creator_as_owner();
 
 -- Function to generate unique invite codes
-CREATE OR REPLACE FUNCTION generate_invite_code(length INTEGER DEFAULT 8)
+CREATE OR REPLACE FUNCTION generate_invite_code(length INTEGER DEFAULT 6)
 RETURNS TEXT AS $$
 DECLARE
   chars TEXT := 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
