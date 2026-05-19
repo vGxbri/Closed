@@ -139,7 +139,7 @@ const WidgetCatalogCard = React.memo<WidgetCatalogCardProps>(
                     color={
                       isActive
                         ? theme.colors.error
-                        : theme.colors.primary
+                        : theme.colors.onSurfaceVariant
                     }
                   />
                   <Text
@@ -148,7 +148,7 @@ const WidgetCatalogCard = React.memo<WidgetCatalogCardProps>(
                       {
                         color: isActive
                           ? theme.colors.error
-                          : theme.colors.primary,
+                          : theme.colors.onSurfaceVariant,
                       },
                     ]}
                   >
@@ -220,7 +220,7 @@ export default function ExploreWidgetsScreen() {
     title: "",
     message: "",
     type: "info",
-    onConfirm: () => {},
+    onConfirm: () => { },
   });
 
   const hideDialog = () =>

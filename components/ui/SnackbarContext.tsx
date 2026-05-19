@@ -32,7 +32,7 @@ export const SnackbarProvider: React.FC<SnackbarProviderProps> = ({ children }) 
   const [visible, setVisible] = useState(false);
   const [message, setMessage] = useState('');
   const [type, setType] = useState<'success' | 'error' | 'info'>('info');
-  
+
   const translateY = useRef(new Animated.Value(-100)).current;
   const opacity = useRef(new Animated.Value(0)).current;
   const hideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -65,7 +65,7 @@ export const SnackbarProvider: React.FC<SnackbarProviderProps> = ({ children }) 
   const inHomeStack = inTabs && segments[1] === 'home';
   const isHomeIndex = inHomeStack && (segments.length === 2 || segments[2] === 'index');
   const isProfile = inTabs && segments[1] === 'profile';
-  
+
   const hasHeader = inTabs && !isProfile && !isHomeIndex;
 
   const showSnackbar = useCallback((msg: string, snackType: 'success' | 'error' | 'info' = 'info') => {
@@ -115,8 +115,8 @@ export const SnackbarProvider: React.FC<SnackbarProviderProps> = ({ children }) 
           backgroundColor: theme.colors.primaryContainer,
           borderColor: theme.colors.primary,
           iconName: 'checkmark-circle' as const,
-          iconColor: theme.colors.primary,
-          textColor: theme.colors.onPrimaryContainer,
+          iconColor: theme.colors.onSurface,
+          textColor: theme.colors.onSurface,
         };
       case 'error':
         return {
@@ -143,7 +143,7 @@ export const SnackbarProvider: React.FC<SnackbarProviderProps> = ({ children }) 
     <SnackbarContext.Provider value={{ showSnackbar }}>
       {children}
       {visible && (
-        <Animated.View 
+        <Animated.View
           style={[
             styles.container,
             {
@@ -154,10 +154,10 @@ export const SnackbarProvider: React.FC<SnackbarProviderProps> = ({ children }) 
           ]}
         >
           <Pressable onPress={hideSnackbar}>
-            <View 
+            <View
               style={[
-                styles.snackbar, 
-                { 
+                styles.snackbar,
+                {
                   backgroundColor: config.backgroundColor,
                   borderColor: config.borderColor,
                 }

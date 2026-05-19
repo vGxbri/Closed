@@ -14,7 +14,6 @@ import React, { useCallback, useState } from "react";
 import {
   Dimensions,
   Pressable,
-  RefreshControl,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
@@ -489,6 +488,13 @@ export default function GroupDetailScreen() {
       } as any);
       return;
     }
+    if (widget.widget.name === "Bloc") {
+      router.push({
+        pathname: "/groups/group/bloc",
+        params: { id },
+      } as any);
+      return;
+    }
     showSnackbar("Próximamente", "info");
   }, [router, id, showSnackbar]);
 
@@ -652,14 +658,6 @@ export default function GroupDetailScreen() {
               { paddingBottom: 120 + insets.bottom },
             ]}
             showsVerticalScrollIndicator={false}
-            refreshControl={
-              <RefreshControl
-                refreshing={isLoading}
-                onRefresh={refetch}
-                colors={[theme.colors.primary]}
-                tintColor={theme.colors.primary}
-              />
-            }
           >
             {/* ─── Group Header ─── */}
             <Animated.View

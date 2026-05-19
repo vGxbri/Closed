@@ -3,7 +3,7 @@ import * as Haptics from "expo-haptics";
 import { BlurTargetView, BlurView } from "expo-blur";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
-import { Stack, useLocalSearchParams, useNavigation, useRouter } from "expo-router";
+import { Stack, useLocalSearchParams, useNavigation, useRouter, useFocusEffect } from "expo-router";
 import { VideoView, useVideoPlayer } from "expo-video";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -623,9 +623,11 @@ export default function GalleryScreen() {
     }
   }, [id, showSnackbar, storageUsed]);
 
-  useEffect(() => {
-    fetchImages(0);
-  }, [fetchImages]);
+  useFocusEffect(
+    useCallback(() => {
+      fetchImages(0);
+    }, [fetchImages])
+  );
 
   const loadMore = useCallback(() => {
     if (!hasMore || isLoading) return;

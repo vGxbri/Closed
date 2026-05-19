@@ -229,26 +229,36 @@ export interface Message {
   created_at: string;
 }
 
-export interface ReactionGroup {
-  emoji: string;
-  count: number;
-  user_ids: string[];
-}
-
 export interface MessageView extends Message {
   sender_name: string;
   sender_avatar: string | null;
   reply_to_content: string | null;
   reply_to_sender_name: string | null;
-  reactions: ReactionGroup[];
 }
 
-export interface MessageReaction {
+// ─── Notes (Bloc widget) ──────────────────────────────────────────────
+export interface ChecklistItem {
   id: string;
-  message_id: string;
-  user_id: string;
-  emoji: string;
+  text: string;
+  checked: boolean;
+}
+
+export interface NoteBlock {
+  id: string;
+  type: 'text' | 'heading' | 'checklist';
+  value: string;
+  items?: ChecklistItem[];
+}
+
+export interface Note {
+  id: string;
+  group_id: string;
+  title: string;
+  content: NoteBlock[];
+  is_pinned: boolean;
+  created_by: string;
   created_at: string;
+  updated_at: string;
 }
 
 export interface GalleryImageWithUser extends GalleryImage {

@@ -1,11 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { BlurTargetView } from "expo-blur";
 import { Image } from "expo-image";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
   Pressable,
-  RefreshControl,
   ScrollView,
   StyleSheet,
   View,
@@ -203,6 +202,12 @@ export default function GroupsScreen() {
   const backgroundRef = useRef(null);
   const { signOut } = useAuth();
 
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch])
+  );
+
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
 
   const handleGroupPress = useCallback(
@@ -218,7 +223,7 @@ export default function GroupsScreen() {
   );
 
   const handleJoinGroup = useCallback(
-    () => router.push("/groups/group/join" as any),
+    () => router.push("/join/joinGroup" as any),
     [router]
   );
 
@@ -236,13 +241,6 @@ export default function GroupsScreen() {
       <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]} edges={["top", "left", "right"]}>
         <ScrollView
           contentContainerStyle={styles.scrollContent}
-          refreshControl={
-            <RefreshControl
-              refreshing={isLoading && groups.length > 0}
-              onRefresh={refetch}
-              tintColor={theme.colors.primary}
-            />
-          }
           showsVerticalScrollIndicator={false}
           bounces={true}
         >

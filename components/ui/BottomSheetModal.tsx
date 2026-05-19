@@ -11,12 +11,12 @@ import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { Portal, useTheme } from "react-native-paper";
 import Animated, {
   runOnJS,
+  SharedValue,
+  useAnimatedKeyboard,
   useAnimatedStyle,
   useSharedValue,
-  useAnimatedKeyboard,
   withSpring,
   withTiming,
-  SharedValue,
 } from "react-native-reanimated";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -78,6 +78,7 @@ export const BottomSheetModal: React.FC<BottomSheetModalProps> = ({
 
   // Pan gesture for dragging down
   const panGesture = Gesture.Pan()
+    .activeOffsetY([-10, 10])
     .onStart(() => {
       context.value = translateY.value;
     })
@@ -138,7 +139,7 @@ export const BottomSheetModal: React.FC<BottomSheetModalProps> = ({
         <Pressable style={styles.backdrop} onPress={onDismiss}>
           <Animated.View style={[StyleSheet.absoluteFill, backdropStyle]}>
             <BlurView
-              intensity={25}
+              intensity={60}
               tint="dark"
               style={StyleSheet.absoluteFill}
               blurMethod={blurTarget ? "dimezisBlurView" : undefined}

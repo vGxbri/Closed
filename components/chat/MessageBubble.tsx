@@ -14,10 +14,7 @@ import Animated, {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
 import { UserAvatar } from '@/components/ui/UserAvatar';
-import { MessageView, ReactionGroup } from '@/types/database';
-
-// ─── Quick Reaction Emojis ──────────────────────────────────────────────
-export const QUICK_EMOJIS = ['❤️', '😂', '😮', '😢', '👍', '🔥'];
+import { MessageView } from '@/types/database';
 
 // ─── Helpers ────────────────────────────────────────────────────────────
 const formatTime = (dateStr: string): string => {
@@ -38,59 +35,10 @@ interface MessageBubbleProps {
   onReply: (message: MessageView) => void;
   onEdit: (message: MessageView) => void;
   onDelete: (message: MessageView) => void;
-  onReaction: (messageId: string, emoji: string) => void;
   onLongPress: (message: MessageView) => void;
 }
 
-// ─── Reaction Pills ─────────────────────────────────────────────────────
-const ReactionPills = React.memo(({
-  reactions,
-  currentUserId,
-  onToggle,
-}: {
-  reactions: ReactionGroup[];
-  currentUserId: string;
-  onToggle: (emoji: string) => void;
-}) => {
-  const theme = useTheme();
-  if (!reactions || reactions.length === 0) return null;
 
-  return (
-    <View style={s.reactionsRow}>
-      {reactions.map((r) => {
-        const isMine = r.user_ids?.includes(currentUserId);
-        return (
-          <Pressable
-            key={r.emoji}
-            onPress={() => {
-              Haptics.selectionAsync();
-              onToggle(r.emoji);
-            }}
-            style={[
-              s.reactionPill,
-              {
-                backgroundColor: isMine
-                  ? (theme.dark ? 'rgba(42,138,112,0.25)' : 'rgba(42,138,112,0.12)')
-                  : theme.colors.surfaceVariant,
-                borderColor: isMine ? theme.colors.primary : 'transparent',
-                borderWidth: isMine ? 1 : 0,
-              },
-            ]}
-          >
-            <Text style={s.reactionEmoji}>{r.emoji}</Text>
-            {r.count > 1 && (
-              <Text style={[s.reactionCount, { color: theme.colors.onSurfaceVariant }]}>
-                {r.count}
-              </Text>
-            )}
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-});
-
-ReactionPills.displayName = 'ReactionPills';
 
 // ─── Reply Quote ────────────────────────────────────────────────────────
 const ReplyQuote = React.memo(({
@@ -134,7 +82,6 @@ const MessageBubble = React.memo(({
   onReply,
   onEdit,
   onDelete,
-  onReaction,
   onLongPress,
   canEdit,
 }: MessageBubbleProps) => {
@@ -176,10 +123,7 @@ const MessageBubble = React.memo(({
     onLongPress(message);
   }, [message, onLongPress]);
 
-  const handleReactionToggle = useCallback(
-    (emoji: string) => onReaction(message.id, emoji),
-    [message.id, onReaction]
-  );
+
 
   // ─── Deleted message ────────────────────────
   if (message.is_deleted) {
@@ -287,12 +231,7 @@ const MessageBubble = React.memo(({
             </SquircleView>
           </Pressable>
 
-          {/* Reactions */}
-          <ReactionPills
-            reactions={message.reactions}
-            currentUserId={currentUserId}
-            onToggle={handleReactionToggle}
-          />
+
         </Animated.View>
       </GestureDetector>
     </View>
@@ -407,23 +346,5 @@ const s = StyleSheet.create({
   replyName: { fontFamily: 'Archivo-Bold', fontSize: 11 },
   replyContent: { fontFamily: 'Archivo-Medium', fontSize: 12, marginTop: 1 },
 
-  // Reactions
-  reactionsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 4,
-    marginTop: 4,
-    marginBottom: 2,
-    paddingHorizontal: 4,
-  },
-  reactionPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 12,
-    gap: 3,
-  },
-  reactionEmoji: { fontSize: 14 },
-  reactionCount: { fontFamily: 'Archivo-Bold', fontSize: 11 },
+
 });

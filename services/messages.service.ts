@@ -133,42 +133,7 @@ class MessagesService {
     }
   }
 
-  /**
-   * Toggles a reaction on a message.
-   * If the user already reacted with this emoji, removes it. Otherwise adds it.
-   */
-  async toggleReaction(messageId: string, emoji: string): Promise<'added' | 'removed'> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Not authenticated');
 
-    // Check if reaction exists
-    const { data: existing } = await supabase
-      .from('message_reactions')
-      .select('id')
-      .eq('message_id', messageId)
-      .eq('user_id', user.id)
-      .eq('emoji', emoji)
-      .maybeSingle();
-
-    if (existing) {
-      // Remove
-      const { error } = await supabase
-        .from('message_reactions')
-        .delete()
-        .eq('id', existing.id);
-
-      if (error) throw error;
-      return 'removed';
-    } else {
-      // Add
-      const { error } = await supabase
-        .from('message_reactions')
-        .insert({ message_id: messageId, user_id: user.id, emoji });
-
-      if (error) throw error;
-      return 'added';
-    }
-  }
 
   /**
    * Subscribes to real-time message updates for a specific group.
@@ -220,41 +185,7 @@ class MessagesService {
       .subscribe();
   }
 
-  /**
-   * Subscribes to reaction changes on messages in a group.
-   * Returns a channel that can be unsubscribed.
-   */
-  subscribeToReactions(
-    groupId: string,
-    onReactionChange: (messageId: string) => void
-  ) {
-    return supabase
-      .channel(`group-reactions:${groupId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'message_reactions',
-        },
-        async (payload) => {
-          const messageId = (payload.new as Record<string, unknown>)?.message_id
-            || (payload.old as Record<string, unknown>)?.message_id;
-          if (messageId && typeof messageId === 'string') {
-            // Check if this message belongs to our group
-            const { data } = await supabase
-              .from('messages')
-              .select('group_id')
-              .eq('id', messageId)
-              .single();
-            if (data?.group_id === groupId) {
-              onReactionChange(messageId);
-            }
-          }
-        }
-      )
-      .subscribe();
-  }
+
 
   /**
    * Fetches a single message from the view by ID.
@@ -288,13 +219,10 @@ class MessagesService {
   }
 
   /**
-   * Parses raw DB row to ensure reactions is always an array.
+   * Parses raw DB row to view type.
    */
   private parseMessageView(raw: Record<string, unknown>): MessageView {
-    return {
-      ...raw,
-      reactions: Array.isArray(raw.reactions) ? raw.reactions : [],
-    } as MessageView;
+    return raw as MessageView;
   }
 }
 

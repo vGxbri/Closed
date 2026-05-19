@@ -25,7 +25,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { MessageBubble, QUICK_EMOJIS } from '@/components/chat/MessageBubble';
+import { MessageBubble } from '@/components/chat/MessageBubble';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { BottomSheetModal } from '@/components/ui/BottomSheetModal';
 import { useAuth, useGroup } from '@/hooks';
@@ -112,7 +112,7 @@ export default function MessagesScreen() {
 
   // Context menu / action sheet state
   const [contextMessage, setContextMessage] = useState<MessageView | null>(null);
-  const [showReactionPicker, setShowReactionPicker] = useState(false);
+
 
   // Delete confirmation
   const [deleteTarget, setDeleteTarget] = useState<MessageView | null>(null);
@@ -170,19 +170,11 @@ export default function MessagesScreen() {
       onMessageDeleted: () => { },
     });
 
-    // Realtime reactions
-    const reactSub = messagesService.subscribeToReactions(id as string, async (messageId) => {
-      if (!mounted) return;
-      const updated = await messagesService.refreshMessage(messageId);
-      if (updated) {
-        setMessages((prev) => prev.map((m) => (m.id === messageId ? updated : m)));
-      }
-    });
+
 
     return () => {
       mounted = false;
       msgSub.unsubscribe();
-      reactSub.unsubscribe();
     };
   }, [id]);
 
@@ -230,7 +222,7 @@ export default function MessagesScreen() {
       sender_avatar: user.user_metadata?.avatar_url || null,
       reply_to_content: replyTo?.content?.slice(0, 100) || null,
       reply_to_sender_name: replyTo?.sender_name || null,
-      reactions: [],
+
     };
 
     setMessages((prev) => [optimisticMsg, ...prev]);
@@ -274,17 +266,11 @@ export default function MessagesScreen() {
     setDeleteTarget(null);
   }, [deleteTarget, isAdmin]);
 
-  const handleReaction = useCallback(async (messageId: string, emoji: string) => {
-    try {
-      await messagesService.toggleReaction(messageId, emoji);
-    } catch (e) {
-      console.error('Error toggling reaction:', e);
-    }
-  }, []);
+
 
   const handleLongPress = useCallback((msg: MessageView) => {
     setContextMessage(msg);
-    setShowReactionPicker(false);
+
   }, []);
 
   const handleCancelReply = useCallback(() => { setReplyTo(null); }, []);
@@ -318,13 +304,13 @@ export default function MessagesScreen() {
           onReply={handleReply}
           onEdit={handleStartEdit}
           onDelete={(m) => setDeleteTarget(m)}
-          onReaction={handleReaction}
+
           onLongPress={handleLongPress}
         />
         {showDate && <DateSeparator dateStr={item.created_at} />}
       </>
     );
-  }, [user?.id, messages, optimisticIds, isAdmin, handleReply, handleStartEdit, handleReaction, handleLongPress]);
+  }, [user?.id, messages, optimisticIds, isAdmin, handleReply, handleStartEdit, handleLongPress]);
 
   const keyExtractor = useCallback((item: MessageView) => item.id, []);
 
@@ -462,28 +448,12 @@ export default function MessagesScreen() {
                 onReply={() => {}}
                 onEdit={() => {}}
                 onDelete={() => {}}
-                onReaction={() => {}}
+
                 onLongPress={() => {}}
               />
             </View>
 
-            {/* Quick reactions row */}
-            <View style={styles.quickReactionsRow}>
-              {QUICK_EMOJIS.map((emoji) => (
-                <Pressable
-                  key={emoji}
-                  onPress={() => {
-                    handleReaction(contextMessage.id, emoji);
-                    setContextMessage(null);
-                  }}
-                  style={({ pressed }) => [styles.quickReactionBtn, { transform: [{ scale: pressed ? 0.85 : 1 }] }]}
-                >
-                  <Text style={styles.quickReactionEmoji}>{emoji}</Text>
-                </Pressable>
-              ))}
-            </View>
 
-            <View style={[styles.contextDivider, { backgroundColor: theme.colors.outlineVariant }]} />
 
             {/* Actions */}
             <ContextAction icon="arrow-undo-outline" label="Responder" onPress={() => { handleReply(contextMessage); }} />
@@ -593,20 +563,7 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
     paddingHorizontal: 20,
   },
-  quickReactionsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  quickReactionBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  quickReactionEmoji: { fontSize: 26 },
+
   contextDivider: { height: StyleSheet.hairlineWidth, marginVertical: 12 },
   contextAction: {
     flexDirection: 'row',

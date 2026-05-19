@@ -5,3 +5,4 @@ export { galleryService } from './gallery.service';
 export { groupsService } from './groups.service';
 export { widgetsService } from './widgets.service';
 export { messagesService } from './messages.service';
+export { notesService } from './notes.service';
