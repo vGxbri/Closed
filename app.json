@@ -46,7 +46,8 @@
           }
         }
       ],
-      "./withKotlinFix.js"
+      "./withKotlinFix.js",
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true,

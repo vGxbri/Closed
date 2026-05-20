@@ -4,8 +4,9 @@ import { MemberListBottomSheet } from "@/components/MemberListBottomSheet";
 import { UserAvatar } from "@/components/ui/UserAvatar";
 import { useAuth, useGroup } from "@/hooks";
 import { galleryService } from "@/services/gallery.service";
+import { eventsService } from "@/services/events.service";
 import { widgetsService } from "@/services/widgets.service";
-import { GroupWidgetWithDetails } from "@/types/database";
+import { CalendarEvent, GroupWidgetWithDetails } from "@/types/database";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { Image } from "expo-image";
@@ -38,6 +39,7 @@ const CARD_WIDTH = (SCREEN_WIDTH - 24 * 2 - CARD_GAP) / 2;
 // ─── Widget Card ───────────────────────────────────────────────────────
 // Widget names that have special renderings
 const WIDGET_ARCHIVO = "Archivo";
+const WIDGET_AGENDA = "Agenda";
 
 interface WidgetCardProps {
   widget: GroupWidgetWithDetails;
@@ -326,10 +328,149 @@ const GenericWidgetCard = React.memo<WidgetCardProps>(
 
 GenericWidgetCard.displayName = "GenericWidgetCard";
 
+// Agenda Widget Card — shows next upcoming event
+const AgendaWidgetCard = React.memo<WidgetCardProps>(
+  ({ widget, index, onPress, groupId }) => {
+    const theme = useTheme();
+    const [nextEvent, setNextEvent] = useState<CalendarEvent | null>(null);
+    const [monthCount, setMonthCount] = useState(0);
+
+    useFocusEffect(
+      React.useCallback(() => {
+        let cancelled = false;
+        const load = async () => {
+          try {
+            const [upcoming, count] = await Promise.all([
+              eventsService.getUpcomingEvents(groupId, 1),
+              eventsService.getMonthEventCount(groupId),
+            ]);
+            if (!cancelled) {
+              setNextEvent(upcoming[0] || null);
+              setMonthCount(count);
+            }
+          } catch (e) {
+            console.error("Error loading agenda preview:", e);
+          }
+        };
+        load();
+        return () => { cancelled = true; };
+      }, [groupId])
+    );
+
+    const formatEventDate = (dateStr: string, isAllDay: boolean): string => {
+      const d = new Date(dateStr);
+      const day = d.getDate();
+      const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+      const month = months[d.getMonth()];
+      if (isAllDay) return `${day} ${month} · Todo el día`;
+      const h = d.getHours().toString().padStart(2, '0');
+      const m = d.getMinutes().toString().padStart(2, '0');
+      return `${day} ${month} · ${h}:${m}`;
+    };
+
+    return (
+      <Animated.View
+        entering={FadeIn.duration(400).delay(200 + index * 80)}
+        style={styles.bentoItem}
+      >
+        <Pressable
+          onPress={() => onPress(widget)}
+          style={({ pressed }) => [
+            {
+              opacity: pressed ? 0.92 : 1,
+              transform: [{ scale: pressed ? 0.97 : 1 }],
+            },
+          ]}
+        >
+          <SquircleView
+            style={[
+              styles.widgetCard,
+              {
+                backgroundColor: theme.colors.surface,
+                borderColor: theme.colors.outlineVariant,
+                borderWidth: 1,
+              },
+            ]}
+            cornerSmoothing={1}
+          >
+            {/* Icon */}
+            <SquircleView
+              style={[
+                styles.widgetIconContainer,
+                {
+                  backgroundColor: theme.colors.surfaceVariant,
+                  borderColor: theme.colors.outlineVariant,
+                  borderWidth: 1,
+                },
+              ]}
+              cornerSmoothing={1}
+            >
+              <Ionicons
+                name="calendar-outline"
+                size={24}
+                color="#FFFFFF"
+              />
+            </SquircleView>
+
+            {/* Info */}
+            <View style={styles.widgetInfo}>
+              <Text
+                style={[styles.widgetName, { color: theme.colors.onSurface }]}
+                numberOfLines={1}
+              >
+                Agenda
+              </Text>
+              {nextEvent ? (
+                <>
+                  <Text
+                    style={[
+                      styles.widgetSubtitle,
+                      { color: theme.colors.onSurfaceVariant },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {nextEvent.emoji} {nextEvent.title}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.agendaDate,
+                      { color: theme.colors.primary },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {formatEventDate(nextEvent.starts_at, nextEvent.is_all_day)}
+                  </Text>
+                </>
+              ) : (
+                <Text
+                  style={[
+                    styles.widgetSubtitle,
+                    { color: theme.colors.onSurfaceVariant },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {monthCount > 0
+                    ? `${monthCount} evento${monthCount !== 1 ? 's' : ''} este mes`
+                    : "Sin eventos próximos"}
+                </Text>
+              )}
+            </View>
+          </SquircleView>
+        </Pressable>
+      </Animated.View>
+    );
+  }
+);
+
+AgendaWidgetCard.displayName = "AgendaWidgetCard";
+
 // Widget Card dispatcher — chooses the right card type
 const WidgetCard = React.memo<WidgetCardProps>((props) => {
   if (props.widget.widget.name === WIDGET_ARCHIVO) {
     return <ArchivoWidgetCard {...props} />;
+  }
+  if (props.widget.widget.name === WIDGET_AGENDA) {
+    return <AgendaWidgetCard {...props} />;
   }
   return <GenericWidgetCard {...props} />;
 });
@@ -491,6 +632,13 @@ export default function GroupDetailScreen() {
     if (widget.widget.name === "Bloc") {
       router.push({
         pathname: "/groups/group/bloc",
+        params: { id },
+      } as any);
+      return;
+    }
+    if (widget.widget.name === "Agenda") {
+      router.push({
+        pathname: "/groups/group/calendar",
         params: { id },
       } as any);
       return;
@@ -1193,6 +1341,12 @@ const styles = StyleSheet.create({
     fontFamily: "Archivo-Medium",
     fontSize: 12,
     letterSpacing: 0.2,
+  },
+  agendaDate: {
+    fontFamily: "Archivo-SemiBold",
+    fontSize: 11,
+    letterSpacing: 0.2,
+    marginTop: 2,
   },
 
   // Add Widget Card
