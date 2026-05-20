@@ -162,6 +162,9 @@ export async function deleteMediaFromStorage(
  */
 export const deleteImageFromStorage = deleteMediaFromStorage;
 
+// Set this to true only if the Supabase project has been upgraded to a paid plan (Pro tier or higher) that supports Image Transformations.
+const ENABLE_IMAGE_OPTIMIZATION = false;
+
 /**
  * Transforms a Supabase public storage URL into an Image Transformation URL.
  * Requires Supabase Image Transformations to be enabled.
@@ -172,6 +175,10 @@ export function getOptimizedMediaUrl(
 ): string | undefined {
   if (!url) return undefined;
   
+  if (!ENABLE_IMAGE_OPTIMIZATION) {
+    return url;
+  }
+
   // Only process urls from our supabase project and standard object/public path
   // If it's already a render URL or from another source, return as is.
   if (url.includes('/object/public/') && url.includes('supabase.co')) {

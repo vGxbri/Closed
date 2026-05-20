@@ -3,6 +3,7 @@ import { MemberAvatarsRow } from "@/components/MemberAvatar";
 import { MemberListBottomSheet } from "@/components/MemberListBottomSheet";
 import { UserAvatar } from "@/components/ui/UserAvatar";
 import { useAuth, useGroup } from "@/hooks";
+import { supabase } from "@/lib/supabase";
 import { galleryService } from "@/services/gallery.service";
 import { eventsService } from "@/services/events.service";
 import { widgetsService } from "@/services/widgets.service";
@@ -353,7 +354,27 @@ const AgendaWidgetCard = React.memo<WidgetCardProps>(
           }
         };
         load();
-        return () => { cancelled = true; };
+
+        const subscription = supabase
+          .channel(`group-agenda-realtime:${groupId}`)
+          .on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table: 'events',
+              filter: `group_id=eq.${groupId}`,
+            },
+            () => {
+              load();
+            }
+          )
+          .subscribe();
+
+        return () => {
+          cancelled = true;
+          subscription.unsubscribe();
+        };
       }, [groupId])
     );
 
@@ -429,7 +450,7 @@ const AgendaWidgetCard = React.memo<WidgetCardProps>(
                     ]}
                     numberOfLines={1}
                   >
-                    {nextEvent.emoji} {nextEvent.title}
+                    {nextEvent.title}
                   </Text>
                   <Text
                     style={[

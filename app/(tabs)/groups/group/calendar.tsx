@@ -2,7 +2,13 @@ import { Ionicons } from "@expo/vector-icons";
 import { BlurTargetView } from "expo-blur";
 import { Image } from "expo-image";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Pressable,
   ScrollView,
@@ -21,8 +27,8 @@ import Animated, {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CustomHeader } from "@/components/ui/CustomHeader";
-import { UserAvatar } from "@/components/ui/UserAvatar";
 import { useSnackbar } from "@/components/ui/SnackbarContext";
+import { UserAvatar } from "@/components/ui/UserAvatar";
 import { useAuth } from "@/hooks";
 import { eventsService } from "@/services/events.service";
 import {
@@ -122,69 +128,90 @@ const CalendarGrid = React.memo<CalendarGridProps>(
 
         {/* Day cells — render row by row */}
         {Array.from({ length: Math.ceil(cells.length / 7) }).map(
-          (_, rowIdx) => (
-            <View key={rowIdx} style={styles.dayRow}>
-              {cells.slice(rowIdx * 7, rowIdx * 7 + 7).map((day, colIdx) => {
-                if (day === null) {
-                  return <View key={`e-${colIdx}`} style={styles.dayCell} />;
-                }
+          (_, rowIdx) => {
+            const rowCells = cells.slice(rowIdx * 7, rowIdx * 7 + 7);
+            while (rowCells.length < 7) {
+              rowCells.push(null);
+            }
 
-                const selected = isSelected(day);
-                const today = isToday(day);
-                const colors = eventDays.get(day) || [];
+            return (
+              <View key={rowIdx} style={styles.dayRow}>
+                {rowCells.map((day, colIdx) => {
+                  if (day === null) {
+                    return (
+                      <View
+                        key={`e-${colIdx}-${rowIdx}`}
+                        style={styles.dayCell}
+                      />
+                    );
+                  }
 
-                return (
-                  <TouchableOpacity
-                    key={day}
-                    style={styles.dayCell}
-                    onPress={() => onSelectDate(new Date(year, month, day))}
-                    activeOpacity={0.7}
-                  >
-                    <View
-                      style={[
-                        styles.dayCellInner,
-                        selected && {
-                          backgroundColor: theme.colors.primary,
-                        },
-                        today &&
-                          !selected && {
-                            borderWidth: 1.5,
-                            borderColor: theme.colors.primary,
-                          },
-                      ]}
+                  const selected = isSelected(day);
+                  const today = isToday(day);
+                  const colors = eventDays.get(day) || [];
+
+                  return (
+                    <TouchableOpacity
+                      key={day}
+                      style={styles.dayCell}
+                      onPress={() => onSelectDate(new Date(year, month, day))}
+                      activeOpacity={0.7}
                     >
-                      <Text
-                        style={[
-                          styles.dayText,
-                          {
-                            color: selected
-                              ? theme.colors.onPrimary
-                              : theme.colors.onSurface,
-                          },
-                          today && !selected && {
-                            color: theme.colors.primary,
-                          },
-                        ]}
-                      >
-                        {day}
-                      </Text>
-                    </View>
-                    {/* Event dots */}
-                    {colors.length > 0 && (
-                      <View style={styles.dotRow}>
-                        {colors.slice(0, 3).map((c, i) => (
-                          <View
-                            key={i}
-                            style={[styles.eventDot, { backgroundColor: c }]}
-                          />
-                        ))}
+                      {/* CONTENEDOR PRINCIPAL DEL NÚMERO */}
+                      <View style={styles.dayCircleContainer}>
+                        {/* 1. CAPA DE FONDO: Un círculo geométrico puro y vacío. 
+                            Al no tener hijos que lo empujen, Android nunca lo deformará.
+                            Además, le pasamos los colores en un solo objeto cerrado para evitar bugs de actualización. */}
+                        <View
+                          style={[
+                            styles.dayBackground,
+                            {
+                              backgroundColor: selected
+                                ? theme.colors.primary
+                                : "transparent",
+                              borderColor:
+                                today && !selected
+                                  ? theme.colors.primary
+                                  : "transparent",
+                              borderWidth: today && !selected ? 1.5 : 0,
+                            },
+                          ]}
+                        />
+
+                        {/* 2. CAPA DE TEXTO: Flota en el centro exacto de la caja superior */}
+                        <Text
+                          style={[
+                            styles.dayText,
+                            {
+                              color: selected
+                                ? "#FFFFFF"
+                                : today
+                                  ? theme.colors.primary
+                                  : theme.colors.onSurface,
+                            },
+                          ]}
+                        >
+                          {day}
+                        </Text>
                       </View>
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          ),
+
+                      {/* 3. CAPA DE EVENTOS: Flotan abajo del todo sin molestar al círculo */}
+                      {colors.length > 0 && (
+                        <View style={styles.dotRowAbsolute}>
+                          {colors.slice(0, 3).map((c, i) => (
+                            <View
+                              key={i}
+                              style={[styles.eventDot, { backgroundColor: c }]}
+                            />
+                          ))}
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            );
+          },
         )}
       </View>
     );
@@ -251,15 +278,12 @@ const EventCard = React.memo<EventCardProps>(({ event, index, onPress }) => {
           />
 
           <View style={styles.eventCardBody}>
-            {/* Top row: emoji + title + time */}
+            {/* Top row: icon + title + time */}
             <View style={styles.eventTopRow}>
-              <Text style={styles.eventEmoji}>{event.emoji}</Text>
+              <Ionicons name="calendar" size={24} color={event.color} />
               <View style={styles.eventTitleBlock}>
                 <Text
-                  style={[
-                    styles.eventTitle,
-                    { color: theme.colors.onSurface },
-                  ]}
+                  style={[styles.eventTitle, { color: theme.colors.onSurface }]}
                   numberOfLines={1}
                 >
                   {event.title}
@@ -468,18 +492,27 @@ export default function CalendarScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingDay, setIsLoadingDay] = useState(false);
 
+  const isFirstLoad = useRef(true);
+
   // ─── Fetch events for current month ────────────────────────
   const fetchMonthEvents = useCallback(async () => {
     if (!id) return;
     try {
-      setIsLoading(true);
-      const data = await eventsService.getGroupEvents(id, currentYear, currentMonth);
+      if (isFirstLoad.current) {
+        setIsLoading(true);
+      }
+      const data = await eventsService.getGroupEvents(
+        id,
+        currentYear,
+        currentMonth,
+      );
       setEvents(data);
     } catch (error) {
       console.error("Error loading calendar events:", error);
       showSnackbar("Error al cargar los eventos", "error");
     } finally {
       setIsLoading(false);
+      isFirstLoad.current = false;
     }
   }, [id, currentYear, currentMonth, showSnackbar]);
 
@@ -492,7 +525,11 @@ export default function CalendarScreen() {
     if (!id) return;
     try {
       setIsLoadingDay(true);
-      const photos = await eventsService.getGalleryImagesForDate(id, selectedDate);
+      setDayPhotos([]); // Clear old photos to avoid flashes of previous selection
+      const photos = await eventsService.getGalleryImagesForDate(
+        id,
+        selectedDate,
+      );
       setDayPhotos(photos);
     } catch (error) {
       console.error("Error loading day photos:", error);
@@ -532,28 +569,51 @@ export default function CalendarScreen() {
 
   // ─── Navigation ────────────────────────────────────────────
   const goToPreviousMonth = useCallback(() => {
-    if (currentMonth === 0) {
-      setCurrentMonth(11);
-      setCurrentYear((y) => y - 1);
-    } else {
-      setCurrentMonth((m) => m - 1);
+    setEvents([]);
+    let newMonth = currentMonth - 1;
+    let newYear = currentYear;
+    if (newMonth < 0) {
+      newMonth = 11;
+      newYear = currentYear - 1;
     }
-  }, [currentMonth]);
+    setCurrentMonth(newMonth);
+    setCurrentYear(newYear);
+
+    // Keep same day number but bound to the target month's total days
+    const currentDay = selectedDate.getDate();
+    const daysInNewMonth = new Date(newYear, newMonth + 1, 0).getDate();
+    const targetDay = Math.min(currentDay, daysInNewMonth);
+    setSelectedDate(new Date(newYear, newMonth, targetDay));
+  }, [currentMonth, currentYear, selectedDate]);
 
   const goToNextMonth = useCallback(() => {
-    if (currentMonth === 11) {
-      setCurrentMonth(0);
-      setCurrentYear((y) => y + 1);
-    } else {
-      setCurrentMonth((m) => m + 1);
+    setEvents([]);
+    let newMonth = currentMonth + 1;
+    let newYear = currentYear;
+    if (newMonth > 11) {
+      newMonth = 0;
+      newYear = currentYear + 1;
     }
-  }, [currentMonth]);
+    setCurrentMonth(newMonth);
+    setCurrentYear(newYear);
+
+    // Keep same day number but bound to the target month's total days
+    const currentDay = selectedDate.getDate();
+    const daysInNewMonth = new Date(newYear, newMonth + 1, 0).getDate();
+    const targetDay = Math.min(currentDay, daysInNewMonth);
+    setSelectedDate(new Date(newYear, newMonth, targetDay));
+  }, [currentMonth, currentYear, selectedDate]);
 
   const goToToday = useCallback(() => {
-    setCurrentYear(today.getFullYear());
-    setCurrentMonth(today.getMonth());
+    const isDifferent =
+      currentYear !== today.getFullYear() || currentMonth !== today.getMonth();
+    if (isDifferent) {
+      setEvents([]);
+      setCurrentYear(today.getFullYear());
+      setCurrentMonth(today.getMonth());
+    }
     setSelectedDate(today);
-  }, [today]);
+  }, [today, currentYear, currentMonth]);
 
   const handleCreateEvent = useCallback(() => {
     router.push({
@@ -590,7 +650,9 @@ export default function CalendarScreen() {
     <>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <BlurTargetView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <BlurTargetView
+        style={[styles.container, { backgroundColor: theme.colors.background }]}
+      >
         <CustomHeader
           title=""
           showBackButton={true}
@@ -610,7 +672,7 @@ export default function CalendarScreen() {
                 <Ionicons
                   name="add"
                   size={20}
-                  color={theme.colors.primary}
+                  color={theme.colors.onSurfaceVariant}
                 />
               </SquircleView>
             </TouchableOpacity>
@@ -630,9 +692,7 @@ export default function CalendarScreen() {
             entering={FadeInUp.duration(500)}
             style={styles.titleBlock}
           >
-            <Text
-              style={[styles.screenTitle, { color: theme.colors.primary }]}
-            >
+            <Text style={[styles.screenTitle, { color: theme.colors.primary }]}>
               Agenda
             </Text>
             <Text
@@ -907,28 +967,44 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     paddingVertical: 2,
-    minHeight: 44,
+    height: 46,
+    justifyContent: "flex-start",
   },
-  dayCellInner: {
+  dayCircleContainer: {
     width: 34,
     height: 34,
-    borderRadius: 11,
     justifyContent: "center",
     alignItems: "center",
+  },
+  dayBackground: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 17,
   },
   dayText: {
     fontFamily: "Archivo-Medium",
     fontSize: 14,
+    textAlign: "center",
   },
-  dotRow: {
+  dotRowAbsolute: {
     flexDirection: "row",
     gap: 2,
-    marginTop: 1,
+    position: "absolute",
+    bottom: 2,
+    alignSelf: "center",
   },
   eventDot: {
     width: 4,
     height: 4,
     borderRadius: 2,
+  },
+  dotRow: {
+    flexDirection: "row",
+    gap: 2,
+    marginTop: 1,
   },
 
   // Day divider

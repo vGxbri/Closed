@@ -605,7 +605,11 @@ export default function ProfileScreen() {
                 ]}
               >
                 <UserAvatar
-                  uri={admin.avatar_url || admin.group_avatar_url}
+                  uri={
+                    admin.group_avatar_url !== undefined && admin.group_avatar_url !== null
+                      ? admin.group_avatar_url
+                      : admin.avatar_url
+                  }
                   name={admin.display_name || admin.group_display_name || 'Admin'}
                   size={40}
                 />

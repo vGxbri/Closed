@@ -24,10 +24,18 @@ class EventsService {
       .from('events')
       .select(`
         *,
-        creator:profiles!events_created_by_profiles_fk(display_name, avatar_url),
+        creator:profiles!events_created_by_profiles_fk(
+          display_name, 
+          avatar_url,
+          group_members!group_members_user_id_fkey(group_display_name, group_avatar_url, group_id)
+        ),
         participants:event_participants(
           *,
-          user:profiles!event_participants_user_id_profiles_fk(display_name, avatar_url)
+          user:profiles!event_participants_user_id_profiles_fk(
+            display_name, 
+            avatar_url,
+            group_members!group_members_user_id_fkey(group_display_name, group_avatar_url, group_id)
+          )
         )
       `)
       .eq('group_id', groupId)
@@ -37,7 +45,7 @@ class EventsService {
 
     if (error) throw error;
 
-    // Enrich with gallery count
+    // Enrich with gallery count and resolved member profiles
     const enriched = await Promise.all(
       (data || []).map(async (event) => {
         const { count } = await supabase
@@ -45,8 +53,16 @@ class EventsService {
           .select('*', { count: 'exact', head: true })
           .eq('event_id', event.id);
 
+        const resolvedCreator = this.resolveMemberProfile(event.creator, groupId);
+        const resolvedParticipants = (event.participants || []).map((p: any) => ({
+          ...p,
+          user: this.resolveMemberProfile(p.user, groupId),
+        }));
+
         return {
           ...event,
+          creator: resolvedCreator,
+          participants: resolvedParticipants,
           gallery_count: count || 0,
         } as CalendarEventWithDetails;
       }),
@@ -63,10 +79,18 @@ class EventsService {
       .from('events')
       .select(`
         *,
-        creator:profiles!events_created_by_profiles_fk(display_name, avatar_url),
+        creator:profiles!events_created_by_profiles_fk(
+          display_name, 
+          avatar_url,
+          group_members!group_members_user_id_fkey(group_display_name, group_avatar_url, group_id)
+        ),
         participants:event_participants(
           *,
-          user:profiles!event_participants_user_id_profiles_fk(display_name, avatar_url)
+          user:profiles!event_participants_user_id_profiles_fk(
+            display_name, 
+            avatar_url,
+            group_members!group_members_user_id_fkey(group_display_name, group_avatar_url, group_id)
+          )
         )
       `)
       .eq('id', eventId)
@@ -82,8 +106,16 @@ class EventsService {
       .select('*', { count: 'exact', head: true })
       .eq('event_id', eventId);
 
+    const resolvedCreator = this.resolveMemberProfile(data.creator, data.group_id);
+    const resolvedParticipants = (data.participants || []).map((p: any) => ({
+      ...p,
+      user: this.resolveMemberProfile(p.user, data.group_id),
+    }));
+
     return {
       ...data,
+      creator: resolvedCreator,
+      participants: resolvedParticipants,
       gallery_count: count || 0,
     } as CalendarEventWithDetails;
   }
@@ -116,20 +148,24 @@ class EventsService {
 
     if (error) throw error;
 
-    // Add participants if provided
+    // Add participants if provided (excluding the creator to avoid duplicate key errors)
     if (input.participant_ids && input.participant_ids.length > 0) {
-      const participantRows = input.participant_ids.map((userId) => ({
-        event_id: data.id,
-        user_id: userId,
-        status: 'pending' as RsvpStatus,
-        invited_by: user.id,
-      }));
+      const otherParticipantIds = input.participant_ids.filter((id) => id !== user.id);
 
-      const { error: partError } = await supabase
-        .from('event_participants')
-        .insert(participantRows);
+      if (otherParticipantIds.length > 0) {
+        const participantRows = otherParticipantIds.map((userId) => ({
+          event_id: data.id,
+          user_id: userId,
+          status: 'pending' as RsvpStatus,
+          invited_by: user.id,
+        }));
 
-      if (partError) console.error('Error adding participants:', partError);
+        const { error: partError } = await supabase
+          .from('event_participants')
+          .insert(participantRows);
+
+        if (partError) console.error('Error adding participants:', partError);
+      }
     }
 
     // Also add the creator as accepted participant
@@ -460,6 +496,45 @@ class EventsService {
       .eq('gallery_image_id', imageId);
 
     if (error) throw error;
+  }
+
+  /**
+   * Helper to resolve the display name and avatar URL for a group member,
+   * taking into account group-specific overrides (group_display_name, group_avatar_url).
+   */
+  private resolveMemberProfile(profile: any, groupId: string) {
+    if (!profile) return null;
+
+    const p = profile as {
+      display_name: string;
+      avatar_url: string | null;
+      group_members?: Array<{
+        group_display_name: string | null;
+        group_avatar_url: string | null;
+        group_id: string;
+      }>;
+    };
+
+    const groupMember = p.group_members?.find((m) => m.group_id === groupId);
+
+    let displayName = p.display_name;
+    let avatarUrl = p.avatar_url;
+
+    if (groupMember) {
+      if (groupMember.group_display_name) {
+        displayName = groupMember.group_display_name;
+      }
+      // If group_avatar_url is an empty string, it explicitly overrides the global avatar (user wants no photo).
+      // If it's null, we fall back to the global profile avatar.
+      if (groupMember.group_avatar_url !== null && groupMember.group_avatar_url !== undefined) {
+        avatarUrl = groupMember.group_avatar_url;
+      }
+    }
+
+    return {
+      display_name: displayName,
+      avatar_url: avatarUrl,
+    };
   }
 }
 

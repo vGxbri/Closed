@@ -86,7 +86,6 @@ export default function EventDetailScreen() {
   const backgroundRef = React.useRef(null);
 
   const [event, setEvent] = useState<CalendarEventWithDetails | null>(null);
-  const [galleryImages, setGalleryImages] = useState<GalleryImageWithUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdatingRsvp, setIsUpdatingRsvp] = useState(false);
 
@@ -109,13 +108,7 @@ export default function EventDetailScreen() {
       const data = await eventsService.getEvent(eventId);
       setEvent(data);
 
-      if (data) {
-        // Auto-link gallery photos
-        await eventsService.autoLinkGalleryPhotos(id, eventId);
-        // Load linked images
-        const images = await eventsService.getEventGalleryImages(eventId);
-        setGalleryImages(images);
-      }
+
     } catch (error) {
       console.error("Error loading event:", error);
       showSnackbar("Error al cargar el evento", "error");
@@ -257,7 +250,6 @@ export default function EventDetailScreen() {
 
           {/* ─── Event Header ─── */}
           <Animated.View entering={FadeIn.duration(500)} style={styles.headerBlock}>
-            <Text style={styles.headerEmoji}>{event.emoji}</Text>
             <Text style={[styles.headerTitle, { color: theme.colors.onSurface }]}>{event.title}</Text>
             <Text style={[styles.headerCreator, { color: theme.colors.onSurfaceVariant }]}>
               Creado por {event.creator?.display_name || "alguien"}
@@ -285,11 +277,6 @@ export default function EventDetailScreen() {
                   </View>
                 </>
               )}
-              <View style={[styles.infoSep, { backgroundColor: theme.colors.outlineVariant }]} />
-              <View style={styles.infoRow}>
-                <View style={[styles.colorDot, { backgroundColor: event.color }]} />
-                <Text style={[styles.infoText, { color: theme.colors.onSurfaceVariant }]}>Color del evento</Text>
-              </View>
             </SquircleView>
           </Animated.View>
 
@@ -354,29 +341,6 @@ export default function EventDetailScreen() {
                 </View>
               )}
             </SquircleView>
-          </Animated.View>
-
-          {/* ─── Gallery ─── */}
-          <Animated.View entering={FadeInDown.duration(300).delay(340)} style={styles.gallerySection}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.onSurface }]}>
-              📸 Fotos del evento ({galleryImages.length})
-            </Text>
-            {galleryImages.length > 0 ? (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.galleryScroll}>
-                {galleryImages.map((img) => (
-                  <SquircleView key={img.id} style={styles.galleryThumb} cornerSmoothing={1}>
-                    <Image source={{ uri: img.media_url }} style={styles.galleryThumbImage} contentFit="cover" transition={200} />
-                  </SquircleView>
-                ))}
-              </ScrollView>
-            ) : (
-              <SquircleView style={[styles.galleryEmpty, { backgroundColor: theme.dark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)", borderColor: theme.colors.outlineVariant, borderWidth: 1 }]} cornerSmoothing={1}>
-                <Ionicons name="camera-outline" size={24} color={theme.colors.onSurfaceVariant} />
-                <Text style={[styles.galleryEmptyText, { color: theme.colors.onSurfaceVariant }]}>
-                  Las fotos subidas el día del evento aparecerán aquí automáticamente
-                </Text>
-              </SquircleView>
-            )}
           </Animated.View>
 
         </ScrollView>

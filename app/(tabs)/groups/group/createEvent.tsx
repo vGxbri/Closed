@@ -28,8 +28,6 @@ import { eventsService } from "@/services/events.service";
 import { GroupMemberView } from "@/types/database";
 
 // ─── Constants ──────────────────────────────────────────────────────────
-const EMOJIS = ["📅", "🎉", "🍕", "⚽", "🎂", "🎬", "🏖️", "🎵", "💼", "🏋️", "🎯", "🍻"];
-
 const COLORS = [
   "#6366F1", "#EC4899", "#F59E0B", "#10B981",
   "#3B82F6", "#EF4444", "#8B5CF6", "#F97316",
@@ -62,7 +60,11 @@ const MemberRow = React.memo<MemberRowProps>(({ member, selected, onToggle }) =>
   return (
     <TouchableOpacity onPress={onToggle} activeOpacity={0.7} style={styles.memberRow}>
       <UserAvatar
-        uri={member.group_avatar_url || member.avatar_url}
+        uri={
+          member.group_avatar_url !== undefined && member.group_avatar_url !== null
+            ? member.group_avatar_url
+            : member.avatar_url
+        }
         name={member.group_display_name || member.display_name}
         size={36}
         borderRadius={12}
@@ -101,7 +103,6 @@ export default function CreateEventScreen() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState("");
-  const [emoji, setEmoji] = useState("📅");
   const [color, setColor] = useState("#6366F1");
   const [isAllDay, setIsAllDay] = useState(false);
   const [startDate, setStartDate] = useState(initialDate);
@@ -155,7 +156,7 @@ export default function CreateEventScreen() {
       Keyboard.dismiss();
       await eventsService.createEvent({
         group_id: id, title: title.trim(), description: description.trim() || undefined,
-        emoji, location: location.trim() || undefined, starts_at: startDate.toISOString(),
+        location: location.trim() || undefined, starts_at: startDate.toISOString(),
         ends_at: isAllDay ? undefined : endDate.toISOString(), is_all_day: isAllDay,
         color, participant_ids: Array.from(selectedMembers),
       });
@@ -165,7 +166,7 @@ export default function CreateEventScreen() {
       console.error("Error creating event:", error);
       setDialogConfig({ visible: true, title: "Error", message: error instanceof Error ? error.message : "No se pudo crear el evento.", type: "error" });
     } finally { setIsCreating(false); }
-  }, [id, title, description, emoji, location, startDate, endDate, isAllDay, color, selectedMembers, showSnackbar, router]);
+  }, [id, title, description, location, startDate, endDate, isAllDay, color, selectedMembers, showSnackbar, router]);
 
   return (
     <>
@@ -180,19 +181,7 @@ export default function CreateEventScreen() {
           </Animated.View>
           <Animated.View entering={FadeIn.duration(400).delay(50)} style={[styles.divider, { backgroundColor: theme.colors.outlineVariant }]} />
 
-          {/* Emoji Selector */}
-          <Animated.View entering={FadeInDown.duration(300).delay(80)} style={styles.section}>
-            <Text style={[styles.sectionLabel, { color: theme.colors.onSurfaceVariant }]}>Icono</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.emojiRow}>
-              {EMOJIS.map((e) => (
-                <TouchableOpacity key={e} onPress={() => setEmoji(e)} activeOpacity={0.7}>
-                  <View style={[styles.emojiCell, { borderColor: emoji === e ? theme.colors.primary : theme.colors.outlineVariant, borderWidth: emoji === e ? 2 : 1, backgroundColor: emoji === e ? theme.colors.primaryContainer : theme.colors.surface }]}>
-                    <Text style={styles.emojiText}>{e}</Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </Animated.View>
+
 
           {/* Title Input */}
           <Animated.View entering={FadeInDown.duration(300).delay(120)} style={styles.section}>
