@@ -24,7 +24,7 @@ import { useGroup } from "../../../../hooks";
 import { awardsService } from "../../../../services";
 import { VoteType } from "../../../../types/database";
 
-import { useSnackbar } from "../../../../components/ui/SnackbarContext";
+import { useSnackbar } from "@/components/ui/SnackbarContext";
 
 const VOTE_TYPE_OPTIONS: { value: VoteType; label: string; icon: string }[] = [
   { value: 'person', label: 'Personas', icon: 'people' },

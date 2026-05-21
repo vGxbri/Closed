@@ -33,7 +33,7 @@ import {
   DialogType,
 } from "../../../../components/ui/ConfirmDialog";
 import { CustomHeader } from "../../../../components/ui/CustomHeader";
-import { useSnackbar } from "../../../../components/ui/SnackbarContext";
+import { useSnackbar } from "@/components/ui/SnackbarContext";
 import { UserAvatar } from "../../../../components/ui/UserAvatar";
 import { groupsService } from "../../../../services";
 

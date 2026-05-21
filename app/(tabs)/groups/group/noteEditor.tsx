@@ -18,7 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
 import { CustomHeader } from "../../../../components/ui/CustomHeader";
-import { useSnackbar } from "../../../../components/ui/SnackbarContext";
+import { useSnackbar } from "@/components/ui/SnackbarContext";
 import { useAuth, useGroup } from "../../../../hooks";
 import { notesService } from "../../../../services/notes.service";
 import { ChecklistItem, Note, NoteBlock } from "../../../../types/database";

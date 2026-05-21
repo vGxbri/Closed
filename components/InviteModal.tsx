@@ -8,7 +8,7 @@ import {
   View,
 } from "react-native";
 import { Button, Surface, Text, useTheme } from "react-native-paper";
-import { useSnackbar } from "./ui/SnackbarContext";
+import { useSnackbar } from "@/components/ui/SnackbarContext";
 import { BottomSheetModal } from "./ui/BottomSheetModal";
 
 interface InviteModalProps {

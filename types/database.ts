@@ -406,6 +406,45 @@ export interface UpdateAwardInput {
   voting_settings?: Partial<VotingSettings>;
 }
 
+// ─── Bucket List (Lista de deseos widget) ─────────────────────────────
+export type BucketListCategory = 'restaurants' | 'travel' | 'movies' | 'gifts' | 'other';
+
+export interface BucketListItem {
+  id: string;
+  group_id: string;
+  title: string;
+  description: string | null;
+  category: BucketListCategory;
+  image_url: string | null;
+  is_completed: boolean;
+  completed_at: string | null;
+  completed_by: string | null;
+  gallery_image_id: string | null;
+  created_by: string;
+  display_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BucketListItemWithCreator extends BucketListItem {
+  creator: {
+    display_name: string;
+    avatar_url: string | null;
+  };
+  completer?: {
+    display_name: string;
+    avatar_url: string | null;
+  } | null;
+}
+
+export interface CreateBucketListItemInput {
+  group_id: string;
+  title: string;
+  description?: string;
+  category?: BucketListCategory;
+  image_url?: string;
+}
+
 // Database schema type for Supabase client
 export interface Database {
   public: {

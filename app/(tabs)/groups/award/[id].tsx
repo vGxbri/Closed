@@ -34,7 +34,7 @@ import {
 } from "../../../../components/ui/ConfirmDialog";
 import { CustomHeader } from "../../../../components/ui/CustomHeader";
 import { MemberSelectMenu } from "../../../../components/ui/MemberSelectMenu";
-import { useSnackbar } from "../../../../components/ui/SnackbarContext";
+import { useSnackbar } from "@/components/ui/SnackbarContext";
 import {
     defaultAwardIcon,
     getIconComponent,

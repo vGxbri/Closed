@@ -18,7 +18,7 @@ import {
 } from "react-native-paper";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
-import { SnackbarProvider } from "../components/ui/SnackbarContext";
+import { SnackbarProvider } from "@/components/ui/SnackbarContext";
 import { customColors, customColorsDark } from "../constants/Colors";
 import { AuthProvider, useAuth } from "../hooks/useAuth";
 

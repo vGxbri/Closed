@@ -19,7 +19,7 @@ import {
 } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CustomHeader } from "../../../../components/ui/CustomHeader";
-import { useSnackbar } from "../../../../components/ui/SnackbarContext";
+import { useSnackbar } from "@/components/ui/SnackbarContext";
 import { awardIconOptions, defaultAwardIcon, getIconComponent, IconName } from "../../../../constants/icons";
 import { awardsService } from "../../../../services";
 import { Award } from "../../../../types/database";

@@ -6,6 +6,7 @@ import { useAuth, useGroup } from "@/hooks";
 import { supabase } from "@/lib/supabase";
 import { galleryService } from "@/services/gallery.service";
 import { eventsService } from "@/services/events.service";
+import { bucketListService } from "@/services/bucketList.service";
 import { widgetsService } from "@/services/widgets.service";
 import { CalendarEvent, GroupWidgetWithDetails } from "@/types/database";
 import { Ionicons } from "@expo/vector-icons";
@@ -41,6 +42,7 @@ const CARD_WIDTH = (SCREEN_WIDTH - 24 * 2 - CARD_GAP) / 2;
 // Widget names that have special renderings
 const WIDGET_ARCHIVO = "Archivo";
 const WIDGET_AGENDA = "Agenda";
+const WIDGET_BUCKET_LIST = "Bucket List";
 
 interface WidgetCardProps {
   widget: GroupWidgetWithDetails;
@@ -485,6 +487,125 @@ const AgendaWidgetCard = React.memo<WidgetCardProps>(
 
 AgendaWidgetCard.displayName = "AgendaWidgetCard";
 
+// Bucket List Widget Card — shows pending/completed counts
+const BucketListWidgetCard = React.memo<WidgetCardProps>(
+  ({ widget, index, onPress, groupId }) => {
+    const theme = useTheme();
+    const [pendingCount, setPendingCount] = useState(0);
+    const [completedCount, setCompletedCount] = useState(0);
+
+    useFocusEffect(
+      React.useCallback(() => {
+        let cancelled = false;
+        const load = async () => {
+          try {
+            const counts = await bucketListService.getItemCounts(groupId);
+            if (!cancelled) {
+              setPendingCount(counts.pending);
+              setCompletedCount(counts.completed);
+            }
+          } catch (e) {
+            console.error("Error loading bucket list preview:", e);
+          }
+        };
+        load();
+
+        const subscription = supabase
+          .channel(`group-bucketlist-realtime:${groupId}`)
+          .on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table: 'bucket_list_items',
+              filter: `group_id=eq.${groupId}`,
+            },
+            () => {
+              load();
+            }
+          )
+          .subscribe();
+
+        return () => {
+          cancelled = true;
+          subscription.unsubscribe();
+        };
+      }, [groupId])
+    );
+
+    return (
+      <Animated.View
+        entering={FadeIn.duration(400).delay(200 + index * 80)}
+        style={styles.bentoItem}
+      >
+        <Pressable
+          onPress={() => onPress(widget)}
+          style={({ pressed }) => [
+            {
+              opacity: pressed ? 0.92 : 1,
+              transform: [{ scale: pressed ? 0.97 : 1 }],
+            },
+          ]}
+        >
+          <SquircleView
+            style={[
+              styles.widgetCard,
+              {
+                backgroundColor: theme.colors.surface,
+                borderColor: theme.colors.outlineVariant,
+                borderWidth: 1,
+              },
+            ]}
+            cornerSmoothing={1}
+          >
+            {/* Icon */}
+            <SquircleView
+              style={[
+                styles.widgetIconContainer,
+                {
+                  backgroundColor: theme.colors.surfaceVariant,
+                  borderColor: theme.colors.outlineVariant,
+                  borderWidth: 1,
+                },
+              ]}
+              cornerSmoothing={1}
+            >
+              <Ionicons
+                name="heart-outline"
+                size={24}
+                color="#FFFFFF"
+              />
+            </SquircleView>
+
+            {/* Info */}
+            <View style={styles.widgetInfo}>
+              <Text
+                style={[styles.widgetName, { color: theme.colors.onSurface }]}
+                numberOfLines={1}
+              >
+                Bucket List
+              </Text>
+              <Text
+                style={[
+                  styles.widgetSubtitle,
+                  { color: theme.colors.onSurfaceVariant },
+                ]}
+                numberOfLines={1}
+              >
+                {pendingCount + completedCount > 0
+                  ? `${pendingCount} pendiente${pendingCount !== 1 ? 's' : ''} · ${completedCount} hecho${completedCount !== 1 ? 's' : ''}`
+                  : "Lista de deseos compartida"}
+              </Text>
+            </View>
+          </SquircleView>
+        </Pressable>
+      </Animated.View>
+    );
+  }
+);
+
+BucketListWidgetCard.displayName = "BucketListWidgetCard";
+
 // Widget Card dispatcher — chooses the right card type
 const WidgetCard = React.memo<WidgetCardProps>((props) => {
   if (props.widget.widget.name === WIDGET_ARCHIVO) {
@@ -492,6 +613,9 @@ const WidgetCard = React.memo<WidgetCardProps>((props) => {
   }
   if (props.widget.widget.name === WIDGET_AGENDA) {
     return <AgendaWidgetCard {...props} />;
+  }
+  if (props.widget.widget.name === WIDGET_BUCKET_LIST) {
+    return <BucketListWidgetCard {...props} />;
   }
   return <GenericWidgetCard {...props} />;
 });
@@ -660,6 +784,13 @@ export default function GroupDetailScreen() {
     if (widget.widget.name === "Agenda") {
       router.push({
         pathname: "/groups/group/calendar",
+        params: { id },
+      } as any);
+      return;
+    }
+    if (widget.widget.name === "Bucket List") {
+      router.push({
+        pathname: "/groups/group/bucketList",
         params: { id },
       } as any);
       return;

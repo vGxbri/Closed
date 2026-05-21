@@ -24,7 +24,7 @@ import {
   DialogType,
 } from "../../../../components/ui/ConfirmDialog";
 import { CustomHeader } from "../../../../components/ui/CustomHeader";
-import { useSnackbar } from "../../../../components/ui/SnackbarContext";
+import { useSnackbar } from "@/components/ui/SnackbarContext";
 import { useGroup } from "../../../../hooks";
 import { widgetsService } from "../../../../services/widgets.service";
 import { Widget } from "../../../../types/database";

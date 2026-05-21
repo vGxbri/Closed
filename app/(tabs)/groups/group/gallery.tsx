@@ -38,7 +38,7 @@ import Animated, {
 } from "react-native-reanimated";
 
 import { CustomHeader } from "../../../../components/ui/CustomHeader";
-import { useSnackbar } from "../../../../components/ui/SnackbarContext";
+import { useSnackbar } from "@/components/ui/SnackbarContext";
 import { useAuth, useGroup } from "../../../../hooks";
 import { galleryService } from "../../../../services/gallery.service";
 import { GalleryImageWithUser } from "../../../../types/database";
