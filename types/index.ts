@@ -48,7 +48,6 @@ export interface Nominee {
 // Navigation param types
 export type RootStackParamList = {
   '(tabs)': undefined;
-  'group/create': undefined;
   'group/[id]': { id: string };
   'award/create': { groupId: string };
   'join/[code]': { code: string };

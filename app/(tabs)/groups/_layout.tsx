@@ -22,10 +22,6 @@ export default function GroupsStackLayout() {
       />
       <Stack.Screen name="group/[id]" options={{ headerShown: false }} />
       <Stack.Screen
-        name="group/create"
-        options={{ title: "Crear Grupo", presentation: "modal" }}
-      />
-      <Stack.Screen
         name="group/join"
         options={{ title: "Unirse a grupo", presentation: "modal" }}
       />

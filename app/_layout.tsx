@@ -58,10 +58,6 @@ function RootLayoutNav({ paperTheme, navigationTheme, colorScheme }: any) {
             <Stack.Screen name="auth" options={{ gestureEnabled: false }} />
             <Stack.Screen name="index" options={{ gestureEnabled: false }} />
             <Stack.Screen
-              name="chooseGroup"
-              options={{ gestureEnabled: false }}
-            />
-            <Stack.Screen
               name="createGroup"
               options={{ presentation: "modal", gestureEnabled: false }}
             />
