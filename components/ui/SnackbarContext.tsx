@@ -12,7 +12,7 @@ interface SnackbarContextType {
   showSnackbar: (message: string, type?: 'success' | 'error' | 'info') => void;
 }
 
-const SnackbarContext = createContext<SnackbarContextType | undefined>(undefined);
+export const SnackbarContext = createContext<SnackbarContextType | undefined>(undefined);
 
 export const useSnackbar = () => {
   const context = useContext(SnackbarContext);

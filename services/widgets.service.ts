@@ -27,6 +27,7 @@ export const widgetsService = {
     const { data, error } = await supabase
       .from('widgets')
       .select('*')
+      .neq('category', 'hidden')
       .order('category', { ascending: true })
       .order('name', { ascending: true });
 

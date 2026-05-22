@@ -1,5 +1,5 @@
 import { BlurView } from "expo-blur";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useContext, useEffect, useState } from "react";
 import {
   Dimensions,
   Pressable,
@@ -9,6 +9,8 @@ import {
 } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { Portal, useTheme } from "react-native-paper";
+
+import { SnackbarContext } from "./SnackbarContext";
 import Animated, {
   runOnJS,
   SharedValue,
@@ -42,6 +44,7 @@ export const BottomSheetModal: React.FC<BottomSheetModalProps> = ({
   blurTarget,
 }) => {
   const theme = useTheme();
+  const snackbarContext = useContext(SnackbarContext);
   const [shouldRender, setShouldRender] = useState(false);
 
   // Animated values
@@ -132,9 +135,8 @@ export const BottomSheetModal: React.FC<BottomSheetModalProps> = ({
 
   if (!shouldRender) return null;
 
-  return (
-    <Portal>
-      <View style={styles.container}>
+  const sheet = (
+    <View style={styles.container}>
         {/* Backdrop */}
         <Pressable style={styles.backdrop} onPress={onDismiss}>
           <Animated.View style={[StyleSheet.absoluteFill, backdropStyle]}>
@@ -180,6 +182,17 @@ export const BottomSheetModal: React.FC<BottomSheetModalProps> = ({
           </Animated.View>
         </GestureDetector>
       </View>
+  );
+
+  return (
+    <Portal>
+      {snackbarContext ? (
+        <SnackbarContext.Provider value={snackbarContext}>
+          {sheet}
+        </SnackbarContext.Provider>
+      ) : (
+        sheet
+      )}
     </Portal>
   );
 };

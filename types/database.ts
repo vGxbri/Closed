@@ -406,7 +406,7 @@ export interface UpdateAwardInput {
   voting_settings?: Partial<VotingSettings>;
 }
 
-// ─── Bucket List (Lista de deseos widget) ─────────────────────────────
+// ─── Planes (widget; tabla bucket_list_items) ─────────────────────────
 export type BucketListCategory = 'restaurants' | 'travel' | 'movies' | 'gifts' | 'other';
 
 export interface BucketListItem {

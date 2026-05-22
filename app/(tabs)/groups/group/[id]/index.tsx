@@ -42,7 +42,8 @@ const CARD_WIDTH = (SCREEN_WIDTH - 24 * 2 - CARD_GAP) / 2;
 // Widget names that have special renderings
 const WIDGET_ARCHIVO = "Archivo";
 const WIDGET_AGENDA = "Agenda";
-const WIDGET_BUCKET_LIST = "Bucket List";
+const WIDGET_PLANES = "Planes";
+const WIDGET_PLANES_LEGACY = "Bucket List";
 
 interface WidgetCardProps {
   widget: GroupWidgetWithDetails;
@@ -487,8 +488,8 @@ const AgendaWidgetCard = React.memo<WidgetCardProps>(
 
 AgendaWidgetCard.displayName = "AgendaWidgetCard";
 
-// Bucket List Widget Card — shows pending/completed counts
-const BucketListWidgetCard = React.memo<WidgetCardProps>(
+// Planes widget card — shows pending/completed counts
+const PlanesWidgetCard = React.memo<WidgetCardProps>(
   ({ widget, index, onPress, groupId }) => {
     const theme = useTheme();
     const [pendingCount, setPendingCount] = useState(0);
@@ -571,7 +572,10 @@ const BucketListWidgetCard = React.memo<WidgetCardProps>(
               cornerSmoothing={1}
             >
               <Ionicons
-                name="heart-outline"
+                name={
+                  (widget.widget.icon as keyof typeof Ionicons.glyphMap) ||
+                  "compass-outline"
+                }
                 size={24}
                 color="#FFFFFF"
               />
@@ -583,7 +587,7 @@ const BucketListWidgetCard = React.memo<WidgetCardProps>(
                 style={[styles.widgetName, { color: theme.colors.onSurface }]}
                 numberOfLines={1}
               >
-                Bucket List
+                {widget.widget.name}
               </Text>
               <Text
                 style={[
@@ -594,7 +598,7 @@ const BucketListWidgetCard = React.memo<WidgetCardProps>(
               >
                 {pendingCount + completedCount > 0
                   ? `${pendingCount} pendiente${pendingCount !== 1 ? 's' : ''} · ${completedCount} hecho${completedCount !== 1 ? 's' : ''}`
-                  : "Lista de deseos compartida"}
+                  : widget.widget.subtitle || "Cosas que queréis hacer juntos"}
               </Text>
             </View>
           </SquircleView>
@@ -604,7 +608,7 @@ const BucketListWidgetCard = React.memo<WidgetCardProps>(
   }
 );
 
-BucketListWidgetCard.displayName = "BucketListWidgetCard";
+PlanesWidgetCard.displayName = "PlanesWidgetCard";
 
 // Widget Card dispatcher — chooses the right card type
 const WidgetCard = React.memo<WidgetCardProps>((props) => {
@@ -614,8 +618,11 @@ const WidgetCard = React.memo<WidgetCardProps>((props) => {
   if (props.widget.widget.name === WIDGET_AGENDA) {
     return <AgendaWidgetCard {...props} />;
   }
-  if (props.widget.widget.name === WIDGET_BUCKET_LIST) {
-    return <BucketListWidgetCard {...props} />;
+  if (
+    props.widget.widget.name === WIDGET_PLANES ||
+    props.widget.widget.name === WIDGET_PLANES_LEGACY
+  ) {
+    return <PlanesWidgetCard {...props} />;
   }
   return <GenericWidgetCard {...props} />;
 });
@@ -788,7 +795,10 @@ export default function GroupDetailScreen() {
       } as any);
       return;
     }
-    if (widget.widget.name === "Bucket List") {
+    if (
+      widget.widget.name === WIDGET_PLANES ||
+      widget.widget.name === WIDGET_PLANES_LEGACY
+    ) {
       router.push({
         pathname: "/groups/group/bucketList",
         params: { id },

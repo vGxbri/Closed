@@ -156,6 +156,7 @@ export function useBucketList(groupId: string) {
   );
 
   return {
+    allItems: items,
     items: filteredItems,
     pendingItems,
     completedItems,
