@@ -48,6 +48,27 @@ const formatDateES = (date: Date): string =>
 const formatTime = (date: Date): string =>
   `${date.getHours().toString().padStart(2, "0")}:${date.getMinutes().toString().padStart(2, "0")}`;
 
+const toLocalDay = (d: Date) =>
+  new Date(d.getFullYear(), d.getMonth(), d.getDate());
+
+function buildEndsAtIso(
+  startDate: Date,
+  endDate: Date,
+  isAllDay: boolean,
+): string | undefined {
+  const startDay = toLocalDay(startDate);
+  const endDay = toLocalDay(endDate);
+  if (endDay.getTime() <= startDay.getTime()) {
+    return isAllDay ? undefined : endDate.toISOString();
+  }
+  const end = new Date(endDay);
+  if (isAllDay) {
+    end.setHours(23, 59, 59, 999);
+    return end.toISOString();
+  }
+  return endDate.toISOString();
+}
+
 // ─── Member Row ─────────────────────────────────────────────────────────
 interface MemberRowProps {
   member: GroupMemberView;
@@ -156,8 +177,9 @@ export default function CreateEventScreen() {
       Keyboard.dismiss();
       await eventsService.createEvent({
         group_id: id, title: title.trim(), description: description.trim() || undefined,
-        location: location.trim() || undefined, starts_at: startDate.toISOString(),
-        ends_at: isAllDay ? undefined : endDate.toISOString(), is_all_day: isAllDay,
+        location: location.trim() || undefined,         starts_at: startDate.toISOString(),
+        ends_at: buildEndsAtIso(startDate, endDate, isAllDay),
+        is_all_day: isAllDay,
         color, participant_ids: Array.from(selectedMembers),
       });
       showSnackbar("Evento creado", "success");
@@ -218,22 +240,49 @@ export default function CreateEventScreen() {
             </SquircleView>
 
             {/* End */}
-            {!isAllDay && (
-              <SquircleView style={[styles.dateCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.outlineVariant, borderWidth: 1, marginTop: 8 }]} cornerSmoothing={1}>
-                <Ionicons name="time-outline" size={18} color={theme.colors.onSurfaceVariant} />
-                <View style={styles.dateInfo}>
-                  <Text style={[styles.dateLabel, { color: theme.colors.onSurfaceVariant }]}>Fin</Text>
-                  <View style={styles.dateValueRow}>
-                    <TouchableOpacity onPress={() => setShowEndDate(true)} activeOpacity={0.7}>
-                      <Text style={[styles.dateValue, { color: theme.colors.onSurface }]}>{formatDateES(endDate)}</Text>
+            <SquircleView
+              style={[
+                styles.dateCard,
+                {
+                  backgroundColor: theme.colors.surface,
+                  borderColor: theme.colors.outlineVariant,
+                  borderWidth: 1,
+                  marginTop: 8,
+                },
+              ]}
+              cornerSmoothing={1}
+            >
+              <Ionicons
+                name={isAllDay ? "calendar-outline" : "time-outline"}
+                size={18}
+                color={theme.colors.onSurfaceVariant}
+              />
+              <View style={styles.dateInfo}>
+                <Text style={[styles.dateLabel, { color: theme.colors.onSurfaceVariant }]}>
+                  Fin
+                </Text>
+                <View style={styles.dateValueRow}>
+                  <TouchableOpacity
+                    onPress={() => setShowEndDate(true)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.dateValue, { color: theme.colors.onSurface }]}>
+                      {formatDateES(endDate)}
+                    </Text>
+                  </TouchableOpacity>
+                  {!isAllDay && (
+                    <TouchableOpacity
+                      onPress={() => setShowEndTime(true)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.timeValue, { color: theme.colors.primary }]}>
+                        {formatTime(endDate)}
+                      </Text>
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => setShowEndTime(true)} activeOpacity={0.7}>
-                      <Text style={[styles.timeValue, { color: theme.colors.primary }]}>{formatTime(endDate)}</Text>
-                    </TouchableOpacity>
-                  </View>
+                  )}
                 </View>
-              </SquircleView>
-            )}
+              </View>
+            </SquircleView>
 
             {showStartDate && <DateTimePicker value={startDate} mode="date" display={Platform.OS === "ios" ? "spinner" : "default"} onChange={handleStartDateChange} />}
             {showStartTime && <DateTimePicker value={startDate} mode="time" is24Hour display={Platform.OS === "ios" ? "spinner" : "default"} onChange={handleStartTimeChange} />}

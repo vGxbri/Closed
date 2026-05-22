@@ -42,14 +42,7 @@ const MemberRow = React.memo<MemberRowProps>(({ member, isLast, index }) => {
         },
       ]}
     >
-      <MemberAvatar
-        user={{
-          id: member.user_id,
-          display_name: member.display_name,
-          avatar_url: member.avatar_url,
-        }}
-        size="md"
-      />
+      <MemberAvatar user={member} size="md" />
       <View style={styles.memberInfo}>
         <Text
           style={[

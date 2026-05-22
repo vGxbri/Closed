@@ -1,3 +1,4 @@
+import { mapGroupMemberWithProfile } from '../lib/memberProfile';
 import { supabase } from '../lib/supabase';
 import {
   CreateGroupInput,
@@ -8,7 +9,34 @@ import {
   UpdateGroupInput,
 } from '../types/database';
 
+const GROUP_MEMBERS_WITH_PROFILE_SELECT = `
+  *,
+  profiles!group_members_user_id_fkey (
+    display_name,
+    username,
+    avatar_url,
+    bio
+  )
+`;
+
 export const groupsService = {
+  /**
+   * Active members with group-specific display name and avatar resolved.
+   */
+  async fetchMembersForGroup(groupId: string): Promise<GroupMemberView[]> {
+    const { data, error } = await supabase
+      .from('group_members')
+      .select(GROUP_MEMBERS_WITH_PROFILE_SELECT)
+      .eq('group_id', groupId)
+      .eq('is_active', true);
+
+    if (error) throw error;
+
+    return (data || []).map((row) =>
+      mapGroupMemberWithProfile(row as Parameters<typeof mapGroupMemberWithProfile>[0]),
+    ) as GroupMemberView[];
+  },
+
   /**
    * Get all groups the current user belongs to
    */
@@ -37,13 +65,7 @@ export const groupsService = {
         .map(async (membership) => {
           const group = membership.group as unknown as Group;
 
-          // Get members
-          const { data: members, error: membersError } = await supabase
-            .from('group_members_view')
-            .select('*')
-            .eq('group_id', group.id);
-
-          if (membersError) throw membersError;
+          const members = await this.fetchMembersForGroup(group.id);
 
           // Get awards
           const { data: awards, error: awardsError } = await supabase
@@ -96,13 +118,7 @@ export const groupsService = {
       .eq('is_active', true)
       .single();
 
-    // Get members
-    const { data: members, error: membersError } = await supabase
-      .from('group_members_view')
-      .select('*')
-      .eq('group_id', groupId);
-
-    if (membersError) throw membersError;
+    const members = await this.fetchMembersForGroup(groupId);
 
     // Get awards
     const { data: awards, error: awardsError } = await supabase

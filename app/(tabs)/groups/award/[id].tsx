@@ -1,11 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
-import { BlurView, BlurTargetView } from "expo-blur";
+import { BlurTargetView, BlurView } from "expo-blur";
 import * as DocumentPicker from "expo-document-picker";
+import * as Haptics from "expo-haptics";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useVideoPlayer, VideoView } from "expo-video";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -18,15 +19,23 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import SquircleView from "react-native-fast-squircle";
 import {
     ActivityIndicator,
-    Button,
     Portal,
     Surface,
     Text,
     useTheme,
 } from "react-native-paper";
+import ReanimatedAnimated, {
+    FadeIn,
+    FadeInDown,
+    FadeInUp,
+} from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { AwardDetailSkeleton } from "@/components/award/AwardSkeletons";
+import { useSnackbar } from "@/components/ui/SnackbarContext";
 import { MemberAvatar } from "../../../../components/MemberAvatar";
 import {
     ConfirmDialog,
@@ -34,7 +43,6 @@ import {
 } from "../../../../components/ui/ConfirmDialog";
 import { CustomHeader } from "../../../../components/ui/CustomHeader";
 import { MemberSelectMenu } from "../../../../components/ui/MemberSelectMenu";
-import { useSnackbar } from "@/components/ui/SnackbarContext";
 import {
     defaultAwardIcon,
     getIconComponent,
@@ -64,6 +72,7 @@ export default function AwardDetailScreen() {
   }>();
   const router = useRouter();
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const { showSnackbar } = useSnackbar();
 
   const { isAdmin, group } = useGroup(groupId);
@@ -245,6 +254,7 @@ export default function AwardDetailScreen() {
 
   // Sync selected nominees when modal opens
   const openManageNomineesModal = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSelectedNomineeIds(award?.nominees.map((n) => n.user_id) || []);
     setShowManageNomineesModal(true);
   };
@@ -361,6 +371,8 @@ export default function AwardDetailScreen() {
 
   const handleVote = async (nomineeId: string) => {
     if (!award) return;
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     try {
       setActionLoading(true);
@@ -602,28 +614,50 @@ export default function AwardDetailScreen() {
   };
 
   if (loading) {
-    return (
-      <View
-        style={[
-          styles.centerContainer,
-          { backgroundColor: theme.colors.background },
-        ]}
-      >
-        <ActivityIndicator size="large" />
-      </View>
-    );
+    return <AwardDetailSkeleton />;
   }
 
   if (!award) {
     return (
-      <View
-        style={[
-          styles.centerContainer,
-          { backgroundColor: theme.colors.background },
-        ]}
-      >
-        <Text variant="bodyLarge">Premio no encontrado</Text>
-      </View>
+      <>
+        <Stack.Screen options={{ headerShown: false }} />
+        <View
+          style={[
+            styles.container,
+            { backgroundColor: theme.colors.background },
+          ]}
+        >
+          <CustomHeader title="" showBackButton={true} />
+          <View style={styles.notFoundContainer}>
+            <SquircleView
+              style={[
+                styles.notFoundIcon,
+                { backgroundColor: theme.colors.surfaceVariant },
+              ]}
+              cornerSmoothing={1}
+            >
+              <Ionicons
+                name="warning-outline"
+                size={36}
+                color={theme.colors.onSurfaceVariant}
+              />
+            </SquircleView>
+            <Text
+              style={[styles.notFoundTitle, { color: theme.colors.onSurface }]}
+            >
+              Premio no encontrado
+            </Text>
+            <Text
+              style={[
+                styles.notFoundSubtitle,
+                { color: theme.colors.onSurfaceVariant },
+              ]}
+            >
+              No hemos podido cargar este premio.
+            </Text>
+          </View>
+        </View>
+      </>
     );
   }
 
@@ -631,230 +665,267 @@ export default function AwardDetailScreen() {
     switch (award.status) {
       case "voting":
         return {
-          label: "Votación en curso",
+          label: "Votando",
           color: "#F59E0B",
-          bg: "rgba(255, 159, 10, 0.15)",
+          bg: "rgba(245, 158, 11, 0.15)",
+          icon: "flame-outline" as keyof typeof Ionicons.glyphMap,
+        };
+      case "nominations":
+        return {
+          label: "Nominaciones",
+          color: theme.colors.tertiary,
+          bg: `${theme.colors.tertiary}22`,
+          icon: "hand-right-outline" as keyof typeof Ionicons.glyphMap,
         };
       case "completed":
         return {
-          label: "Finalizado",
-          color: theme.colors.primary,
-          bg: "rgba(50, 215, 75, 0.15)",
+          label: "Completado",
+          color: "#22C55E",
+          bg: "rgba(34, 197, 94, 0.15)",
+          icon: "trophy" as keyof typeof Ionicons.glyphMap,
         };
       default:
         return {
           label: "Borrador",
           color: theme.colors.onSurfaceVariant,
           bg: theme.colors.surfaceVariant,
+          icon: "document-outline" as keyof typeof Ionicons.glyphMap,
         };
     }
   };
 
   const statusConfig = getStatusConfig();
+  const totalVotes = award.nominees.reduce(
+    (acc, curr) => acc + (curr.vote_count || 0),
+    0,
+  );
 
   return (
     <>
-      <BlurTargetView ref={backgroundRef} style={styles.container}>
-      <CustomHeader title={award.name} showBackButton={true} />
-      <ScrollView
+      <Stack.Screen options={{ headerShown: false }} />
+      <BlurTargetView
+        ref={backgroundRef}
         style={[styles.container, { backgroundColor: theme.colors.background }]}
       >
-        {/* Header */}
-        <View style={styles.headerWrapper}>
-          <Surface
-            style={[
-              styles.header,
-              {
-                backgroundColor: theme.colors.surface,
-                borderColor: theme.colors.secondaryContainer,
-              },
-            ]}
-            elevation={1}
+        <CustomHeader title="" showBackButton={true} />
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: 60 + insets.bottom },
+          ]}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* ─── Title ─── */}
+          <ReanimatedAnimated.View
+            entering={FadeInUp.duration(500)}
+            style={styles.titleBlock}
           >
-            {/* Icon */}
-            <Surface
-              style={[
-                styles.iconContainer,
-                {
-                  backgroundColor: theme.colors.primaryContainer,
-                  borderColor: theme.colors.primary,
-                },
-              ]}
-              elevation={0}
-            >
-              {getIconComponent(
-                (award.icon as IconName) || defaultAwardIcon,
-                36,
-                theme.colors.onSurface,
-              )}
-            </Surface>
-
-            {/* Title & Description */}
             <Text
-              variant="headlineSmall"
-              style={{
-                fontWeight: "800",
-                textAlign: "center",
-                marginBottom: 6,
-                letterSpacing: -0.5,
-              }}
+              style={[styles.screenTitle, { color: theme.colors.primary }]}
+              numberOfLines={2}
             >
               {award.name}
             </Text>
-            {award.description && (
+            {award.description ? (
               <Text
-                variant="bodyMedium"
-                style={{
-                  color: theme.colors.onSurfaceVariant,
-                  textAlign: "center",
-                  marginBottom: 16,
-                  lineHeight: 20,
-                }}
+                style={[
+                  styles.screenSubtitle,
+                  { color: theme.colors.onSurfaceVariant },
+                ]}
               >
                 {award.description}
               </Text>
-            )}
+            ) : null}
+          </ReanimatedAnimated.View>
 
-            {/* Status Badge */}
-            <View
-              style={[styles.statusBadge, { backgroundColor: statusConfig.bg }]}
+          <ReanimatedAnimated.View
+            entering={FadeIn.duration(400).delay(50)}
+            style={[
+              styles.divider,
+              { backgroundColor: theme.colors.outlineVariant },
+            ]}
+          />
+
+          {/* ─── Status Card ─── */}
+          <ReanimatedAnimated.View
+            entering={FadeInDown.duration(350).delay(80)}
+            style={styles.section}
+          >
+            <SquircleView
+              style={[
+                styles.statusCard,
+                {
+                  backgroundColor: theme.colors.surface,
+                  borderColor:
+                    award.status === "voting"
+                      ? "#F59E0B"
+                      : award.status === "completed"
+                        ? theme.colors.primary
+                        : theme.colors.outlineVariant,
+                  borderWidth: award.status === "voting" ? 1.5 : 1,
+                },
+              ]}
+              cornerSmoothing={1}
             >
-              <Ionicons
-                name={
-                  award.status === "voting"
-                    ? "hourglass-outline"
-                    : award.status === "completed"
-                      ? "trophy"
-                      : "document-outline"
-                }
-                size={14}
-                color={statusConfig.color}
-              />
-              <Text
-                style={{
-                  color: statusConfig.color,
-                  fontWeight: "700",
-                  marginLeft: 6,
-                }}
-              >
-                {statusConfig.label}
-              </Text>
-            </View>
-
-            {/* Voting deadline or completion status */}
-            {award.status === "voting" && award.voting_end_at && (
-              <View style={styles.deadlineRow}>
-                <Ionicons
-                  name="time-outline"
-                  size={14}
-                  color={theme.colors.onSurfaceVariant}
-                />
-                <Text
-                  variant="labelMedium"
-                  style={{
-                    color: theme.colors.onSurfaceVariant,
-                    marginLeft: 6,
-                  }}
+              <View style={styles.statusCardRow}>
+                <SquircleView
+                  style={[
+                    styles.statusCardIcon,
+                    {
+                      backgroundColor: theme.dark
+                        ? "rgba(42,138,112,0.15)"
+                        : "rgba(42,138,112,0.08)",
+                      borderColor: theme.colors.primary,
+                      borderWidth: 1,
+                    },
+                  ]}
+                  cornerSmoothing={1}
                 >
-                  Termina: {formatDate(award.voting_end_at)}
-                </Text>
-              </View>
-            )}
+                  {getIconComponent(
+                    (award.icon as IconName) || defaultAwardIcon,
+                    28,
+                    theme.colors.primary,
+                  )}
+                </SquircleView>
 
-            {/* Total Votes Count */}
-            {["voting", "completed"].includes(award.status) &&
-              (() => {
-                const totalVotes = award.nominees.reduce(
-                  (acc, curr) => acc + (curr.vote_count || 0),
-                  0,
-                );
-                return (
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      marginTop:
-                        award.status === "voting" && award.voting_end_at
-                          ? 4
-                          : 12,
-                    }}
+                <View style={styles.statusCardTextBlock}>
+                  <SquircleView
+                    style={[
+                      styles.statusBadge,
+                      {
+                        backgroundColor: statusConfig.bg,
+                        borderColor: statusConfig.color,
+                        borderWidth: 1,
+                      },
+                    ]}
+                    cornerSmoothing={1}
                   >
                     <Ionicons
-                      name="stats-chart"
-                      size={14}
-                      color={theme.colors.onSurfaceVariant}
+                      name={statusConfig.icon}
+                      size={12}
+                      color={statusConfig.color}
                     />
                     <Text
-                      variant="labelMedium"
-                      style={{
-                        color: theme.colors.onSurfaceVariant,
-                        marginLeft: 6,
-                      }}
+                      style={[
+                        styles.statusBadgeText,
+                        { color: statusConfig.color },
+                      ]}
                     >
-                      {totalVotes}{" "}
-                      {totalVotes === 1 ? "voto total" : "votos totales"}
+                      {statusConfig.label}
                     </Text>
-                  </View>
-                );
-              })()}
+                  </SquircleView>
 
-            {award.status === "completed" && (
-              <View
-                style={[
-                  styles.completedBanner,
-                  {
-                    backgroundColor: !award.winner_id
-                      ? theme.colors.surfaceVariant
-                      : award.is_revealed
-                        ? "#22C55E20"
-                        : theme.colors.primaryContainer,
-                  },
-                ]}
-              >
-                <Ionicons
-                  name={
-                    !award.winner_id
-                      ? "alert-circle-outline"
-                      : award.is_revealed
-                        ? "checkmark-circle"
-                        : "eye-off-outline"
-                  }
-                  size={16}
-                  color={
-                    !award.winner_id
-                      ? theme.colors.onSurfaceVariant
-                      : award.is_revealed
-                        ? "#22C55E"
-                        : theme.colors.onSurfaceVariant
-                  }
-                />
-                <Text
-                  style={{
-                    color: !award.winner_id
-                      ? theme.colors.onSurfaceVariant
-                      : award.is_revealed
-                        ? "#22C55E"
-                        : theme.colors.onSurfaceVariant,
-                    fontWeight: "600",
-                    marginLeft: 8,
-                  }}
-                >
-                  {!award.winner_id
-                    ? "Premio Desierto (Insuficientes votos)"
-                    : award.is_revealed
-                      ? "¡Ganador revelado!"
-                      : "Ganador pendiente"}
-                </Text>
+                  {["voting", "completed"].includes(award.status) && (
+                    <View style={styles.statRow}>
+                      <Ionicons
+                        name="stats-chart-outline"
+                        size={13}
+                        color={theme.colors.onSurfaceVariant}
+                      />
+                      <Text
+                        style={[
+                          styles.statRowText,
+                          { color: theme.colors.onSurfaceVariant },
+                        ]}
+                      >
+                        {totalVotes}{" "}
+                        {totalVotes === 1 ? "voto total" : "votos totales"}
+                      </Text>
+                    </View>
+                  )}
+
+                  {award.status === "voting" && award.voting_end_at && (
+                    <View style={styles.statRow}>
+                      <Ionicons
+                        name="time-outline"
+                        size={13}
+                        color={theme.colors.onSurfaceVariant}
+                      />
+                      <Text
+                        style={[
+                          styles.statRowText,
+                          { color: theme.colors.onSurfaceVariant },
+                        ]}
+                      >
+                        Termina {formatDate(award.voting_end_at)}
+                      </Text>
+                    </View>
+                  )}
+                </View>
               </View>
-            )}
-          </Surface>
-        </View>
 
-        {/* Nominees Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <Text variant="titleLarge" style={{ fontWeight: "700" }}>
+              {award.status === "completed" && (
+                <SquircleView
+                  style={[
+                    styles.completedBanner,
+                    {
+                      backgroundColor: !award.winner_id
+                        ? theme.colors.surfaceVariant
+                        : award.is_revealed
+                          ? "rgba(34,197,94,0.12)"
+                          : theme.dark
+                            ? "rgba(42,138,112,0.15)"
+                            : "rgba(42,138,112,0.08)",
+                      borderColor: !award.winner_id
+                        ? theme.colors.outlineVariant
+                        : award.is_revealed
+                          ? "#22C55E"
+                          : theme.colors.primary,
+                      borderWidth: 1,
+                    },
+                  ]}
+                  cornerSmoothing={1}
+                >
+                  <Ionicons
+                    name={
+                      !award.winner_id
+                        ? "alert-circle-outline"
+                        : award.is_revealed
+                          ? "checkmark-circle"
+                          : "eye-off-outline"
+                    }
+                    size={16}
+                    color={
+                      !award.winner_id
+                        ? theme.colors.onSurfaceVariant
+                        : award.is_revealed
+                          ? "#22C55E"
+                          : theme.colors.primary
+                    }
+                  />
+                  <Text
+                    style={[
+                      styles.completedBannerText,
+                      {
+                        color: !award.winner_id
+                          ? theme.colors.onSurfaceVariant
+                          : award.is_revealed
+                            ? "#22C55E"
+                            : theme.colors.primary,
+                      },
+                    ]}
+                  >
+                    {!award.winner_id
+                      ? "Premio desierto · insuficientes votos"
+                      : award.is_revealed
+                        ? "¡Ganador revelado!"
+                        : "Ganador pendiente de revelar"}
+                  </Text>
+                </SquircleView>
+              )}
+            </SquircleView>
+          </ReanimatedAnimated.View>
+
+          {/* ─── Nominees Section ─── */}
+          <ReanimatedAnimated.View
+            entering={FadeInDown.duration(350).delay(120)}
+            style={styles.section}
+          >
+            <View style={styles.sectionTitleRow}>
+              <Text
+                style={[styles.sectionTitle, { color: theme.colors.onSurface }]}
+              >
                 {award.vote_type === "person"
                   ? "Nominados"
                   : award.vote_type === "photo"
@@ -865,576 +936,608 @@ export default function AwardDetailScreen() {
                         ? "Audios"
                         : "Textos"}
               </Text>
-              {/* Count Badge */}
-              <View
+              <SquircleView
                 style={[
-                  styles.countBadge,
-                  { backgroundColor: theme.colors.secondaryContainer },
+                  styles.sectionCountBadge,
+                  {
+                    backgroundColor: theme.colors.surfaceVariant,
+                    borderColor: theme.colors.outlineVariant,
+                    borderWidth: 1,
+                  },
                 ]}
+                cornerSmoothing={1}
               >
                 <Text
-                  variant="labelSmall"
-                  style={{
-                    color: theme.colors.onSecondaryContainer,
-                    fontWeight: "700",
-                  }}
-                >
-                  {award ? award.nominees.length : 0}
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Manage Nominees Button (Only for Person awards in draft) */}
-          {isAdmin &&
-            award?.vote_type === "person" &&
-            award.status === "draft" && (
-              <Button
-                mode="outlined"
-                onPress={openManageNomineesModal}
-                style={{ marginBottom: 16, borderColor: theme.colors.outline }}
-                textColor={theme.colors.onSurfaceVariant}
-                icon="account-edit-outline"
-              >
-                Gestionar Nominados
-              </Button>
-            )}
-
-          {/* Nominees List */}
-          <View style={styles.nomineesList}>
-            {award.nominees.map((nominee) => {
-              const isWinner =
-                award.status === "completed" &&
-                nominee.is_winner &&
-                award.is_revealed;
-
-              return (
-                <Surface
-                  key={nominee.id}
                   style={[
-                    styles.nomineeCard,
+                    styles.sectionCountText,
+                    { color: theme.colors.onSurfaceVariant },
+                  ]}
+                >
+                  {award.nominees.length}
+                </Text>
+              </SquircleView>
+            </View>
+
+            {/* Manage Nominees Button (Only for Person awards in draft) */}
+            {isAdmin &&
+              award?.vote_type === "person" &&
+              award.status === "draft" && (
+                <Pressable
+                  onPress={openManageNomineesModal}
+                  style={({ pressed }) => [
                     {
-                      backgroundColor: isWinner
-                        ? "#FFD70015"
-                        : theme.colors.surface,
-                      borderColor: isWinner
-                        ? "#FFD700"
-                        : theme.colors.secondaryContainer,
-                      paddingTop: isWinner ? 32 : 16,
+                      opacity: pressed ? 0.85 : 1,
+                      transform: [{ scale: pressed ? 0.98 : 1 }],
                     },
                   ]}
-                  elevation={1}
                 >
-                  {/* Winner Banner */}
-                  {isWinner && (
-                    <View
+                  <SquircleView
+                    style={[
+                      styles.manageButton,
+                      {
+                        backgroundColor: theme.colors.surface,
+                        borderColor: theme.colors.outlineVariant,
+                        borderWidth: 1,
+                      },
+                    ]}
+                    cornerSmoothing={1}
+                  >
+                    <Ionicons
+                      name="person-add-outline"
+                      size={17}
+                      color={theme.colors.primary}
+                    />
+                    <Text
                       style={[
-                        styles.winnerBanner,
-                        { backgroundColor: "#FFD700" },
+                        styles.manageButtonText,
+                        { color: theme.colors.onSurface },
                       ]}
                     >
-                      <Ionicons name="trophy" size={12} color="#000" />
-                      <Text
-                        style={{
-                          color: "#000",
-                          fontWeight: "700",
-                          marginLeft: 4,
-                          fontSize: 11,
-                        }}
-                      >
-                        GANADOR
-                      </Text>
-                    </View>
-                  )}
+                      Gestionar nominados
+                    </Text>
+                    <Ionicons
+                      name="chevron-forward"
+                      size={16}
+                      color={theme.colors.onSurfaceVariant}
+                    />
+                  </SquircleView>
+                </Pressable>
+              )}
 
-                  {/* User Row */}
-                  <View style={styles.nomineeUserRow}>
-                    <MemberAvatar user={nominee.user} size="md" />
-                    <View style={{ flex: 1, marginLeft: 12 }}>
-                      <Text variant="bodyLarge" style={{ fontWeight: "600" }}>
-                        {nominee.user.display_name}
-                      </Text>
-                      {award.vote_type !== "person" &&
-                        nominee.nomination_reason && (
+            {/* Nominees List */}
+            <View style={styles.nomineesList}>
+              {award.nominees.length === 0 && (
+                <SquircleView
+                  style={[
+                    styles.emptyNominees,
+                    {
+                      backgroundColor: theme.colors.surface,
+                      borderColor: theme.colors.outlineVariant,
+                      borderWidth: 1,
+                    },
+                  ]}
+                  cornerSmoothing={1}
+                >
+                  <Ionicons
+                    name="people-outline"
+                    size={28}
+                    color={theme.colors.onSurfaceVariant}
+                  />
+                  <Text
+                    style={[
+                      styles.emptyNomineesText,
+                      { color: theme.colors.onSurfaceVariant },
+                    ]}
+                  >
+                    {isAdmin
+                      ? award.vote_type === "person"
+                        ? "Añade al menos 2 nominados para empezar"
+                        : "Añade contenido para empezar"
+                      : "Aún no hay nominados"}
+                  </Text>
+                </SquircleView>
+              )}
+
+              {award.nominees.map((nominee, nomineeIndex) => {
+                const isWinner =
+                  award.status === "completed" &&
+                  nominee.is_winner &&
+                  award.is_revealed;
+
+                return (
+                  <ReanimatedAnimated.View
+                    key={nominee.id}
+                    entering={FadeInDown.duration(300).delay(
+                      160 + nomineeIndex * 50,
+                    )}
+                  >
+                    <SquircleView
+                      style={[
+                        styles.nomineeCard,
+                        {
+                          backgroundColor: isWinner
+                            ? "rgba(255,215,0,0.08)"
+                            : theme.colors.surface,
+                          borderColor: isWinner
+                            ? "#FFD700"
+                            : theme.colors.outlineVariant,
+                          borderWidth: isWinner ? 1.5 : 1,
+                          paddingTop: isWinner ? 36 : 16,
+                        },
+                      ]}
+                      cornerSmoothing={1}
+                    >
+                    {/* Winner Banner */}
+                    {isWinner && (
+                      <View
+                        style={[
+                          styles.winnerBanner,
+                          { backgroundColor: "#FFD700" },
+                        ]}
+                      >
+                        <Ionicons name="trophy" size={12} color="#000" />
+                        <Text
+                          style={{
+                            color: "#000",
+                            fontWeight: "700",
+                            marginLeft: 4,
+                            fontSize: 11,
+                          }}
+                        >
+                          GANADOR
+                        </Text>
+                      </View>
+                    )}
+
+                    {/* User Row */}
+                    <View style={styles.nomineeUserRow}>
+                      <MemberAvatar user={nominee.user} size="md" />
+                      <View style={{ flex: 1, marginLeft: 12 }}>
+                        <Text variant="bodyLarge" style={{ fontWeight: "600" }}>
+                          {nominee.user.display_name}
+                        </Text>
+                        {award.vote_type !== "person" &&
+                          nominee.nomination_reason && (
+                            <Text
+                              variant="labelSmall"
+                              style={{ color: theme.colors.onSurfaceVariant }}
+                            >
+                              {nominee.nomination_reason}
+                            </Text>
+                          )}
+                      </View>
+
+                      {/* Vote Button */}
+                      {award.status === "voting" &&
+                        (() => {
+                          const isCurrentUserNominee =
+                            award.vote_type === "person" &&
+                            award.nominees.some((n) => n.user_id === user?.id);
+                          const isSelf = nominee.user_id === user?.id;
+
+                          const isVoteDisabled =
+                            actionLoading ||
+                            (!!myVote &&
+                              !award.voting_settings?.allow_vote_change) ||
+                            (isCurrentUserNominee &&
+                              !award.voting_settings?.nominees_can_vote) ||
+                            (isCurrentUserNominee &&
+                              isSelf &&
+                              !award.voting_settings?.allow_self_vote);
+
+                          // Style for disabled state (e.g. grayed out if strict restriction)
+                          // If I voted, I want only the OTHER buttons to look disabled (if change is not allowed)
+                          // The selected button should remain opaque (primary color)
+                          const isDisabledStyle =
+                            isVoteDisabled && myVote !== nominee.id
+                              ? { opacity: 0.5 }
+                              : {};
+
+                          return (
+                            <TouchableOpacity
+                              style={[
+                                styles.voteButton,
+                                {
+                                  backgroundColor:
+                                    myVote === nominee.id
+                                      ? theme.colors.primary
+                                      : "transparent",
+                                  borderColor:
+                                    myVote === nominee.id
+                                      ? theme.colors.primary
+                                      : theme.colors.outline,
+                                },
+                                isDisabledStyle,
+                              ]}
+                              disabled={isVoteDisabled}
+                              onPress={() => handleVote(nominee.id)}
+                            >
+                              <Ionicons
+                                name={
+                                  myVote === nominee.id
+                                    ? "checkmark"
+                                    : "heart-outline"
+                                }
+                                size={16}
+                                color={
+                                  myVote === nominee.id
+                                    ? theme.colors.onPrimary
+                                    : theme.colors.outline
+                                }
+                              />
+                              <Text
+                                style={{
+                                  marginLeft: 6,
+                                  fontWeight: "600",
+                                  color:
+                                    myVote === nominee.id
+                                      ? theme.colors.onPrimary
+                                      : theme.colors.outline,
+                                }}
+                              >
+                                {myVote === nominee.id ? "Votado" : "Votar"}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })()}
+
+                      {/* Persistent Vote Indicator (when not voting) */}
+                      {award.status !== "voting" && myVote === nominee.id && (
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            backgroundColor: isWinner
+                              ? "#FFD70025"
+                              : theme.colors.primaryContainer,
+                            paddingHorizontal: 12,
+                            paddingVertical: 6,
+                            borderRadius: 20,
+                            borderWidth: 1,
+                            borderColor: isWinner
+                              ? "#FFD700"
+                              : theme.colors.primary,
+                          }}
+                        >
+                          <Ionicons
+                            name="checkmark-circle"
+                            size={16}
+                            color={
+                              isWinner ? "#B8860B" : theme.colors.onSurface
+                            }
+                          />
                           <Text
                             variant="labelSmall"
-                            style={{ color: theme.colors.onSurfaceVariant }}
+                            style={{
+                              color: isWinner
+                                ? "#B8860B"
+                                : theme.colors.onSurface,
+                              marginLeft: 6,
+                              fontWeight: "700",
+                            }}
                           >
-                            {nominee.nomination_reason}
+                            Tu voto
                           </Text>
+                        </View>
+                      )}
+
+                      {/* Vote Count (when revealed) */}
+                      {award.is_revealed && (
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            backgroundColor: theme.colors.surfaceVariant,
+                            paddingHorizontal: 10,
+                            paddingVertical: 6,
+                            borderRadius: 20,
+                            marginLeft: 8,
+                          }}
+                        >
+                          <Text
+                            variant="labelSmall"
+                            style={{
+                              color: theme.colors.onSurfaceVariant,
+                              fontWeight: "700",
+                            }}
+                          >
+                            {nominee.vote_count}{" "}
+                            {nominee.vote_count === 1 ? "voto" : "votos"}
+                          </Text>
+                        </View>
+                      )}
+
+                      {/* Delete Button (Draft Mode) */}
+                      {isAdmin &&
+                        award.status === "draft" &&
+                        award.vote_type !== "person" && (
+                          <TouchableOpacity
+                            onPress={() => handleDeleteNomination(nominee.id)}
+                            style={{ padding: 8 }}
+                          >
+                            <Ionicons
+                              name="trash-outline"
+                              size={20}
+                              color={theme.colors.error}
+                            />
+                          </TouchableOpacity>
                         )}
                     </View>
 
-                    {/* Vote Button */}
-                    {award.status === "voting" &&
-                      (() => {
-                        const isCurrentUserNominee =
-                          award.vote_type === "person" &&
-                          award.nominees.some((n) => n.user_id === user?.id);
-                        const isSelf = nominee.user_id === user?.id;
-
-                        const isVoteDisabled =
-                          actionLoading ||
-                          (!!myVote &&
-                            !award.voting_settings?.allow_vote_change) ||
-                          (isCurrentUserNominee &&
-                            !award.voting_settings?.nominees_can_vote) ||
-                          (isCurrentUserNominee &&
-                            isSelf &&
-                            !award.voting_settings?.allow_self_vote);
-
-                        // Style for disabled state (e.g. grayed out if strict restriction)
-                        // If I voted, I want only the OTHER buttons to look disabled (if change is not allowed)
-                        // The selected button should remain opaque (primary color)
-                        const isDisabledStyle =
-                          isVoteDisabled && myVote !== nominee.id
-                            ? { opacity: 0.5 }
-                            : {};
-
-                        return (
+                    {/* Content Display */}
+                    {nominee.content_url && (
+                      <View style={styles.nomineeContentWrapper}>
+                        {award.vote_type === "video" ? (
                           <TouchableOpacity
-                            style={[
-                              styles.voteButton,
-                              {
-                                backgroundColor:
-                                  myVote === nominee.id
-                                    ? theme.colors.primary
-                                    : "transparent",
-                                borderColor:
-                                  myVote === nominee.id
-                                    ? theme.colors.primary
-                                    : theme.colors.outline,
-                              },
-                              isDisabledStyle,
-                            ]}
-                            disabled={isVoteDisabled}
-                            onPress={() => handleVote(nominee.id)}
+                            onPress={() =>
+                              setSelectedImage(nominee.content_url)
+                            }
+                            activeOpacity={0.9}
+                            style={styles.mediaContainer}
                           >
-                            <Ionicons
-                              name={
-                                myVote === nominee.id
-                                  ? "checkmark"
-                                  : "heart-outline"
-                              }
-                              size={16}
-                              color={
-                                myVote === nominee.id
-                                  ? theme.colors.onPrimary
-                                  : theme.colors.outline
-                              }
-                            />
-                            <Text
-                              style={{
-                                marginLeft: 6,
-                                fontWeight: "600",
-                                color:
-                                  myVote === nominee.id
-                                    ? theme.colors.onPrimary
-                                    : theme.colors.outline,
-                              }}
-                            >
-                              {myVote === nominee.id ? "Votado" : "Votar"}
-                            </Text>
+                            <NomineeVideoThumbnail uri={nominee.content_url} />
                           </TouchableOpacity>
-                        );
-                      })()}
-
-                    {/* Persistent Vote Indicator (when not voting) */}
-                    {award.status !== "voting" && myVote === nominee.id && (
-                      <View
-                        style={{
-                          flexDirection: "row",
-                          alignItems: "center",
-                          backgroundColor: isWinner
-                            ? "#FFD70025"
-                            : theme.colors.primaryContainer,
-                          paddingHorizontal: 12,
-                          paddingVertical: 6,
-                          borderRadius: 20,
-                          borderWidth: 1,
-                          borderColor: isWinner
-                            ? "#FFD700"
-                            : theme.colors.primary,
-                        }}
-                      >
-                        <Ionicons
-                          name="checkmark-circle"
-                          size={16}
-                          color={isWinner ? "#B8860B" : theme.colors.onSurface}
-                        />
-                        <Text
-                          variant="labelSmall"
-                          style={{
-                            color: isWinner
-                              ? "#B8860B"
-                              : theme.colors.onSurface,
-                            marginLeft: 6,
-                            fontWeight: "700",
-                          }}
-                        >
-                          Tu voto
-                        </Text>
+                        ) : award.vote_type === "audio" ? (
+                          <TouchableOpacity
+                            onPress={() =>
+                              setSelectedImage(nominee.content_url)
+                            }
+                            activeOpacity={0.9}
+                          >
+                            <NomineeAudioPlayer
+                              uri={nominee.content_url}
+                              title={nominee.nomination_reason || "Audio"}
+                            />
+                          </TouchableOpacity>
+                        ) : award.vote_type === "text" ? (
+                          <NomineeTextCard text={nominee.content_url} />
+                        ) : (
+                          <TouchableOpacity
+                            onPress={() =>
+                              setSelectedImage(nominee.content_url)
+                            }
+                            activeOpacity={0.9}
+                            style={styles.mediaContainer}
+                          >
+                            <Image
+                              source={{ uri: nominee.content_url }}
+                              style={styles.nomineeImage}
+                              contentFit="cover"
+                            />
+                          </TouchableOpacity>
+                        )}
                       </View>
                     )}
+                    </SquircleView>
+                  </ReanimatedAnimated.View>
+                );
+              })}
+            </View>
+          </ReanimatedAnimated.View>
 
-                    {/* Vote Count (when revealed) */}
-                    {award.is_revealed && (
-                      <View
-                        style={{
-                          flexDirection: "row",
-                          alignItems: "center",
-                          backgroundColor: theme.colors.surfaceVariant,
-                          paddingHorizontal: 10,
-                          paddingVertical: 6,
-                          borderRadius: 20,
-                          marginLeft: 8,
-                        }}
-                      >
-                        <Text
-                          variant="labelSmall"
-                          style={{
-                            color: theme.colors.onSurfaceVariant,
-                            fontWeight: "700",
-                          }}
-                        >
-                          {nominee.vote_count}{" "}
-                          {nominee.vote_count === 1 ? "voto" : "votos"}
-                        </Text>
-                      </View>
-                    )}
-
-                    {/* Delete Button (Draft Mode) */}
-                    {isAdmin &&
-                      award.status === "draft" &&
-                      award.vote_type !== "person" && (
-                        <TouchableOpacity
-                          onPress={() => handleDeleteNomination(nominee.id)}
-                          style={{ padding: 8 }}
-                        >
-                          <Ionicons
-                            name="trash-outline"
-                            size={20}
-                            color={theme.colors.error}
-                          />
-                        </TouchableOpacity>
-                      )}
-                  </View>
-
-                  {/* Content Display */}
-                  {nominee.content_url && (
-                    <View style={styles.nomineeContentWrapper}>
-                      {award.vote_type === "video" ? (
-                        <TouchableOpacity
-                          onPress={() => setSelectedImage(nominee.content_url)}
-                          activeOpacity={0.9}
-                          style={styles.mediaContainer}
-                        >
-                          <NomineeVideoThumbnail uri={nominee.content_url} />
-                        </TouchableOpacity>
-                      ) : award.vote_type === "audio" ? (
-                        <TouchableOpacity
-                          onPress={() => setSelectedImage(nominee.content_url)}
-                          activeOpacity={0.9}
-                        >
-                          <NomineeAudioPlayer
-                            uri={nominee.content_url}
-                            title={nominee.nomination_reason || "Audio"}
-                          />
-                        </TouchableOpacity>
-                      ) : award.vote_type === "text" ? (
-                        <NomineeTextCard text={nominee.content_url} />
-                      ) : (
-                        <TouchableOpacity
-                          onPress={() => setSelectedImage(nominee.content_url)}
-                          activeOpacity={0.9}
-                          style={styles.mediaContainer}
-                        >
-                          <Image
-                            source={{ uri: nominee.content_url }}
-                            style={styles.nomineeImage}
-                            contentFit="cover"
-                          />
-                        </TouchableOpacity>
-                      )}
-                    </View>
-                  )}
-                </Surface>
-              );
-            })}
-          </View>
-        </View>
-
-        {/* Admin Actions */}
-        {isAdmin && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <View style={{ flexDirection: "row", alignItems: "center" }}>
-                <Ionicons
-                  name="settings-outline"
-                  size={18}
-                  color={theme.colors.onSurfaceVariant}
-                />
+          {/* ─── Admin Actions ─── */}
+          {isAdmin && (
+            <ReanimatedAnimated.View
+              entering={FadeInDown.duration(350).delay(180)}
+              style={styles.section}
+            >
+              <View style={styles.sectionTitleRow}>
                 <Text
-                  variant="titleMedium"
-                  style={{ fontWeight: "600", marginLeft: 8 }}
+                  style={[
+                    styles.sectionTitle,
+                    { color: theme.colors.onSurface },
+                  ]}
                 >
                   Administración
                 </Text>
               </View>
-            </View>
 
-            <Surface
-              style={[
-                styles.adminCard,
-                {
-                  backgroundColor: theme.colors.surface,
-                  borderColor: theme.colors.secondaryContainer,
-                },
-              ]}
-              elevation={1}
-            >
-              {/* Edit Award Button - Only visible before voting starts */}
-              {["draft", "nominations"].includes(award.status) ? (
-                <TouchableOpacity
-                  style={[
-                    styles.adminButton,
-                    { backgroundColor: theme.colors.surfaceVariant },
-                  ]}
-                  onPress={() =>
-                    router.push({
-                      pathname: "/groups/award/edit",
-                      params: { id, groupId },
-                    } as any)
-                  }
-                >
-                  <Ionicons
-                    name="pencil-outline"
-                    size={24}
-                    color={theme.colors.onSurfaceVariant}
-                  />
-                  <View style={{ marginLeft: 14, flex: 1 }}>
-                    <Text
-                      style={{
-                        fontWeight: "600",
-                        color: theme.colors.onSurface,
-                      }}
-                    >
-                      Editar Premio
-                    </Text>
-                    <Text
-                      variant="labelSmall"
-                      style={{ color: theme.colors.onSurfaceVariant }}
-                    >
-                      Cambiar icono, nombre o descripción
-                    </Text>
-                  </View>
-                  <Ionicons
-                    name="chevron-forward"
-                    size={20}
-                    color={theme.colors.onSurfaceVariant}
-                  />
-                </TouchableOpacity>
-              ) : null}
-
-              {award.status === "draft" && (
-                <>
-                  <TouchableOpacity
-                    style={[
-                      styles.adminButton,
-                      {
-                        backgroundColor: theme.colors.primaryContainer,
-                        borderTopWidth: 1,
-                        borderTopColor: theme.colors.surfaceVariant,
-                      },
-                    ]}
-                    onPress={() => setShowStartVotingModal(true)}
-                  >
-                    <Ionicons
-                      name="play-circle"
-                      size={24}
-                      color={theme.colors.onPrimaryContainer}
-                    />
-                    <View style={{ marginLeft: 14, flex: 1 }}>
-                      <Text
-                        style={{
-                          fontWeight: "700",
-                          color: theme.colors.onSurface,
-                        }}
-                      >
-                        Iniciar Votación
-                      </Text>
-                      <Text
-                        variant="labelSmall"
-                        style={{ color: theme.colors.onSurfaceVariant }}
-                      >
-                        Abrir el premio para votos
-                      </Text>
-                    </View>
-                    <Ionicons
-                      name="chevron-forward"
-                      size={20}
-                      color={theme.colors.onSurfaceVariant}
-                    />
-                  </TouchableOpacity>
-
-                  {["photo", "video", "audio", "text"].includes(
-                    award.vote_type,
-                  ) && (
-                    <TouchableOpacity
-                      style={[
-                        styles.adminButton,
-                        {
-                          borderTopWidth: 1,
-                          borderTopColor: theme.colors.surfaceVariant,
-                        },
-                      ]}
-                      onPress={handleAddNomineeWithPhoto}
-                    >
-                      <Ionicons
-                        name={
-                          award.vote_type === "video"
-                            ? "videocam-outline"
-                            : award.vote_type === "audio"
-                              ? "musical-notes-outline"
-                              : award.vote_type === "text"
-                                ? "document-text-outline"
-                                : "camera-outline"
-                        }
-                        size={24}
-                        color={theme.colors.tertiary}
-                      />
-                      <View style={{ marginLeft: 14, flex: 1 }}>
-                        <Text
-                          style={{
-                            fontWeight: "600",
-                            color: theme.colors.onSurface,
-                          }}
-                        >
-                          {award.vote_type === "video"
-                            ? "Añadir Vídeo"
-                            : award.vote_type === "audio"
-                              ? "Añadir Audio"
-                              : award.vote_type === "text"
-                                ? "Añadir Texto"
-                                : "Añadir Foto"}
-                        </Text>
-                        <Text
-                          variant="labelSmall"
-                          style={{ color: theme.colors.onSurfaceVariant }}
-                        >
-                          Subir nuevo contenido
-                        </Text>
-                      </View>
-                      <Ionicons
-                        name="add-circle-outline"
-                        size={20}
-                        color={theme.colors.onSurfaceVariant}
-                      />
-                    </TouchableOpacity>
-                  )}
-                </>
-              )}
-
-              {award.status === "voting" && (
-                <TouchableOpacity
-                  style={[styles.adminButton, { backgroundColor: "#F59E0B15" }]}
-                  onPress={handleFinishVoting}
-                >
-                  <Ionicons name="stop-circle" size={24} color="#F59E0B" />
-                  <View style={{ marginLeft: 14, flex: 1 }}>
-                    <Text
-                      style={{
-                        fontWeight: "700",
-                        color: theme.colors.onSurface,
-                      }}
-                    >
-                      Finalizar Votación
-                    </Text>
-                    <Text
-                      variant="labelSmall"
-                      style={{ color: theme.colors.onSurfaceVariant }}
-                    >
-                      Cerrar votos y declarar ganador
-                    </Text>
-                  </View>
-                  <Ionicons
-                    name="chevron-forward"
-                    size={20}
-                    color={theme.colors.onSurfaceVariant}
-                  />
-                </TouchableOpacity>
-              )}
-
-              {award.status === "completed" &&
-                !award.is_revealed &&
-                award.winner_id && (
-                  <TouchableOpacity
-                    style={[
-                      styles.adminButton,
-                      { backgroundColor: "#22C55E15" },
-                    ]}
-                    onPress={handleRevealWinner}
-                  >
-                    <Ionicons name="eye" size={24} color="#22C55E" />
-                    <View style={{ marginLeft: 14, flex: 1 }}>
-                      <Text
-                        style={{
-                          fontWeight: "700",
-                          color: theme.colors.onSurface,
-                        }}
-                      >
-                        Revelar Ganador
-                      </Text>
-                      <Text
-                        variant="labelSmall"
-                        style={{ color: theme.colors.onSurfaceVariant }}
-                      >
-                        Mostrar resultado a todos
-                      </Text>
-                    </View>
-                    <Ionicons
-                      name="chevron-forward"
-                      size={20}
-                      color={theme.colors.onSurfaceVariant}
-                    />
-                  </TouchableOpacity>
-                )}
-
-              <TouchableOpacity
+              <SquircleView
                 style={[
-                  styles.adminButton,
+                  styles.adminCard,
                   {
-                    borderTopWidth: 1,
-                    borderTopColor: theme.colors.surfaceVariant,
+                    backgroundColor: theme.colors.surface,
+                    borderColor: theme.colors.outlineVariant,
+                    borderWidth: 1,
                   },
                 ]}
-                onPress={handleDelete}
+                cornerSmoothing={1}
               >
-                <Ionicons
-                  name="trash-outline"
-                  size={24}
-                  color={theme.colors.error}
-                />
-                <View style={{ marginLeft: 14, flex: 1 }}>
-                  <Text
-                    style={{ fontWeight: "600", color: theme.colors.error }}
-                  >
-                    Eliminar Premio
-                  </Text>
-                  <Text
-                    variant="labelSmall"
-                    style={{ color: theme.colors.onSurfaceVariant }}
-                  >
-                    Esta acción es irreversible
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            </Surface>
-          </View>
-        )}
+                {(() => {
+                  type AdminAction = {
+                    icon: keyof typeof Ionicons.glyphMap;
+                    iconColor?: string;
+                    iconBg?: string;
+                    title: string;
+                    subtitle: string;
+                    titleColor?: string;
+                    onPress: () => void;
+                  };
 
-        <View style={{ height: 100 }} />
-      </ScrollView>
+                  const actions: AdminAction[] = [];
+
+                  if (["draft", "nominations"].includes(award.status)) {
+                    actions.push({
+                      icon: "pencil-outline",
+                      title: "Editar premio",
+                      subtitle: "Cambia icono, nombre o descripción",
+                      onPress: () => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        router.push({
+                          pathname: "/groups/award/edit",
+                          params: { id, groupId },
+                        } as any);
+                      },
+                    });
+                  }
+
+                  if (award.status === "draft") {
+                    actions.push({
+                      icon: "play-circle",
+                      iconColor: theme.colors.primary,
+                      iconBg: theme.dark
+                        ? "rgba(42,138,112,0.15)"
+                        : "rgba(42,138,112,0.08)",
+                      title: "Iniciar votación",
+                      subtitle: "Abre el premio para recibir votos",
+                      onPress: () => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        setShowStartVotingModal(true);
+                      },
+                    });
+
+                    if (
+                      ["photo", "video", "audio", "text"].includes(
+                        award.vote_type,
+                      )
+                    ) {
+                      const addLabel =
+                        award.vote_type === "video"
+                          ? "Añadir vídeo"
+                          : award.vote_type === "audio"
+                            ? "Añadir audio"
+                            : award.vote_type === "text"
+                              ? "Añadir texto"
+                              : "Añadir foto";
+                      const addIcon: keyof typeof Ionicons.glyphMap =
+                        award.vote_type === "video"
+                          ? "videocam-outline"
+                          : award.vote_type === "audio"
+                            ? "musical-notes-outline"
+                            : award.vote_type === "text"
+                              ? "document-text-outline"
+                              : "camera-outline";
+                      actions.push({
+                        icon: addIcon,
+                        title: addLabel,
+                        subtitle: "Sube nuevo contenido al premio",
+                        onPress: handleAddNomineeWithPhoto,
+                      });
+                    }
+                  }
+
+                  if (award.status === "voting") {
+                    actions.push({
+                      icon: "stop-circle",
+                      iconColor: "#F59E0B",
+                      iconBg: "rgba(245,158,11,0.12)",
+                      title: "Finalizar votación",
+                      subtitle: "Cierra los votos y declara ganador",
+                      onPress: handleFinishVoting,
+                    });
+                  }
+
+                  if (
+                    award.status === "completed" &&
+                    !award.is_revealed &&
+                    award.winner_id
+                  ) {
+                    actions.push({
+                      icon: "eye-outline",
+                      iconColor: "#22C55E",
+                      iconBg: "rgba(34,197,94,0.12)",
+                      title: "Revelar ganador",
+                      subtitle: "Muestra el resultado a todos",
+                      onPress: handleRevealWinner,
+                    });
+                  }
+
+                  actions.push({
+                    icon: "trash-outline",
+                    iconColor: theme.colors.error,
+                    iconBg: `${theme.colors.error}15`,
+                    title: "Eliminar premio",
+                    subtitle: "Esta acción es irreversible",
+                    titleColor: theme.colors.error,
+                    onPress: handleDelete,
+                  });
+
+                  return actions.map((action, idx) => {
+                    const isLast = idx === actions.length - 1;
+                    return (
+                      <React.Fragment key={action.title}>
+                        <Pressable
+                          onPress={action.onPress}
+                          style={({ pressed }) => [
+                            styles.adminButton,
+                            {
+                              backgroundColor: pressed
+                                ? theme.dark
+                                  ? "rgba(255,255,255,0.04)"
+                                  : "rgba(0,0,0,0.03)"
+                                : "transparent",
+                            },
+                          ]}
+                        >
+                          <SquircleView
+                            style={[
+                              styles.adminButtonIcon,
+                              {
+                                backgroundColor:
+                                  action.iconBg ?? theme.colors.surfaceVariant,
+                                borderColor:
+                                  action.iconColor ??
+                                  theme.colors.outlineVariant,
+                                borderWidth: 1,
+                              },
+                            ]}
+                            cornerSmoothing={1}
+                          >
+                            <Ionicons
+                              name={action.icon}
+                              size={18}
+                              color={
+                                action.iconColor ??
+                                theme.colors.onSurfaceVariant
+                              }
+                            />
+                          </SquircleView>
+                          <View style={styles.adminButtonText}>
+                            <Text
+                              style={[
+                                styles.adminButtonTitle,
+                                {
+                                  color:
+                                    action.titleColor ??
+                                    theme.colors.onSurface,
+                                },
+                              ]}
+                            >
+                              {action.title}
+                            </Text>
+                            <Text
+                              style={[
+                                styles.adminButtonSubtitle,
+                                { color: theme.colors.onSurfaceVariant },
+                              ]}
+                            >
+                              {action.subtitle}
+                            </Text>
+                          </View>
+                          <Ionicons
+                            name="chevron-forward"
+                            size={18}
+                            color={theme.colors.onSurfaceVariant}
+                          />
+                        </Pressable>
+                        {!isLast && (
+                          <View
+                            style={[
+                              styles.adminDivider,
+                              {
+                                backgroundColor: theme.colors.outlineVariant,
+                              },
+                            ]}
+                          />
+                        )}
+                      </React.Fragment>
+                    );
+                  });
+                })()}
+              </SquircleView>
+            </ReanimatedAnimated.View>
+          )}
+        </ScrollView>
       </BlurTargetView>
 
       {/* Start Voting Modal - ConfirmDialog Style */}
@@ -2020,8 +2123,6 @@ function TextNominationModal({
   }, [visible, opacityAnim, scaleAnim, translateYAnim]);
 
   if (!shouldRender) return null;
-
-
 
   const canSubmit = charCount > 0;
 
@@ -2868,76 +2969,184 @@ function NomineeTextCard({ text }: { text: string }) {
 }
 
 const styles = StyleSheet.create({
-  centerContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
   container: {
     flex: 1,
   },
-  headerWrapper: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-  },
-  header: {
+  notFoundContainer: {
+    flex: 1,
+    justifyContent: "center",
     alignItems: "center",
-    padding: 24,
-    borderRadius: 20,
-    borderWidth: 1,
+    paddingHorizontal: 32,
+    gap: 12,
   },
-  iconContainer: {
+  notFoundIcon: {
     width: 72,
     height: 72,
-    borderRadius: 18,
-    borderWidth: 1,
-    alignItems: "center",
+    borderRadius: 22,
     justifyContent: "center",
-    marginBottom: 16,
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  notFoundTitle: {
+    fontFamily: "Archivo-Bold",
+    fontSize: 18,
+    textAlign: "center",
+  },
+  notFoundSubtitle: {
+    fontFamily: "Archivo-Medium",
+    fontSize: 13,
+    textAlign: "center",
+    lineHeight: 19,
+    letterSpacing: 0.1,
+  },
+  scrollContent: {
+    paddingHorizontal: 24,
+    paddingTop: 0,
+  },
+
+  // ─── Title ─────────────────────────────────────────────────────────
+  titleBlock: { marginTop: 4, marginBottom: 4 },
+  screenTitle: {
+    fontFamily: "InstrumentSerif-Italic",
+    fontSize: 38,
+    letterSpacing: 0.5,
+    lineHeight: 44,
+  },
+  screenSubtitle: {
+    fontFamily: "Archivo-Medium",
+    fontSize: 14,
+    letterSpacing: 0.3,
+    marginTop: 2,
+    lineHeight: 20,
+  },
+  divider: { height: 1, marginTop: 16, marginBottom: 20 },
+
+  // ─── Section ───────────────────────────────────────────────────────
+  section: { marginBottom: 24 },
+  sectionTitleRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+    gap: 10,
+  },
+  sectionTitle: {
+    fontFamily: "Archivo-Bold",
+    fontSize: 17,
+    letterSpacing: 0.2,
+  },
+  sectionCountBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 10,
+    minWidth: 28,
+    alignItems: "center",
+  },
+  sectionCountText: {
+    fontFamily: "Archivo-Bold",
+    fontSize: 12,
+    letterSpacing: 0.3,
+  },
+
+  // ─── Status Card ───────────────────────────────────────────────────
+  statusCard: {
+    borderRadius: 22,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+  statusCardRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+  },
+  statusCardIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 18,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  statusCardTextBlock: {
+    flex: 1,
+    gap: 6,
   },
   statusBadge: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: 10,
+    alignSelf: "flex-start",
   },
-  deadlineRow: {
+  statusBadgeText: {
+    fontFamily: "Archivo-Bold",
+    fontSize: 11.5,
+    letterSpacing: 0.3,
+  },
+  statRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 12,
+    gap: 5,
+  },
+  statRowText: {
+    fontFamily: "Archivo-Medium",
+    fontSize: 12,
+    letterSpacing: 0.2,
   },
   completedBanner: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 10,
-    marginTop: 12,
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 14,
+    marginTop: 14,
   },
-  section: {
-    padding: 16,
+  completedBannerText: {
+    fontFamily: "Archivo-SemiBold",
+    fontSize: 13,
+    letterSpacing: 0.2,
+    flex: 1,
   },
-  sectionHeader: {
+
+  // ─── Manage Button ─────────────────────────────────────────────────
+  manageButton: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 16,
-  },
-  countBadge: {
-    marginLeft: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
-  },
-  nomineesList: {
-    gap: 12,
-  },
-  nomineeCard: {
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     borderRadius: 16,
-    borderWidth: 1,
-    padding: 16,
+    marginBottom: 12,
+  },
+  manageButtonText: {
+    flex: 1,
+    fontFamily: "Archivo-SemiBold",
+    fontSize: 14,
+    letterSpacing: 0.2,
+  },
+
+  // ─── Nominees ──────────────────────────────────────────────────────
+  nomineesList: { gap: 10 },
+  nomineeCard: {
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
     overflow: "hidden",
+  },
+  emptyNominees: {
+    borderRadius: 20,
+    paddingVertical: 28,
+    paddingHorizontal: 20,
+    alignItems: "center",
+    gap: 10,
+  },
+  emptyNomineesText: {
+    fontFamily: "Archivo-Medium",
+    fontSize: 13,
+    textAlign: "center",
+    letterSpacing: 0.1,
   },
   winnerBanner: {
     position: "absolute",
@@ -2946,8 +3155,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderBottomLeftRadius: 10,
+    paddingVertical: 5,
+    borderBottomLeftRadius: 12,
+    borderTopRightRadius: 20,
   },
   nomineeUserRow: {
     flexDirection: "row",
@@ -2958,35 +3168,59 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 10,
+    borderRadius: 12,
     borderWidth: 1,
   },
   nomineeContentWrapper: {
     marginTop: 12,
   },
   mediaContainer: {
-    borderRadius: 12,
+    borderRadius: 14,
     overflow: "hidden",
   },
   nomineeImage: {
     width: "100%",
     height: 200,
-    borderRadius: 12,
+    borderRadius: 14,
     backgroundColor: "#f0f0f0",
   },
-  adminSection: {
-    margin: 16,
-    marginTop: 0,
-  },
+
+  // ─── Admin ─────────────────────────────────────────────────────────
   adminCard: {
-    borderRadius: 16,
-    borderWidth: 1,
+    borderRadius: 20,
     overflow: "hidden",
   },
   adminButton: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 16,
+    gap: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  adminButtonIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  adminButtonText: {
+    flex: 1,
+    gap: 2,
+  },
+  adminButtonTitle: {
+    fontFamily: "Archivo-SemiBold",
+    fontSize: 14.5,
+    letterSpacing: 0.1,
+  },
+  adminButtonSubtitle: {
+    fontFamily: "Archivo-Medium",
+    fontSize: 12,
+    letterSpacing: 0.1,
+  },
+  adminDivider: {
+    height: 1,
+    marginLeft: 68,
   },
   fullScreenImageContainer: {
     flex: 1,

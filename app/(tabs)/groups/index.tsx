@@ -1,14 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { BlurTargetView } from "expo-blur";
-import { Image } from "expo-image";
-import { useRouter, useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
-} from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import SquircleView from "react-native-fast-squircle";
 import { Text, useTheme } from "react-native-paper";
 import Animated, {
@@ -22,7 +16,6 @@ import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
 import { UserAvatar } from "../../../components/ui/UserAvatar";
 import { useAuth, useGroups } from "../../../hooks";
 import { GroupWithDetails } from "../../../types/database";
-import { getOptimizedMediaUrl } from "../../../lib/storage";
 
 const CARD_GAP = 14;
 
@@ -53,20 +46,32 @@ const SkeletonCard = React.memo<SkeletonCardProps>(({ index }) => {
         <View
           style={[
             styles.skeletonIcon,
-            { backgroundColor: theme.dark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)" },
+            {
+              backgroundColor: theme.dark
+                ? "rgba(255,255,255,0.06)"
+                : "rgba(0,0,0,0.06)",
+            },
           ]}
         />
         {/* Text placeholder */}
         <View
           style={[
             styles.skeletonTextLong,
-            { backgroundColor: theme.dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)" },
+            {
+              backgroundColor: theme.dark
+                ? "rgba(255,255,255,0.08)"
+                : "rgba(0,0,0,0.06)",
+            },
           ]}
         />
         <View
           style={[
             styles.skeletonTextShort,
-            { backgroundColor: theme.dark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)" },
+            {
+              backgroundColor: theme.dark
+                ? "rgba(255,255,255,0.05)"
+                : "rgba(0,0,0,0.04)",
+            },
           ]}
         />
       </SquircleView>
@@ -86,7 +91,6 @@ interface GroupCardItemProps {
 const GroupCardItem = React.memo<GroupCardItemProps>(
   ({ group, index, onPress }) => {
     const theme = useTheme();
-    const awardCount = group.awards?.length || 0;
 
     return (
       <Animated.View
@@ -146,23 +150,6 @@ const GroupCardItem = React.memo<GroupCardItemProps>(
                     {group.member_count}
                   </Text>
                 </View>
-                {awardCount > 0 && (
-                  <View style={styles.metaChip}>
-                    <Ionicons
-                      name="trophy"
-                      size={12}
-                      color={theme.colors.onSurfaceVariant}
-                    />
-                    <Text
-                      style={[
-                        styles.metaText,
-                        { color: theme.colors.onSurfaceVariant },
-                      ]}
-                    >
-                      {awardCount}
-                    </Text>
-                  </View>
-                )}
               </View>
             </View>
 
@@ -179,7 +166,10 @@ const GroupCardItem = React.memo<GroupCardItemProps>(
                 ]}
               >
                 <Text
-                  style={[styles.roleBadgeText, { color: theme.colors.primary }]}
+                  style={[
+                    styles.roleBadgeText,
+                    { color: theme.colors.primary },
+                  ]}
                 >
                   {group.my_role === "owner" ? "Admin" : "Mod"}
                 </Text>
@@ -189,7 +179,7 @@ const GroupCardItem = React.memo<GroupCardItemProps>(
         </Pressable>
       </Animated.View>
     );
-  }
+  },
 );
 
 GroupCardItem.displayName = "GroupCardItem";
@@ -205,7 +195,7 @@ export default function GroupsScreen() {
   useFocusEffect(
     useCallback(() => {
       refetch();
-    }, [refetch])
+    }, [refetch]),
   );
 
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
@@ -214,17 +204,17 @@ export default function GroupsScreen() {
     (groupId: string) => {
       router.push({ pathname: "/groups/group/[id]", params: { id: groupId } });
     },
-    [router]
+    [router],
   );
 
   const handleCreateGroup = useCallback(
     () => router.push("/createGroup" as any),
-    [router]
+    [router],
   );
 
   const handleJoinGroup = useCallback(
     () => router.push("/join/joinGroup" as any),
-    [router]
+    [router],
   );
 
   // Memoize skeleton cards
@@ -233,12 +223,15 @@ export default function GroupsScreen() {
       Array.from({ length: 4 }).map((_, i) => (
         <SkeletonCard key={`skeleton-${i}`} index={i} />
       )),
-    []
+    [],
   );
 
   return (
     <BlurTargetView ref={backgroundRef} style={{ flex: 1 }}>
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]} edges={["top", "left", "right"]}>
+      <SafeAreaView
+        style={[styles.safeArea, { backgroundColor: theme.colors.background }]}
+        edges={["top", "left", "right"]}
+      >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
@@ -250,9 +243,7 @@ export default function GroupsScreen() {
             style={styles.header}
           >
             <View>
-              <Text
-                style={[styles.title, { color: theme.colors.primary }]}
-              >
+              <Text style={[styles.title, { color: theme.colors.primary }]}>
                 Tus Grupos
               </Text>
               <Text
@@ -317,7 +308,11 @@ export default function GroupsScreen() {
                   ]}
                   cornerSmoothing={1}
                 >
-                  <Ionicons name="log-out-outline" size={20} color={theme.colors.onSurfaceVariant} />
+                  <Ionicons
+                    name="log-out-outline"
+                    size={20}
+                    color={theme.colors.onSurfaceVariant}
+                  />
                 </SquircleView>
               </Pressable>
             </View>
@@ -372,10 +367,7 @@ export default function GroupsScreen() {
                 </SquircleView>
 
                 <Text
-                  style={[
-                    styles.emptyTitle,
-                    { color: theme.colors.onSurface },
-                  ]}
+                  style={[styles.emptyTitle, { color: theme.colors.onSurface }]}
                 >
                   Comienza tu legado
                 </Text>
@@ -437,7 +429,7 @@ export default function GroupsScreen() {
               {/* "Add New" Card */}
               <Animated.View
                 entering={FadeInDown.duration(400).delay(
-                  100 + groups.length * 80
+                  100 + groups.length * 80,
                 )}
                 style={styles.bentoItem}
               >

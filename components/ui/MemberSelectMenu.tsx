@@ -12,10 +12,12 @@ import { MemberAvatar } from "../MemberAvatar";
 import { BottomSheetModal } from "./BottomSheetModal";
 
 export interface SelectableMember {
-  id?: string; // for MemberAvatar compatibility
+  id?: string;
   user_id: string;
   display_name: string;
   avatar_url?: string | null;
+  group_avatar_url?: string | null;
+  group_display_name?: string | null;
 }
 
 interface MemberSelectMenuProps {
@@ -162,14 +164,7 @@ export const MemberSelectMenu: React.FC<MemberSelectMenuProps> = ({
                 onPress={() => toggleMember(member.user_id)}
                 activeOpacity={0.7}
               >
-                <MemberAvatar
-                  user={{
-                    id: member.user_id,
-                    display_name: member.display_name,
-                    avatar_url: member.avatar_url,
-                  }}
-                  size="sm"
-                />
+                <MemberAvatar user={member} size="sm" />
                 <Text
                   variant="bodyMedium"
                   style={{

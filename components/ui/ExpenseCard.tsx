@@ -7,6 +7,7 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 
 import { SharedExpenseWithDetails, GroupMemberView } from "../../types/database";
 import { formatCents } from "../../lib/sharedExpenses";
+import { getMemberAvatarUrl } from "@/lib/memberProfile";
 import { UserAvatar } from "./UserAvatar";
 
 interface ExpenseCardProps {
@@ -29,9 +30,10 @@ export const ExpenseCard = React.memo<ExpenseCardProps>(
       members.find((m) => m.user_id === expense.paid_by)?.display_name ||
       "Desconocido";
 
+    const payerMember = members.find((m) => m.user_id === expense.paid_by);
     const payerAvatar =
       expense.payer?.avatar_url ??
-      members.find((m) => m.user_id === expense.paid_by)?.avatar_url ??
+      (payerMember ? getMemberAvatarUrl(payerMember) : null) ??
       null;
 
     const splitCount = expense.splits.length;

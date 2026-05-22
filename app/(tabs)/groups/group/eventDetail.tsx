@@ -12,7 +12,7 @@ import {
   View,
 } from "react-native";
 import SquircleView from "react-native-fast-squircle";
-import { ActivityIndicator, Text, useTheme } from "react-native-paper";
+import { Text, useTheme } from "react-native-paper";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -22,6 +22,7 @@ import { MenuOption, OptionsMenu } from "@/components/ui/OptionsMenu";
 import { UserAvatar } from "@/components/ui/UserAvatar";
 import { useSnackbar } from "@/components/ui/SnackbarContext";
 import { useAuth, useGroup } from "@/hooks";
+import { getEventScheduleDisplay } from "@/lib/eventSchedule";
 import { eventsService } from "@/services/events.service";
 import {
   CalendarEventWithDetails,
@@ -31,14 +32,6 @@ import {
 } from "@/types/database";
 
 // ─── Constants ──────────────────────────────────────────────────────────
-const MONTHS_ES = [
-  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
-];
-const DAYS_ES = [
-  "Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado",
-];
-
 const RSVP_CONFIG: Record<RsvpStatus, { label: string; icon: string; color: string }> = {
   accepted: { label: "Voy", icon: "checkmark-circle", color: "#10B981" },
   maybe: { label: "Quizás", icon: "help-circle", color: "#F59E0B" },
@@ -73,6 +66,111 @@ const ParticipantRow = React.memo<ParticipantRowProps>(({ participant }) => {
   );
 });
 ParticipantRow.displayName = "ParticipantRow";
+
+// ─── Skeleton ───────────────────────────────────────────────────────────
+const SkeletonBar = React.memo<{
+  width: number | `${number}%`;
+  height: number;
+  borderRadius?: number;
+  style?: object;
+}>(({ width, height, borderRadius = 8, style }) => {
+  const theme = useTheme();
+  return (
+    <View
+      style={[
+        { width, height, borderRadius, backgroundColor: theme.colors.surfaceVariant },
+        style,
+      ]}
+    />
+  );
+});
+SkeletonBar.displayName = "SkeletonBar";
+
+const EventDetailSkeleton = React.memo(() => {
+  const theme = useTheme();
+  const insets = useSafeAreaInsets();
+  const cardStyle = {
+    backgroundColor: theme.colors.surface,
+    borderColor: theme.colors.outlineVariant,
+    borderWidth: 1,
+  };
+
+  return (
+    <>
+      <Stack.Screen options={{ headerShown: false }} />
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <CustomHeader title="" showBackButton={true} />
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={[styles.content, { paddingBottom: 120 + insets.bottom }]}
+          showsVerticalScrollIndicator={false}
+        >
+          <Animated.View entering={FadeIn.duration(400)} style={styles.headerBlock}>
+            <SkeletonBar width="70%" height={28} borderRadius={10} />
+            <SkeletonBar width="45%" height={14} borderRadius={6} style={{ marginTop: 10 }} />
+          </Animated.View>
+
+          <Animated.View entering={FadeInDown.duration(350).delay(60)}>
+            <SquircleView style={[styles.infoCard, cardStyle]} cornerSmoothing={1}>
+              {[0, 1, 2].map((i) => (
+                <React.Fragment key={i}>
+                  {i > 0 && (
+                    <View style={[styles.infoSep, { backgroundColor: theme.colors.outlineVariant }]} />
+                  )}
+                  <View style={styles.infoRow}>
+                    <View style={[styles.skeletonIcon, { backgroundColor: theme.colors.surfaceVariant }]} />
+                    <SkeletonBar width="75%" height={14} borderRadius={7} />
+                  </View>
+                </React.Fragment>
+              ))}
+            </SquircleView>
+          </Animated.View>
+
+          <Animated.View entering={FadeInDown.duration(350).delay(120)}>
+            <SquircleView style={[styles.descCard, cardStyle]} cornerSmoothing={1}>
+              <View style={[styles.skeletonIcon, { backgroundColor: theme.colors.surfaceVariant }]} />
+              <View style={styles.skeletonDescCol}>
+                <SkeletonBar width="100%" height={12} borderRadius={6} />
+                <SkeletonBar width="85%" height={12} borderRadius={6} style={{ marginTop: 8 }} />
+                <SkeletonBar width="60%" height={12} borderRadius={6} style={{ marginTop: 8 }} />
+              </View>
+            </SquircleView>
+          </Animated.View>
+
+          <Animated.View entering={FadeInDown.duration(350).delay(180)} style={styles.rsvpSection}>
+            <SkeletonBar width={90} height={13} borderRadius={6} style={{ marginBottom: 10 }} />
+            <View style={styles.rsvpRow}>
+              {[0, 1, 2].map((i) => (
+                <SquircleView
+                  key={i}
+                  style={[styles.rsvpButton, cardStyle, { flex: 1 }]}
+                  cornerSmoothing={1}
+                >
+                  <View style={[styles.skeletonRsvpIcon, { backgroundColor: theme.colors.surfaceVariant }]} />
+                  <SkeletonBar width="50%" height={10} borderRadius={5} style={{ marginTop: 8 }} />
+                </SquircleView>
+              ))}
+            </View>
+          </Animated.View>
+
+          <Animated.View entering={FadeInDown.duration(350).delay(240)} style={styles.participantsSection}>
+            <SkeletonBar width={160} height={16} borderRadius={8} style={{ marginBottom: 12 }} />
+            <SquircleView style={[styles.participantsCard, cardStyle]} cornerSmoothing={1}>
+              {[0, 1, 2, 3].map((i) => (
+                <View key={i} style={styles.participantRow}>
+                  <View style={[styles.skeletonAvatar, { backgroundColor: theme.colors.surfaceVariant }]} />
+                  <SkeletonBar width="40%" height={14} borderRadius={7} />
+                  <SkeletonBar width={72} height={24} borderRadius={10} />
+                </View>
+              ))}
+            </SquircleView>
+          </Animated.View>
+        </ScrollView>
+      </View>
+    </>
+  );
+});
+EventDetailSkeleton.displayName = "EventDetailSkeleton";
 
 // ─── Main Screen ────────────────────────────────────────────────────────
 export default function EventDetailScreen() {
@@ -177,25 +275,10 @@ export default function EventDetailScreen() {
   const isCreator = event?.created_by === user?.id;
   const canManage = isCreator || isAdmin;
 
-  // ─── Derived ───────────────────────────────────────────────
-  const dateLabel = useMemo(() => {
-    if (!event) return "";
-    const d = new Date(event.starts_at);
-    return `${DAYS_ES[d.getDay()]} ${d.getDate()} de ${MONTHS_ES[d.getMonth()]} ${d.getFullYear()}`;
-  }, [event]);
-
-  const timeLabel = useMemo(() => {
-    if (!event) return "";
-    if (event.is_all_day) return "Todo el día";
-    const start = new Date(event.starts_at);
-    const startStr = `${start.getHours().toString().padStart(2, "0")}:${start.getMinutes().toString().padStart(2, "0")}`;
-    if (event.ends_at) {
-      const end = new Date(event.ends_at);
-      const endStr = `${end.getHours().toString().padStart(2, "0")}:${end.getMinutes().toString().padStart(2, "0")}`;
-      return `${startStr} - ${endStr}`;
-    }
-    return startStr;
-  }, [event]);
+  const schedule = useMemo(
+    () => (event ? getEventScheduleDisplay(event) : null),
+    [event],
+  );
 
   const acceptedCount = useMemo(
     () => event?.participants.filter((p) => p.status === "accepted").length || 0,
@@ -204,17 +287,7 @@ export default function EventDetailScreen() {
 
   // ─── Loading / Error ───────────────────────────────────────
   if (isLoading) {
-    return (
-      <>
-        <Stack.Screen options={{ headerShown: false }} />
-        <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-          <CustomHeader title="" showBackButton={true} />
-          <View style={styles.loadingCenter}>
-            <ActivityIndicator size="large" color={theme.colors.primary} />
-          </View>
-        </View>
-      </>
-    );
+    return <EventDetailSkeleton />;
   }
 
   if (!event) {
@@ -260,13 +333,25 @@ export default function EventDetailScreen() {
           <Animated.View entering={FadeInDown.duration(300).delay(100)}>
             <SquircleView style={[styles.infoCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.outlineVariant, borderWidth: 1 }]} cornerSmoothing={1}>
               <View style={styles.infoRow}>
-                <Ionicons name="calendar-outline" size={18} color={theme.colors.primary} />
-                <Text style={[styles.infoText, { color: theme.colors.onSurface }]}>{dateLabel}</Text>
+                <Ionicons
+                  name={schedule?.isMultiDay ? "calendar" : "calendar-outline"}
+                  size={18}
+                  color={theme.colors.primary}
+                />
+                <Text style={[styles.infoText, { color: theme.colors.onSurface }]}>
+                  {schedule?.dateLabel}
+                </Text>
               </View>
               <View style={[styles.infoSep, { backgroundColor: theme.colors.outlineVariant }]} />
               <View style={styles.infoRow}>
-                <Ionicons name="time-outline" size={18} color={theme.colors.primary} />
-                <Text style={[styles.infoText, { color: theme.colors.onSurface }]}>{timeLabel}</Text>
+                <Ionicons
+                  name={event.is_all_day ? "sunny-outline" : "time-outline"}
+                  size={18}
+                  color={theme.colors.primary}
+                />
+                <Text style={[styles.infoText, { color: theme.colors.onSurface }]}>
+                  {schedule?.timeLabel}
+                </Text>
               </View>
               {event.location && (
                 <>
@@ -359,6 +444,10 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 24, paddingTop: 0 },
   loadingCenter: { flex: 1, justifyContent: "center", alignItems: "center", gap: 16 },
   emptyText: { fontFamily: "Archivo-Medium", fontSize: 15 },
+  skeletonIcon: { width: 18, height: 18, borderRadius: 6 },
+  skeletonDescCol: { flex: 1, gap: 0 },
+  skeletonRsvpIcon: { width: 20, height: 20, borderRadius: 10 },
+  skeletonAvatar: { width: 36, height: 36, borderRadius: 12 },
 
   // Header
   headerBlock: { alignItems: "center", paddingTop: 8, marginBottom: 20 },

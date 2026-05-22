@@ -134,10 +134,15 @@ CREATE TABLE public.group_members (
   -- Invite tracking
   invited_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
   
+  -- Per-group profile overrides
+  group_display_name TEXT,
+  group_avatar_url TEXT,
+  group_bio TEXT,
+
   -- Metadata
   joined_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
-  
+
   -- Unique constraint: one membership per user per group
   UNIQUE(group_id, user_id)
 );
@@ -425,16 +430,25 @@ CREATE INDEX idx_activity_created ON public.activity_log(created_at DESC);
 
 -- Group members with profile info
 CREATE OR REPLACE VIEW public.group_members_view AS
-SELECT 
+SELECT
   gm.id,
   gm.group_id,
   gm.user_id,
   gm.role,
   gm.is_active,
+  gm.invited_by,
   gm.joined_at,
-  p.display_name,
+  gm.updated_at,
+  gm.group_display_name,
+  gm.group_avatar_url,
+  gm.group_bio,
   p.username,
-  p.avatar_url
+  p.bio AS user_bio,
+  COALESCE(NULLIF(gm.group_display_name, ''), p.display_name) AS display_name,
+  CASE
+    WHEN gm.group_avatar_url IS NOT NULL THEN NULLIF(gm.group_avatar_url, '')
+    ELSE p.avatar_url
+  END AS avatar_url
 FROM public.group_members gm
 JOIN public.profiles p ON gm.user_id = p.id
 WHERE gm.is_active = true;

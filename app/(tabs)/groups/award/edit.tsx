@@ -1,28 +1,58 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import { BlurTargetView } from "expo-blur";
+import * as Haptics from "expo-haptics";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import React, { useCallback, useEffect, useState } from "react";
 import {
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    View
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
 } from "react-native";
-import {
-    ActivityIndicator,
-    Button,
-    Surface,
-    Text,
-    TextInput,
-    useTheme,
-} from "react-native-paper";
+import SquircleView from "react-native-fast-squircle";
+import { Text, useTheme } from "react-native-paper";
+import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { CustomHeader } from "../../../../components/ui/CustomHeader";
+
+import {
+  AwardTextInput,
+  GroupedCard,
+  IconGrid,
+  OptionRow,
+  RowDivider,
+  SectionLabel,
+  SubmitButton,
+} from "@/components/award/AwardFormUI";
+import { AwardFormSkeleton } from "@/components/award/AwardSkeletons";
+import { ConfirmDialog, DialogType } from "@/components/ui/ConfirmDialog";
+import { CustomHeader } from "@/components/ui/CustomHeader";
 import { useSnackbar } from "@/components/ui/SnackbarContext";
-import { awardIconOptions, defaultAwardIcon, getIconComponent, IconName } from "../../../../constants/icons";
-import { awardsService } from "../../../../services";
-import { Award } from "../../../../types/database";
+import {
+  defaultAwardIcon,
+  getIconComponent,
+  IconName,
+} from "@/constants/icons";
+import { awardsService } from "@/services";
+import { Award } from "@/types/database";
+
+const VOTE_TYPE_LABEL: Record<string, string> = {
+  person: "Personas",
+  photo: "Fotos",
+  video: "Vídeos",
+  audio: "Audios",
+  text: "Textos",
+};
+
+const VOTE_TYPE_ICON: Record<string, keyof typeof Ionicons.glyphMap> = {
+  person: "people-outline",
+  photo: "image-outline",
+  video: "videocam-outline",
+  audio: "musical-notes-outline",
+  text: "document-text-outline",
+};
 
 export default function EditAwardScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -30,11 +60,12 @@ export default function EditAwardScreen() {
   const insets = useSafeAreaInsets();
   const theme = useTheme();
   const { showSnackbar } = useSnackbar();
-  
+  const backgroundRef = React.useRef(null);
+
   const [award, setAward] = useState<Award | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  
+
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [selectedIcon, setSelectedIcon] = useState<IconName>(defaultAwardIcon);
@@ -42,12 +73,15 @@ export default function EditAwardScreen() {
   const [allowSelfVote, setAllowSelfVote] = useState(false);
   const [allowVoteChange, setAllowVoteChange] = useState(false);
 
-  const withOpacity = (color: string, opacity: number) => {
-    const alpha = Math.round(opacity * 255).toString(16).padStart(2, '0');
-    return color + alpha;
-  };
+  const [dialogConfig, setDialogConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    type: DialogType;
+  }>({ visible: false, title: "", message: "", type: "info" });
+  const hideDialog = () =>
+    setDialogConfig((prev) => ({ ...prev, visible: false }));
 
-  // Load award data
   useEffect(() => {
     const loadAward = async () => {
       try {
@@ -57,7 +91,6 @@ export default function EditAwardScreen() {
           setName(data.name);
           setDescription(data.description || "");
           setSelectedIcon((data.icon as IconName) || defaultAwardIcon);
-          // Load voting settings
           if (data.voting_settings) {
             setNomineesCanVote(data.voting_settings.nominees_can_vote || false);
             setAllowSelfVote(data.voting_settings.allow_self_vote || false);
@@ -74,40 +107,22 @@ export default function EditAwardScreen() {
     loadAward();
   }, [id, showSnackbar]);
 
-  // Loading state
-  if (loading) {
-    return (
-      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <View style={styles.centerContent}>
-          <ActivityIndicator size="large" />
-          <Text variant="bodyMedium" style={{ marginTop: 16, color: theme.colors.onSurfaceVariant }}>
-            Cargando...
-          </Text>
-        </View>
-      </View>
-    );
-  }
-
-  if (!award) {
-    return (
-      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <View style={styles.notFound}>
-          <Ionicons name="warning-outline" size={48} color={theme.colors.onSurfaceVariant} />
-          <Text variant="bodyLarge" style={{ marginVertical: 16, color: theme.colors.onSurfaceVariant }}>
-            Premio no encontrado
-          </Text>
-          <Button mode="contained" onPress={() => router.back()}>Volver</Button>
-        </View>
-      </View>
-    );
-  }
-
-  const handleSave = async () => {
-    if (!name.trim()) return;
+  const handleSave = useCallback(async () => {
+    if (!award) return;
+    if (!name.trim()) {
+      setDialogConfig({
+        visible: true,
+        title: "Nombre requerido",
+        message: "Dale un nombre a tu premio.",
+        type: "warning",
+      });
+      return;
+    }
 
     try {
       setSaving(true);
-      
+      Keyboard.dismiss();
+
       await awardsService.updateAward(id, {
         name: name.trim(),
         description: description.trim() || null,
@@ -115,358 +130,493 @@ export default function EditAwardScreen() {
         voting_settings: {
           ...award.voting_settings,
           allow_vote_change: allowVoteChange,
-          ...(award.vote_type === 'person' && {
+          ...(award.vote_type === "person" && {
             nominees_can_vote: nomineesCanVote,
             allow_self_vote: nomineesCanVote && allowSelfVote,
           }),
         },
       });
-      
+
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       showSnackbar("¡Premio actualizado!", "success");
       router.back();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Error al actualizar el premio";
+      const message =
+        err instanceof Error ? err.message : "Error al actualizar el premio";
       showSnackbar(message, "error");
     } finally {
       setSaving(false);
     }
-  };
+  }, [
+    award,
+    id,
+    name,
+    description,
+    selectedIcon,
+    allowVoteChange,
+    nomineesCanVote,
+    allowSelfVote,
+    router,
+    showSnackbar,
+  ]);
+
+  if (loading) {
+    return <AwardFormSkeleton variant="edit" />;
+  }
+
+  if (!award) {
+    return (
+      <>
+        <Stack.Screen options={{ headerShown: false }} />
+        <View
+          style={[
+            styles.container,
+            { backgroundColor: theme.colors.background },
+          ]}
+        >
+          <CustomHeader title="" showBackButton={true} />
+          <View style={styles.lockContainer}>
+            <SquircleView
+              style={[
+                styles.lockIcon,
+                { backgroundColor: theme.colors.surfaceVariant },
+              ]}
+              cornerSmoothing={1}
+            >
+              <Ionicons
+                name="warning-outline"
+                size={36}
+                color={theme.colors.onSurfaceVariant}
+              />
+            </SquircleView>
+            <Text
+              style={[styles.lockTitle, { color: theme.colors.onSurface }]}
+            >
+              Premio no encontrado
+            </Text>
+            <Text
+              style={[
+                styles.lockSubtitle,
+                { color: theme.colors.onSurfaceVariant },
+              ]}
+            >
+              No hemos podido cargar este premio.
+            </Text>
+            <Pressable
+              onPress={() => router.back()}
+              style={({ pressed }) => [
+                styles.lockButtonWrap,
+                { opacity: pressed ? 0.9 : 1 },
+              ]}
+            >
+              <SquircleView
+                style={[
+                  styles.lockButton,
+                  { backgroundColor: theme.colors.primary },
+                ]}
+                cornerSmoothing={1}
+              >
+                <Text
+                  style={[
+                    styles.lockButtonText,
+                    { color: theme.colors.onPrimary },
+                  ]}
+                >
+                  Volver
+                </Text>
+              </SquircleView>
+            </Pressable>
+          </View>
+        </View>
+      </>
+    );
+  }
+
+  const voteTypeLabel = VOTE_TYPE_LABEL[award.vote_type] || award.vote_type;
+  const voteTypeIcon = VOTE_TYPE_ICON[award.vote_type] || "trophy-outline";
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <CustomHeader title="Editar Premio" showBackButton={true} />
-      <KeyboardAvoidingView
-        style={styles.keyboardView}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+    <>
+      <Stack.Screen options={{ headerShown: false }} />
+      <BlurTargetView
+        ref={backgroundRef}
+        style={[styles.container, { backgroundColor: theme.colors.background }]}
       >
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Preview Card */}
-          <Surface 
-            style={[
-              styles.previewCard, 
-              { 
-                backgroundColor: theme.colors.surface, 
-                borderColor: theme.colors.secondaryContainer, 
-                borderWidth: 1 
-              }
-            ]} 
-            elevation={1}
-          >
-            <View style={[styles.previewIconContainer, { backgroundColor: theme.colors.primaryContainer, borderColor: theme.colors.primary, borderWidth: 1 }]}>
-              {getIconComponent(selectedIcon, 32, theme.colors.onSurface)}
-            </View>
-            <Text variant="titleLarge" style={{ fontWeight: "700", marginTop: 12, textAlign: 'center' }}>
-              {name.trim() || "Nombre del premio"}
-            </Text>
-            {description.trim() ? (
-              <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 4, textAlign: 'center' }}>
-                {description}
-              </Text>
-            ) : null}
-          </Surface>
+        <CustomHeader title="" showBackButton={true} />
 
-          {/* Icon Selector */}
-          <View style={styles.section}>
-            <Text variant="titleMedium" style={{ fontWeight: "600", marginBottom: 12 }}>
-              Elige un icono
-            </Text>
-            <Surface 
-              style={[
-                styles.iconGridCard, 
-                { 
-                  backgroundColor: theme.colors.surface, 
-                  borderColor: theme.colors.secondaryContainer, 
-                  borderWidth: 1 
-                }
-              ]} 
-              elevation={1}
+        <KeyboardAvoidingView
+          style={styles.keyboardView}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={[
+              styles.content,
+              { paddingBottom: 140 + insets.bottom },
+            ]}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            <Animated.View
+              entering={FadeIn.duration(500)}
+              style={styles.titleBlock}
             >
-              {awardIconOptions.map((iconName) => (
-                <TouchableOpacity
-                  key={iconName}
+              <Text
+                style={[styles.screenTitle, { color: theme.colors.primary }]}
+              >
+                Editar premio
+              </Text>
+              <Text
+                style={[
+                  styles.screenSubtitle,
+                  { color: theme.colors.onSurfaceVariant },
+                ]}
+              >
+                Cambia el nombre, icono y opciones de votación
+              </Text>
+            </Animated.View>
+
+            <Animated.View
+              entering={FadeIn.duration(400).delay(50)}
+              style={[
+                styles.divider,
+                { backgroundColor: theme.colors.outlineVariant },
+              ]}
+            />
+
+            {/* ─── Preview Card ─── */}
+            <Animated.View
+              entering={FadeInDown.duration(300).delay(80)}
+              style={styles.section}
+            >
+              <SquircleView
+                style={[
+                  styles.previewCard,
+                  {
+                    backgroundColor: theme.colors.surface,
+                    borderColor: theme.colors.outlineVariant,
+                    borderWidth: 1,
+                  },
+                ]}
+                cornerSmoothing={1}
+              >
+                <SquircleView
                   style={[
-                    styles.iconButton,
-                    { 
-                      backgroundColor: selectedIcon === iconName 
-                        ? theme.colors.primaryContainer 
-                        : 'transparent',
-                      borderColor: selectedIcon === iconName 
-                        ? theme.colors.primary 
-                        : theme.colors.outlineVariant,
+                    styles.previewIcon,
+                    {
+                      backgroundColor: theme.dark
+                        ? "rgba(42,138,112,0.15)"
+                        : "rgba(42,138,112,0.08)",
+                      borderColor: theme.colors.primary,
+                      borderWidth: 1,
                     },
                   ]}
-                  onPress={() => setSelectedIcon(iconName)}
+                  cornerSmoothing={1}
                 >
-                  {getIconComponent(
-                    iconName, 
-                    24, 
-                    selectedIcon === iconName 
-                      ? theme.colors.onSurface 
-                      : withOpacity(theme.colors.onSurfaceVariant, 0.4)
-                  )}
-                </TouchableOpacity>
-              ))}
-            </Surface>
-          </View>
-
-          {/* Form Fields */}
-          <View style={styles.section}>
-            <Text variant="titleMedium" style={{ fontWeight: "600", marginBottom: 12 }}>
-              Detalles
-            </Text>
-            
-            <TextInput
-              label="Nombre del premio"
-              placeholder="ej. Mejor Amigo del Año"
-              value={name}
-              onChangeText={setName}
-              mode="outlined"
-              maxLength={40}
-              style={styles.input}
-              outlineStyle={{ borderRadius: 14 }}
-              left={<TextInput.Icon icon="trophy" />}
-            />
-
-            <TextInput
-              label="Descripción (opcional)"
-              placeholder="Describe este premio..."
-              value={description}
-              onChangeText={setDescription}
-              mode="outlined"
-              multiline
-              numberOfLines={3}
-              style={styles.input}
-              outlineStyle={{ borderRadius: 14 }}
-              left={<TextInput.Icon icon="text" />}
-            />
-          </View>
-
-          {/* Unified Voting Options Section (At the bottom) */}
-          <View style={[styles.section, { marginBottom: 32 }]}>
-            <Text variant="titleMedium" style={{ fontWeight: "600", marginBottom: 12 }}>
-              Opciones de configuración
-            </Text>
-            <Surface 
-              style={[
-                styles.iconGridCard, 
-                { 
-                  backgroundColor: theme.colors.surface,
-                  borderColor: theme.colors.secondaryContainer, 
-                  borderWidth: 1,
-                  flexDirection: 'column',
-                  gap: 0,
-                  padding: 4 // Reduced padding
-                }
-              ]} 
-              elevation={1}
-            >
-              {/* Allow Vote Change Toggle */}
-              <TouchableOpacity
-                style={[
-                  styles.optionRow,
-                  { borderBottomWidth: (award.vote_type === 'person' && nomineesCanVote) || (award.vote_type === 'person') ? 1 : 0, borderBottomColor: theme.colors.surfaceVariant }
-                ]}
-                onPress={() => setAllowVoteChange(!allowVoteChange)}
-              >
-                <View style={[
-                  styles.optionIconContainer,
-                  { backgroundColor: allowVoteChange ? theme.colors.primary : theme.colors.surfaceVariant }
-                ]}>
-                  <Ionicons name="sync" size={18} color={allowVoteChange ? theme.colors.onPrimary : theme.colors.onSurfaceVariant} />
-                </View>
-                <View style={{ flex: 1, marginLeft: 14 }}>
-                  <Text variant="bodyLarge" style={{ fontWeight: allowVoteChange ? '600' : '400', color: theme.colors.onSurface }}>
-                    Permitir cambiar el voto
-                  </Text>
-                  <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                    Los usuarios pueden modificar su voto después
-                  </Text>
-                </View>
-                <Ionicons 
-                  name={allowVoteChange ? "checkbox" : "square-outline"} 
-                  size={24} 
-                  color={allowVoteChange ? theme.colors.primary : theme.colors.onSurfaceVariant} 
-                />
-              </TouchableOpacity>
-
-              {/* Nominee Voting Toggles - Only for 'person' vote type */}
-              {award.vote_type === 'person' && (
-                <>
-                  <TouchableOpacity
+                  {getIconComponent(selectedIcon, 30, theme.colors.primary)}
+                </SquircleView>
+                <Text
+                  style={[
+                    styles.previewName,
+                    { color: theme.colors.onSurface },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {name.trim() || "Nombre del premio"}
+                </Text>
+                {description.trim() ? (
+                  <Text
                     style={[
-                      styles.optionRow,
-                      { borderBottomWidth: allowSelfVote || nomineesCanVote ? 1 : 0, borderBottomColor: theme.colors.surfaceVariant }
+                      styles.previewDescription,
+                      { color: theme.colors.onSurfaceVariant },
                     ]}
-                    onPress={() => {
-                      setNomineesCanVote(!nomineesCanVote);
-                      if (nomineesCanVote) setAllowSelfVote(false);
-                    }}
+                    numberOfLines={2}
                   >
-                    <View style={[
-                      styles.optionIconContainer,
-                      { backgroundColor: nomineesCanVote ? theme.colors.primary : theme.colors.surfaceVariant }
-                    ]}>
-                      <Ionicons name="hand-left" size={18} color={nomineesCanVote ? theme.colors.onPrimary : theme.colors.onSurfaceVariant} />
-                    </View>
-                    <View style={{ flex: 1, marginLeft: 14 }}>
-                      <Text variant="bodyLarge" style={{ fontWeight: nomineesCanVote ? '600' : '400', color: theme.colors.onSurface }}>
-                        Los nominados pueden votar
-                      </Text>
-                      <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                        Permitir que las personas nominadas voten
-                      </Text>
-                    </View>
-                    <Ionicons 
-                      name={nomineesCanVote ? "checkbox" : "square-outline"} 
-                      size={24} 
-                      color={nomineesCanVote ? theme.colors.primary : theme.colors.onSurfaceVariant} 
+                    {description.trim()}
+                  </Text>
+                ) : null}
+
+                <SquircleView
+                  style={[
+                    styles.voteTypePill,
+                    {
+                      backgroundColor: theme.colors.surfaceVariant,
+                      borderColor: theme.colors.outlineVariant,
+                      borderWidth: 1,
+                    },
+                  ]}
+                  cornerSmoothing={1}
+                >
+                  <Ionicons
+                    name={voteTypeIcon}
+                    size={13}
+                    color={theme.colors.onSurfaceVariant}
+                  />
+                  <Text
+                    style={[
+                      styles.voteTypePillText,
+                      { color: theme.colors.onSurfaceVariant },
+                    ]}
+                  >
+                    {voteTypeLabel}
+                  </Text>
+                </SquircleView>
+              </SquircleView>
+            </Animated.View>
+
+            {/* ─── Name ─── */}
+            <Animated.View
+              entering={FadeInDown.duration(300).delay(120)}
+              style={styles.section}
+            >
+              <SectionLabel>Nombre *</SectionLabel>
+              <AwardTextInput
+                value={name}
+                onChangeText={setName}
+                placeholder="ej. Mejor Amigo del Año"
+                maxLength={40}
+              />
+            </Animated.View>
+
+            {/* ─── Description ─── */}
+            <Animated.View
+              entering={FadeInDown.duration(300).delay(160)}
+              style={styles.section}
+            >
+              <SectionLabel>Descripción (opcional)</SectionLabel>
+              <AwardTextInput
+                value={description}
+                onChangeText={setDescription}
+                placeholder="Describe este premio..."
+                maxLength={200}
+                multiline
+              />
+            </Animated.View>
+
+            {/* ─── Icon ─── */}
+            <Animated.View
+              entering={FadeInDown.duration(300).delay(200)}
+              style={styles.section}
+            >
+              <SectionLabel>Icono</SectionLabel>
+              <IconGrid
+                selectedIcon={selectedIcon}
+                onSelect={(icon) => {
+                  Haptics.selectionAsync();
+                  setSelectedIcon(icon);
+                }}
+              />
+            </Animated.View>
+
+            {/* ─── Voting Settings ─── */}
+            <Animated.View
+              entering={FadeInDown.duration(300).delay(240)}
+              style={styles.section}
+            >
+              <SectionLabel>Opciones de votación</SectionLabel>
+              <GroupedCard>
+                <OptionRow
+                  icon="sync-outline"
+                  title="Permitir cambiar el voto"
+                  subtitle="Los miembros podrán modificar su voto"
+                  isActive={allowVoteChange}
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    setAllowVoteChange((v) => !v);
+                  }}
+                  variant="toggle"
+                  isFirst
+                  isLast={award.vote_type !== "person"}
+                />
+
+                {award.vote_type === "person" && (
+                  <>
+                    <RowDivider />
+                    <OptionRow
+                      icon="hand-right-outline"
+                      title="Los nominados pueden votar"
+                      subtitle="Permite votar a los miembros nominados"
+                      isActive={nomineesCanVote}
+                      onPress={() => {
+                        Haptics.selectionAsync();
+                        setNomineesCanVote((v) => {
+                          if (v) setAllowSelfVote(false);
+                          return !v;
+                        });
+                      }}
+                      variant="toggle"
+                      isLast={!nomineesCanVote}
                     />
-                  </TouchableOpacity>
 
-                  {nomineesCanVote && (
-                    <TouchableOpacity
-                      style={[styles.optionRow, { borderBottomWidth: 0 }]}
-                      onPress={() => setAllowSelfVote(!allowSelfVote)}
-                    >
-                      <View style={[
-                        styles.optionIconContainer,
-                        { backgroundColor: allowSelfVote ? theme.colors.primary : theme.colors.surfaceVariant }
-                      ]}>
-                        <Ionicons name="person" size={18} color={allowSelfVote ? theme.colors.onPrimary : theme.colors.onSurfaceVariant} />
-                      </View>
-                      <View style={{ flex: 1, marginLeft: 14 }}>
-                        <Text variant="bodyLarge" style={{ fontWeight: allowSelfVote ? '600' : '400', color: theme.colors.onSurface }}>
-                          Pueden votarse a sí mismos
-                        </Text>
-                        <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                          Permitir que un nominado vote por sí mismo
-                        </Text>
-                      </View>
-                      <Ionicons 
-                        name={allowSelfVote ? "checkbox" : "square-outline"} 
-                        size={24} 
-                        color={allowSelfVote ? theme.colors.primary : theme.colors.onSurfaceVariant} 
-                      />
-                    </TouchableOpacity>
-                  )}
-                </>
-              )}
-            </Surface>
-          </View>
-        </ScrollView>
+                    {nomineesCanVote && (
+                      <>
+                        <RowDivider />
+                        <OptionRow
+                          icon="person-outline"
+                          title="Pueden votarse a sí mismos"
+                          subtitle="Cada nominado puede votarse a sí mismo"
+                          isActive={allowSelfVote}
+                          onPress={() => {
+                            Haptics.selectionAsync();
+                            setAllowSelfVote((v) => !v);
+                          }}
+                          variant="toggle"
+                          isLast
+                        />
+                      </>
+                    )}
+                  </>
+                )}
+              </GroupedCard>
+            </Animated.View>
+          </ScrollView>
 
-        {/* Submit Button */}
-        <Surface 
-          style={[
-            styles.footer, 
-            { 
-              paddingBottom: 80 + insets.bottom,
-              backgroundColor: theme.colors.surface,
-              borderTopEndRadius: 16,
-              borderTopStartRadius: 16,
-            }
-          ]} 
-          elevation={0}
-        >
-          <Button
-            mode="contained"
-            onPress={handleSave}
-            loading={saving}
-            disabled={!name.trim() || saving}
-            style={{ borderRadius: 14 }}
-            contentStyle={{ 
-              backgroundColor: theme.colors.primaryContainer, 
-              paddingVertical: 6,
-              borderColor: theme.colors.primary, 
-              borderWidth: 1, 
-              borderRadius: 16
-            }}
+          {/* ─── Footer CTA ─── */}
+          <Animated.View
+            entering={FadeIn.duration(400).delay(280)}
+            style={[
+              styles.footer,
+              {
+                paddingBottom: insets.bottom + 16,
+                borderTopColor: theme.colors.outlineVariant,
+                backgroundColor: theme.colors.background,
+              },
+            ]}
           >
-            Guardar Cambios
-          </Button>
-        </Surface>
-      </KeyboardAvoidingView>
-    </View>
+            <SubmitButton
+              label="Guardar cambios"
+              loadingLabel="Guardando..."
+              icon="checkmark-circle-outline"
+              onPress={handleSave}
+              disabled={!name.trim() || saving}
+              loading={saving}
+            />
+          </Animated.View>
+        </KeyboardAvoidingView>
+
+        <ConfirmDialog
+          visible={dialogConfig.visible}
+          title={dialogConfig.title}
+          message={dialogConfig.message}
+          type={dialogConfig.type}
+          onConfirm={hideDialog}
+          onCancel={hideDialog}
+          confirmText="Entendido"
+          showCancel={false}
+          blurTargetRef={backgroundRef}
+        />
+      </BlurTargetView>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  container: { flex: 1 },
+  keyboardView: { flex: 1 },
+  scrollView: { flex: 1 },
+  content: { paddingHorizontal: 24, paddingTop: 0 },
+
+  titleBlock: { marginTop: 4, marginBottom: 4 },
+  screenTitle: {
+    fontFamily: "InstrumentSerif-Italic",
+    fontSize: 38,
+    letterSpacing: 0.5,
+    lineHeight: 44,
   },
-  keyboardView: {
-    flex: 1,
+  screenSubtitle: {
+    fontFamily: "Archivo-Medium",
+    fontSize: 14,
+    letterSpacing: 0.3,
+    marginTop: 2,
   },
-  scrollView: {
-    flex: 1,
-  },
-  content: {
-    padding: 20,
-  },
-  centerContent: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  notFound: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
+  divider: { height: 1, marginTop: 16, marginBottom: 20 },
+
+  section: { marginBottom: 20 },
+
   previewCard: {
-    alignItems: 'center',
-    padding: 24,
-    borderRadius: 20,
-    marginBottom: 24,
-  },
-  previewIconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  section: {
-    marginBottom: 24,
-  },
-  iconGridCard: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-    padding: 16,
-    borderRadius: 16,
-  },
-  iconButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
+    borderRadius: 22,
+    paddingVertical: 24,
+    paddingHorizontal: 20,
     alignItems: "center",
+  },
+  previewIcon: {
+    width: 68,
+    height: 68,
+    borderRadius: 22,
     justifyContent: "center",
-    borderWidth: 1,
+    alignItems: "center",
+    marginBottom: 14,
   },
-  input: {
-    marginBottom: 12,
+  previewName: {
+    fontFamily: "Archivo-Bold",
+    fontSize: 18,
+    letterSpacing: 0.2,
+    textAlign: "center",
   },
-  footer: {
-    padding: 16,
-    paddingTop: 16,
+  previewDescription: {
+    fontFamily: "Archivo-Medium",
+    fontSize: 13,
+    letterSpacing: 0.1,
+    textAlign: "center",
+    marginTop: 6,
+    lineHeight: 18,
   },
-  optionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 14,
-  },
-  optionIconContainer: {
-    width: 36,
-    height: 36,
+  voteTypePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+    marginTop: 14,
+  },
+  voteTypePillText: {
+    fontFamily: "Archivo-SemiBold",
+    fontSize: 12,
+    letterSpacing: 0.3,
+  },
+
+  footer: {
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    borderTopWidth: 1,
+  },
+
+  lockContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 32,
+    gap: 16,
+  },
+  lockIcon: {
+    width: 72,
+    height: 72,
+    borderRadius: 22,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  lockTitle: {
+    fontFamily: "Archivo-Bold",
+    fontSize: 18,
+    textAlign: "center",
+  },
+  lockSubtitle: {
+    fontFamily: "Archivo-Medium",
+    fontSize: 13,
+    textAlign: "center",
+    lineHeight: 19,
+    letterSpacing: 0.1,
+  },
+  lockButtonWrap: { marginTop: 8 },
+  lockButton: {
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    borderRadius: 16,
+  },
+  lockButtonText: {
+    fontFamily: "Archivo-Bold",
+    fontSize: 15,
   },
 });

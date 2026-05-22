@@ -1,3 +1,5 @@
+import { eventOverlapsLocalDay } from '../lib/calendarMonthLayout';
+import { profileWithGroupMembersSelect, resolveMemberProfileForGroup } from '../lib/memberProfile';
 import { supabase } from '../lib/supabase';
 import {
   CalendarEvent,
@@ -24,18 +26,10 @@ class EventsService {
       .from('events')
       .select(`
         *,
-        creator:profiles!events_created_by_profiles_fk(
-          display_name, 
-          avatar_url,
-          group_members!group_members_user_id_fkey(group_display_name, group_avatar_url, group_id)
-        ),
+        creator:profiles!events_created_by_profiles_fk(${profileWithGroupMembersSelect}),
         participants:event_participants(
           *,
-          user:profiles!event_participants_user_id_profiles_fk(
-            display_name, 
-            avatar_url,
-            group_members!group_members_user_id_fkey(group_display_name, group_avatar_url, group_id)
-          )
+          user:profiles!event_participants_user_id_profiles_fk(${profileWithGroupMembersSelect})
         )
       `)
       .eq('group_id', groupId)
@@ -53,10 +47,10 @@ class EventsService {
           .select('*', { count: 'exact', head: true })
           .eq('event_id', event.id);
 
-        const resolvedCreator = this.resolveMemberProfile(event.creator, groupId);
+        const resolvedCreator = resolveMemberProfileForGroup(event.creator, groupId);
         const resolvedParticipants = (event.participants || []).map((p: any) => ({
           ...p,
-          user: this.resolveMemberProfile(p.user, groupId),
+          user: resolveMemberProfileForGroup(p.user, groupId),
         }));
 
         return {
@@ -79,18 +73,10 @@ class EventsService {
       .from('events')
       .select(`
         *,
-        creator:profiles!events_created_by_profiles_fk(
-          display_name, 
-          avatar_url,
-          group_members!group_members_user_id_fkey(group_display_name, group_avatar_url, group_id)
-        ),
+        creator:profiles!events_created_by_profiles_fk(${profileWithGroupMembersSelect}),
         participants:event_participants(
           *,
-          user:profiles!event_participants_user_id_profiles_fk(
-            display_name, 
-            avatar_url,
-            group_members!group_members_user_id_fkey(group_display_name, group_avatar_url, group_id)
-          )
+          user:profiles!event_participants_user_id_profiles_fk(${profileWithGroupMembersSelect})
         )
       `)
       .eq('id', eventId)
@@ -106,10 +92,10 @@ class EventsService {
       .select('*', { count: 'exact', head: true })
       .eq('event_id', eventId);
 
-    const resolvedCreator = this.resolveMemberProfile(data.creator, data.group_id);
+    const resolvedCreator = resolveMemberProfileForGroup(data.creator, data.group_id);
     const resolvedParticipants = (data.participants || []).map((p: any) => ({
       ...p,
-      user: this.resolveMemberProfile(p.user, data.group_id),
+      user: resolveMemberProfileForGroup(p.user, data.group_id),
     }));
 
     return {
@@ -288,23 +274,36 @@ class EventsService {
       .from('events')
       .select(`
         *,
-        creator:profiles!events_created_by_profiles_fk(display_name, avatar_url),
+        creator:profiles!events_created_by_profiles_fk(${profileWithGroupMembersSelect}),
         participants:event_participants(
           *,
-          user:profiles!event_participants_user_id_profiles_fk(display_name, avatar_url)
+          user:profiles!event_participants_user_id_profiles_fk(${profileWithGroupMembersSelect})
         )
       `)
       .eq('group_id', groupId)
-      .gte('starts_at', startOfDay.toISOString())
       .lte('starts_at', endOfDay.toISOString())
       .order('starts_at', { ascending: true });
 
     if (error) throw error;
 
-    return (data || []).map((event) => ({
-      ...event,
-      gallery_count: 0,
-    })) as CalendarEventWithDetails[];
+    const overlapping = (data || []).filter((event) =>
+      eventOverlapsLocalDay(event, date),
+    );
+
+    return overlapping.map((event) => {
+      const resolvedCreator = resolveMemberProfileForGroup(event.creator, groupId);
+      const resolvedParticipants = (event.participants || []).map((p: any) => ({
+        ...p,
+        user: resolveMemberProfileForGroup(p.user, groupId),
+      }));
+
+      return {
+        ...event,
+        creator: resolvedCreator,
+        participants: resolvedParticipants,
+        gallery_count: 0,
+      };
+    }) as CalendarEventWithDetails[];
   }
 
   /**
@@ -425,16 +424,30 @@ class EventsService {
       .select(`
         gallery_image:gallery_images(
           *,
-          uploader:profiles!gallery_images_uploaded_by_profiles_fk(display_name, avatar_url)
+          uploader:profiles!gallery_images_uploaded_by_profiles_fk(${profileWithGroupMembersSelect})
         )
       `)
       .eq('event_id', eventId);
 
     if (error) throw error;
 
+    const groupId = (data?.[0] as { gallery_image?: { group_id?: string } } | undefined)
+      ?.gallery_image?.group_id;
+
     return (data || [])
       .map((row: Record<string, unknown>) => row.gallery_image)
-      .filter(Boolean) as unknown as GalleryImageWithUser[];
+      .filter(Boolean)
+      .map((image) => {
+        const img = image as GalleryImageWithUser & { group_id?: string };
+        const gid = img.group_id ?? groupId;
+        if (!gid) return img;
+        const resolved = resolveMemberProfileForGroup(img.uploader, gid);
+        if (!resolved || !img.uploader) return img;
+        return {
+          ...img,
+          uploader: { ...img.uploader, ...resolved },
+        };
+      }) as unknown as GalleryImageWithUser[];
   }
 
   /**
@@ -453,7 +466,7 @@ class EventsService {
       .from('gallery_images')
       .select(`
         *,
-        uploader:profiles!gallery_images_uploaded_by_profiles_fk(display_name, avatar_url)
+        uploader:profiles!gallery_images_uploaded_by_profiles_fk(${profileWithGroupMembersSelect})
       `)
       .eq('group_id', groupId)
       .gte('created_at', startOfDay.toISOString())
@@ -461,7 +474,15 @@ class EventsService {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return (data || []) as unknown as GalleryImageWithUser[];
+
+    return (data || []).map((image) => {
+      const resolved = resolveMemberProfileForGroup(image.uploader, groupId);
+      if (!resolved || !image.uploader) return image;
+      return {
+        ...image,
+        uploader: { ...image.uploader, ...resolved },
+      };
+    }) as unknown as GalleryImageWithUser[];
   }
 
   /**
@@ -498,44 +519,6 @@ class EventsService {
     if (error) throw error;
   }
 
-  /**
-   * Helper to resolve the display name and avatar URL for a group member,
-   * taking into account group-specific overrides (group_display_name, group_avatar_url).
-   */
-  private resolveMemberProfile(profile: any, groupId: string) {
-    if (!profile) return null;
-
-    const p = profile as {
-      display_name: string;
-      avatar_url: string | null;
-      group_members?: Array<{
-        group_display_name: string | null;
-        group_avatar_url: string | null;
-        group_id: string;
-      }>;
-    };
-
-    const groupMember = p.group_members?.find((m) => m.group_id === groupId);
-
-    let displayName = p.display_name;
-    let avatarUrl = p.avatar_url;
-
-    if (groupMember) {
-      if (groupMember.group_display_name) {
-        displayName = groupMember.group_display_name;
-      }
-      // If group_avatar_url is an empty string, it explicitly overrides the global avatar (user wants no photo).
-      // If it's null, we fall back to the global profile avatar.
-      if (groupMember.group_avatar_url !== null && groupMember.group_avatar_url !== undefined) {
-        avatarUrl = groupMember.group_avatar_url;
-      }
-    }
-
-    return {
-      display_name: displayName,
-      avatar_url: avatarUrl,
-    };
-  }
 }
 
 export const eventsService = new EventsService();

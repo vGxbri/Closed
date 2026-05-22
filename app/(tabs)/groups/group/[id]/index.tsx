@@ -8,6 +8,7 @@ import { galleryService } from "@/services/gallery.service";
 import { eventsService } from "@/services/events.service";
 import { bucketListService } from "@/services/bucketList.service";
 import { sharedExpensesService } from "@/services/sharedExpenses.service";
+import { awardsService } from "@/services/awards.service";
 import { formatCents } from "@/lib/sharedExpenses";
 import { widgetsService } from "@/services/widgets.service";
 import { CalendarEvent, GroupWidgetWithDetails } from "@/types/database";
@@ -47,6 +48,7 @@ const WIDGET_AGENDA = "Agenda";
 const WIDGET_PLANES = "Planes";
 const WIDGET_PLANES_LEGACY = "Bucket List";
 const WIDGET_GASTOS = "Gastos";
+const WIDGET_PREMIOS = "Premios";
 
 interface WidgetCardProps {
   widget: GroupWidgetWithDetails;
@@ -731,6 +733,126 @@ const GastosWidgetCard = React.memo<WidgetCardProps>(
 
 GastosWidgetCard.displayName = "GastosWidgetCard";
 
+// Premios widget card — shows active award counts
+const PremiosWidgetCard = React.memo<WidgetCardProps>(
+  ({ widget, index, onPress, groupId }) => {
+    const theme = useTheme();
+    const [total, setTotal] = useState(0);
+    const [voting, setVoting] = useState(0);
+
+    useFocusEffect(
+      React.useCallback(() => {
+        let cancelled = false;
+        const load = async () => {
+          try {
+            const counts = await awardsService.getAwardCounts(groupId);
+            if (!cancelled) {
+              setTotal(counts.total);
+              setVoting(counts.voting);
+            }
+          } catch (e) {
+            console.error("Error loading awards preview:", e);
+          }
+        };
+        load();
+
+        const subscription = supabase
+          .channel(`group-awards-realtime:${groupId}`)
+          .on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table: 'awards',
+              filter: `group_id=eq.${groupId}`,
+            },
+            () => { load(); }
+          )
+          .subscribe();
+
+        return () => {
+          cancelled = true;
+          subscription.unsubscribe();
+        };
+      }, [groupId])
+    );
+
+    return (
+      <Animated.View
+        entering={FadeIn.duration(400).delay(200 + index * 80)}
+        style={styles.bentoItem}
+      >
+        <Pressable
+          onPress={() => onPress(widget)}
+          style={({ pressed }) => [
+            {
+              opacity: pressed ? 0.92 : 1,
+              transform: [{ scale: pressed ? 0.97 : 1 }],
+            },
+          ]}
+        >
+          <SquircleView
+            style={[
+              styles.widgetCard,
+              {
+                backgroundColor: theme.colors.surface,
+                borderColor: theme.colors.outlineVariant,
+                borderWidth: 1,
+              },
+            ]}
+            cornerSmoothing={1}
+          >
+            <SquircleView
+              style={[
+                styles.widgetIconContainer,
+                {
+                  backgroundColor: theme.colors.surfaceVariant,
+                  borderColor: theme.colors.outlineVariant,
+                  borderWidth: 1,
+                },
+              ]}
+              cornerSmoothing={1}
+            >
+              <Ionicons
+                name={
+                  (widget.widget.icon as keyof typeof Ionicons.glyphMap) ||
+                  "trophy-outline"
+                }
+                size={24}
+                color="#FFFFFF"
+              />
+            </SquircleView>
+
+            <View style={styles.widgetInfo}>
+              <Text
+                style={[styles.widgetName, { color: theme.colors.onSurface }]}
+                numberOfLines={1}
+              >
+                {widget.widget.name}
+              </Text>
+              <Text
+                style={[
+                  styles.widgetSubtitle,
+                  { color: theme.colors.onSurfaceVariant },
+                ]}
+                numberOfLines={1}
+              >
+                {total > 0
+                  ? voting > 0
+                    ? `${voting} votando · ${total} premio${total !== 1 ? 's' : ''}`
+                    : `${total} premio${total !== 1 ? 's' : ''}`
+                  : widget.widget.subtitle || "Premios del grupo"}
+              </Text>
+            </View>
+          </SquircleView>
+        </Pressable>
+      </Animated.View>
+    );
+  }
+);
+
+PremiosWidgetCard.displayName = "PremiosWidgetCard";
+
 // Widget Card dispatcher — chooses the right card type
 const WidgetCard = React.memo<WidgetCardProps>((props) => {
   if (props.widget.widget.name === WIDGET_ARCHIVO) {
@@ -747,6 +869,9 @@ const WidgetCard = React.memo<WidgetCardProps>((props) => {
   }
   if (props.widget.widget.name === WIDGET_GASTOS) {
     return <GastosWidgetCard {...props} />;
+  }
+  if (props.widget.widget.name === WIDGET_PREMIOS) {
+    return <PremiosWidgetCard {...props} />;
   }
   return <GenericWidgetCard {...props} />;
 });
@@ -932,6 +1057,13 @@ export default function GroupDetailScreen() {
     if (widget.widget.name === WIDGET_GASTOS) {
       router.push({
         pathname: "/groups/group/sharedExpenses",
+        params: { id },
+      } as any);
+      return;
+    }
+    if (widget.widget.name === WIDGET_PREMIOS) {
+      router.push({
+        pathname: "/groups/group/awards",
         params: { id },
       } as any);
       return;

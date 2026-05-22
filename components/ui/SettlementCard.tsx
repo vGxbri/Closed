@@ -7,6 +7,7 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 
 import { GroupMemberView } from "../../types/database";
 import { DebtTransfer, formatCents } from "../../lib/sharedExpenses";
+import { getMemberAvatarUrl } from "@/lib/memberProfile";
 import { UserAvatar } from "./UserAvatar";
 
 interface SettlementCardProps {
@@ -49,7 +50,7 @@ export const SettlementCard = React.memo<SettlementCardProps>(
           <View style={styles.cardContent}>
             <View style={styles.avatarsRow}>
               <UserAvatar
-                uri={fromMember?.avatar_url ?? null}
+                uri={fromMember ? getMemberAvatarUrl(fromMember) : null}
                 name={fromName}
                 size="sm"
               />
@@ -59,7 +60,7 @@ export const SettlementCard = React.memo<SettlementCardProps>(
                 color={theme.colors.onSurfaceVariant}
               />
               <UserAvatar
-                uri={toMember?.avatar_url ?? null}
+                uri={toMember ? getMemberAvatarUrl(toMember) : null}
                 name={toName}
                 size="sm"
               />

@@ -1,11 +1,21 @@
 import React from 'react';
 import { StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { getMemberAvatarUrl, getMemberDisplayName } from '../lib/memberProfile';
 import { GroupMemberView, Profile } from '../types/database';
 import { Colors } from '../constants/Colors';
 import { UserAvatar } from './ui/UserAvatar';
 
 // Accept either a Profile or a GroupMemberView (which has display_name instead of name)
-type UserLike = Profile | GroupMemberView | { id: string; display_name: string; avatar_url?: string | null };
+type UserLike =
+  | Profile
+  | GroupMemberView
+  | {
+      id: string;
+      display_name: string;
+      avatar_url?: string | null;
+      group_avatar_url?: string | null;
+      group_display_name?: string | null;
+    };
 
 interface MemberAvatarProps {
   user: UserLike;
@@ -15,6 +25,12 @@ interface MemberAvatarProps {
 }
 
 const getUserName = (user: UserLike): string => {
+  if ('group_display_name' in user) {
+    return getMemberDisplayName({
+      display_name: user.display_name || 'Usuario',
+      group_display_name: user.group_display_name,
+    });
+  }
   return user.display_name || 'Usuario';
 };
 
@@ -25,11 +41,18 @@ export const MemberAvatar: React.FC<MemberAvatarProps> = ({
   style,
 }) => {
   const name = getUserName(user);
+  const avatarUri =
+    'group_avatar_url' in user
+      ? getMemberAvatarUrl({
+          avatar_url: user.avatar_url,
+          group_avatar_url: user.group_avatar_url,
+        })
+      : user.avatar_url;
 
   return (
     <View style={[styles.container, style]}>
       <UserAvatar
-        uri={user.avatar_url}
+        uri={avatarUri}
         name={name}
         size={size}
       />

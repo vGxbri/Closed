@@ -1,6 +1,30 @@
+import { profileWithGroupMembersSelect, resolveMemberProfileForGroup } from '../lib/memberProfile';
 import { supabase } from '../lib/supabase';
 import { deleteMediaFromStorage, uploadMediaToStorage } from '../lib/storage';
 import { GalleryImage, GalleryImageWithUser } from '../types/database';
+
+function mapGalleryImageWithGroupUploader(
+  image: GalleryImageWithUser,
+  groupId: string,
+): GalleryImageWithUser {
+  if (!image.uploader) return image;
+
+  const resolved = resolveMemberProfileForGroup(
+    image.uploader as Parameters<typeof resolveMemberProfileForGroup>[0],
+    groupId,
+  );
+
+  if (!resolved) return image;
+
+  return {
+    ...image,
+    uploader: {
+      ...image.uploader,
+      display_name: resolved.display_name,
+      avatar_url: resolved.avatar_url,
+    },
+  };
+}
 
 const BUCKET = 'gallery';
 const PAGE_SIZE = 20;
@@ -20,14 +44,16 @@ export const galleryService = {
       .from('gallery_images')
       .select(`
         *,
-        uploader:profiles!gallery_images_uploaded_by_profiles_fk(display_name, avatar_url)
+        uploader:profiles!gallery_images_uploaded_by_profiles_fk(${profileWithGroupMembersSelect})
       `)
       .eq('group_id', groupId)
       .order('created_at', { ascending: false })
       .range(from, to);
 
     if (error) throw error;
-    return (data || []) as unknown as GalleryImageWithUser[];
+    return ((data || []) as unknown as GalleryImageWithUser[]).map((image) =>
+      mapGalleryImageWithGroupUploader(image, groupId),
+    );
   },
 
   /**

@@ -1,5 +1,6 @@
 import { decode } from 'base64-arraybuffer';
 import * as FileSystem from 'expo-file-system/legacy';
+import { resolveMemberProfileForGroup } from '../lib/memberProfile';
 import { supabase } from '../lib/supabase';
 import {
   Award,
@@ -46,12 +47,17 @@ export const awardsService = {
       throw awardError;
     }
 
-    // Get nominees with user profiles
+    const groupId = award.group_id as string;
+
+    // Get nominees with profiles and per-group membership overrides
     const { data: nominees, error: nomineesError } = await supabase
       .from('nominees')
       .select(`
         *,
-        user:profiles!nominees_user_id_fkey (*)
+        user:profiles!nominees_user_id_fkey (
+          *,
+          group_members!group_members_user_id_fkey(group_display_name, group_avatar_url, group_id)
+        )
       `)
       .eq('award_id', awardId)
       .order('created_at', { ascending: true });
@@ -60,15 +66,21 @@ export const awardsService = {
 
     return {
       ...award,
-      // Hide winner_id if not revealed for non-admins? 
-      // Actually frontend should handle UI hiding, but better to be safe? 
-      // For now let's just pass it and trust UI since RLS isn't complex enough yet.
-      nominees: (nominees || []).map(n => ({
-        ...n,
-        user: n.user as any,
-        // Hide winner status if not revealed
-        is_winner: award.is_revealed ? n.is_winner : false, 
-      })) as NomineeWithProfile[],
+      nominees: (nominees || []).map((n) => {
+        const rawUser = n.user as any;
+        const resolved = resolveMemberProfileForGroup(rawUser, groupId);
+        return {
+          ...n,
+          user: rawUser
+            ? {
+                ...rawUser,
+                display_name: resolved?.display_name ?? rawUser.display_name,
+                avatar_url: resolved?.avatar_url ?? rawUser.avatar_url,
+              }
+            : rawUser,
+          is_winner: award.is_revealed ? n.is_winner : false,
+        };
+      }) as NomineeWithProfile[],
     };
   },
 
@@ -502,6 +514,41 @@ export const awardsService = {
     return data.publicUrl;
   },
   
+  /**
+   * Get award counts by status for widget preview.
+   */
+  async getAwardCounts(groupId: string): Promise<{ total: number; voting: number; draft: number; completed: number }> {
+    const [totalResult, votingResult, draftResult, completedResult] = await Promise.all([
+      supabase
+        .from('awards')
+        .select('*', { count: 'exact', head: true })
+        .eq('group_id', groupId)
+        .neq('status', 'archived'),
+      supabase
+        .from('awards')
+        .select('*', { count: 'exact', head: true })
+        .eq('group_id', groupId)
+        .eq('status', 'voting'),
+      supabase
+        .from('awards')
+        .select('*', { count: 'exact', head: true })
+        .eq('group_id', groupId)
+        .eq('status', 'draft'),
+      supabase
+        .from('awards')
+        .select('*', { count: 'exact', head: true })
+        .eq('group_id', groupId)
+        .eq('status', 'completed'),
+    ]);
+
+    return {
+      total: totalResult.count || 0,
+      voting: votingResult.count || 0,
+      draft: draftResult.count || 0,
+      completed: completedResult.count || 0,
+    };
+  },
+
   /**
    * Check if award invalid and expire it if needed
    */

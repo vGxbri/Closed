@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Input } from '@/components/ui/Input';
 import { useSnackbar } from '@/components/ui/SnackbarContext';
+import { getMemberAvatarUrl } from '@/lib/memberProfile';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { useAuth, useGroup } from '@/hooks';
 
@@ -170,18 +171,18 @@ export default function ProfileScreen() {
     return group.members.find((m) => m.user_id === user.id) ?? null;
   }, [group, user]);
 
-  // display_name and avatar_url from the view are already coalesced
   const displayName = useMemo(
     () => myMembership?.display_name || profile?.display_name || 'Usuario',
     [myMembership, profile]
   );
 
-  const avatarUrl = useMemo(() => {
-    if (myMembership?.group_avatar_url !== undefined && myMembership?.group_avatar_url !== null) {
-      return myMembership.group_avatar_url;
-    }
-    return profile?.avatar_url || null;
-  }, [myMembership, profile]);
+  const avatarUrl = useMemo(
+    () =>
+      myMembership
+        ? getMemberAvatarUrl(myMembership)
+        : profile?.avatar_url ?? null,
+    [myMembership, profile],
+  );
 
   const hasGroupAvatar = !!myMembership?.group_avatar_url;
 
@@ -605,11 +606,7 @@ export default function ProfileScreen() {
                 ]}
               >
                 <UserAvatar
-                  uri={
-                    admin.group_avatar_url !== undefined && admin.group_avatar_url !== null
-                      ? admin.group_avatar_url
-                      : admin.avatar_url
-                  }
+                  uri={getMemberAvatarUrl(admin)}
                   name={admin.display_name || admin.group_display_name || 'Admin'}
                   size={40}
                 />

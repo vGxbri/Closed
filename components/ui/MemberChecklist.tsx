@@ -5,6 +5,7 @@ import SquircleView from "react-native-fast-squircle";
 import { Text, useTheme } from "react-native-paper";
 
 import { GroupMemberView } from "../../types/database";
+import { getMemberAvatarUrl, getMemberDisplayName } from "@/lib/memberProfile";
 import { UserAvatar } from "./UserAvatar";
 
 interface MemberChecklistProps {
@@ -93,8 +94,8 @@ const MemberChecklistItem = React.memo<MemberChecklistItemProps>(
           </SquircleView>
 
           <UserAvatar
-            uri={member.avatar_url}
-            name={member.group_display_name || member.display_name}
+            uri={getMemberAvatarUrl(member)}
+            name={getMemberDisplayName(member)}
             size="sm"
           />
 
@@ -102,7 +103,7 @@ const MemberChecklistItem = React.memo<MemberChecklistItemProps>(
             style={[styles.name, { color: theme.colors.onSurface }]}
             numberOfLines={1}
           >
-            {member.group_display_name || member.display_name}
+            {getMemberDisplayName(member)}
           </Text>
         </SquircleView>
       </Pressable>

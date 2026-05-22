@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
 import { BlurTargetView } from "expo-blur";
 import { Image } from "expo-image";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
@@ -30,6 +31,15 @@ import { CustomHeader } from "@/components/ui/CustomHeader";
 import { useSnackbar } from "@/components/ui/SnackbarContext";
 import { UserAvatar } from "@/components/ui/UserAvatar";
 import { useAuth } from "@/hooks";
+import {
+  buildCalendarMonthLayout,
+  CalendarWeekBar,
+  CALENDAR_EVENT_MARKER_GAP,
+  CALENDAR_EVENT_MARKER_SIZE,
+  getMondayBasedOffset,
+} from "@/lib/calendarMonthLayout";
+import { getEventScheduleCompact } from "@/lib/eventSchedule";
+import { supabase } from "@/lib/supabase";
 import { eventsService } from "@/services/events.service";
 import {
   CalendarEventWithDetails,
@@ -60,28 +70,70 @@ const RSVP_ICONS: Record<string, { icon: string; color: string }> = {
   maybe: { icon: "help-circle", color: "#6366F1" },
 };
 
+// ─── Continuous multi-day bar overlayed on a week row ──────────────────
+const MARKER_STEP = CALENDAR_EVENT_MARKER_SIZE + CALENDAR_EVENT_MARKER_GAP;
+const BASE_ROW_HEIGHT = 46;
+
+const WeekEventBar = React.memo<{ bar: CalendarWeekBar }>(({ bar }) => {
+  const leftFrac = bar.roundLeft
+    ? (bar.startCol + 0.5) / 7
+    : bar.startCol / 7;
+  const rightFrac = bar.roundRight
+    ? (bar.endCol + 0.5) / 7
+    : (bar.endCol + 1) / 7;
+  const widthFrac = Math.max(0, rightFrac - leftFrac);
+  const bottom = 2 + bar.lane * MARKER_STEP;
+  const radius = CALENDAR_EVENT_MARKER_SIZE / 2;
+
+  return (
+    <View
+      style={{
+        position: "absolute",
+        left: `${leftFrac * 100}%`,
+        width: `${widthFrac * 100}%`,
+        bottom,
+        height: CALENDAR_EVENT_MARKER_SIZE,
+        backgroundColor: bar.color,
+        borderTopLeftRadius: bar.roundLeft ? radius : 0,
+        borderBottomLeftRadius: bar.roundLeft ? radius : 0,
+        borderTopRightRadius: bar.roundRight ? radius : 0,
+        borderBottomRightRadius: bar.roundRight ? radius : 0,
+      }}
+    />
+  );
+});
+WeekEventBar.displayName = "WeekEventBar";
+
 // ─── Calendar Grid ──────────────────────────────────────────────────────
 interface CalendarGridProps {
   year: number;
   month: number; // 0-indexed
   selectedDate: Date;
-  eventDays: Map<number, string[]>; // day number → array of event colors
+  singleDayDots: Map<number, string[]>;
+  weekBarsByRow: Map<number, CalendarWeekBar[]>;
+  maxLanesByRow: Map<number, number>;
   onSelectDate: (date: Date) => void;
   todayDate: Date;
 }
 
 const CalendarGrid = React.memo<CalendarGridProps>(
-  ({ year, month, selectedDate, eventDays, onSelectDate, todayDate }) => {
+  ({
+    year,
+    month,
+    selectedDate,
+    singleDayDots,
+    weekBarsByRow,
+    maxLanesByRow,
+    onSelectDate,
+    todayDate,
+  }) => {
     const theme = useTheme();
 
     const { days, startOffset } = useMemo(() => {
       const daysInMonth = new Date(year, month + 1, 0).getDate();
-      // Monday = 0, Sunday = 6
-      let firstDayOfWeek = new Date(year, month, 1).getDay() - 1;
-      if (firstDayOfWeek < 0) firstDayOfWeek = 6;
       return {
         days: daysInMonth,
-        startOffset: firstDayOfWeek,
+        startOffset: getMondayBasedOffset(year, month),
       };
     }, [year, month]);
 
@@ -134,8 +186,21 @@ const CalendarGrid = React.memo<CalendarGridProps>(
               rowCells.push(null);
             }
 
+            const rowBars = weekBarsByRow.get(rowIdx) || [];
+            const laneCount = maxLanesByRow.get(rowIdx) || 0;
+            const rowHasDots = rowCells.some(
+              (d) => d !== null && (singleDayDots.get(d) || []).length > 0,
+            );
+            const markerRows = laneCount + (rowHasDots ? 1 : 0);
+            const extraHeight = Math.max(0, markerRows - 1) * MARKER_STEP;
+            const rowHeight = BASE_ROW_HEIGHT + extraHeight;
+            const dotBottom = 2 + laneCount * MARKER_STEP;
+
             return (
-              <View key={rowIdx} style={styles.dayRow}>
+              <View
+                key={rowIdx}
+                style={[styles.dayRow, { height: rowHeight }]}
+              >
                 {rowCells.map((day, colIdx) => {
                   if (day === null) {
                     return (
@@ -148,7 +213,7 @@ const CalendarGrid = React.memo<CalendarGridProps>(
 
                   const selected = isSelected(day);
                   const today = isToday(day);
-                  const colors = eventDays.get(day) || [];
+                  const colors = singleDayDots.get(day) || [];
 
                   return (
                     <TouchableOpacity
@@ -157,11 +222,7 @@ const CalendarGrid = React.memo<CalendarGridProps>(
                       onPress={() => onSelectDate(new Date(year, month, day))}
                       activeOpacity={0.7}
                     >
-                      {/* CONTENEDOR PRINCIPAL DEL NÚMERO */}
                       <View style={styles.dayCircleContainer}>
-                        {/* 1. CAPA DE FONDO: Un círculo geométrico puro y vacío. 
-                            Al no tener hijos que lo empujen, Android nunca lo deformará.
-                            Además, le pasamos los colores en un solo objeto cerrado para evitar bugs de actualización. */}
                         <View
                           style={[
                             styles.dayBackground,
@@ -177,8 +238,6 @@ const CalendarGrid = React.memo<CalendarGridProps>(
                             },
                           ]}
                         />
-
-                        {/* 2. CAPA DE TEXTO: Flota en el centro exacto de la caja superior */}
                         <Text
                           style={[
                             styles.dayText,
@@ -195,13 +254,20 @@ const CalendarGrid = React.memo<CalendarGridProps>(
                         </Text>
                       </View>
 
-                      {/* 3. CAPA DE EVENTOS: Flotan abajo del todo sin molestar al círculo */}
                       {colors.length > 0 && (
-                        <View style={styles.dotRowAbsolute}>
+                        <View
+                          style={[
+                            styles.dotRowAbsolute,
+                            { bottom: dotBottom },
+                          ]}
+                        >
                           {colors.slice(0, 3).map((c, i) => (
                             <View
                               key={i}
-                              style={[styles.eventDot, { backgroundColor: c }]}
+                              style={[
+                                styles.eventDot,
+                                { backgroundColor: c },
+                              ]}
                             />
                           ))}
                         </View>
@@ -209,6 +275,20 @@ const CalendarGrid = React.memo<CalendarGridProps>(
                     </TouchableOpacity>
                   );
                 })}
+
+                {rowBars.length > 0 && (
+                  <View
+                    style={StyleSheet.absoluteFill}
+                    pointerEvents="none"
+                  >
+                    {rowBars.map((bar) => (
+                      <WeekEventBar
+                        key={`${bar.eventId}-${bar.lane}-${bar.startCol}`}
+                        bar={bar}
+                      />
+                    ))}
+                  </View>
+                )}
               </View>
             );
           },
@@ -230,17 +310,10 @@ interface EventCardProps {
 const EventCard = React.memo<EventCardProps>(({ event, index, onPress }) => {
   const theme = useTheme();
 
-  const timeLabel = useMemo(() => {
-    if (event.is_all_day) return "Todo el día";
-    const start = new Date(event.starts_at);
-    const startStr = `${start.getHours().toString().padStart(2, "0")}:${start.getMinutes().toString().padStart(2, "0")}`;
-    if (event.ends_at) {
-      const end = new Date(event.ends_at);
-      const endStr = `${end.getHours().toString().padStart(2, "0")}:${end.getMinutes().toString().padStart(2, "0")}`;
-      return `${startStr} - ${endStr}`;
-    }
-    return startStr;
-  }, [event]);
+  const timeLabel = useMemo(
+    () => getEventScheduleCompact(event),
+    [event],
+  );
 
   const acceptedCount = useMemo(
     () => event.participants.filter((p) => p.status === "accepted").length,
@@ -488,8 +561,10 @@ export default function CalendarScreen() {
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
   const [selectedDate, setSelectedDate] = useState(today);
   const [events, setEvents] = useState<CalendarEventWithDetails[]>([]);
+  const [dayEvents, setDayEvents] = useState<CalendarEventWithDetails[]>([]);
   const [dayPhotos, setDayPhotos] = useState<GalleryImageWithUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingDayEvents, setIsLoadingDayEvents] = useState(false);
   const [isLoadingDay, setIsLoadingDay] = useState(false);
 
   const isFirstLoad = useRef(true);
@@ -520,6 +595,25 @@ export default function CalendarScreen() {
     fetchMonthEvents();
   }, [fetchMonthEvents]);
 
+  // ─── Fetch events for selected day (bottom list) ───────────
+  const fetchDayEvents = useCallback(async () => {
+    if (!id) return;
+    try {
+      setIsLoadingDayEvents(true);
+      const data = await eventsService.getEventsForDate(id, selectedDate);
+      setDayEvents(data);
+    } catch (error) {
+      console.error("Error loading day events:", error);
+      showSnackbar("Error al cargar los eventos del día", "error");
+    } finally {
+      setIsLoadingDayEvents(false);
+    }
+  }, [id, selectedDate, showSnackbar]);
+
+  useEffect(() => {
+    fetchDayEvents();
+  }, [fetchDayEvents]);
+
   // ─── Fetch photos for selected day ─────────────────────────
   const fetchDayPhotos = useCallback(async () => {
     if (!id) return;
@@ -542,34 +636,49 @@ export default function CalendarScreen() {
     fetchDayPhotos();
   }, [fetchDayPhotos]);
 
-  // ─── Event days map ────────────────────────────────────────
-  const eventDays = useMemo(() => {
-    const map = new Map<number, string[]>();
-    for (const event of events) {
-      const day = new Date(event.starts_at).getDate();
-      const existing = map.get(day) || [];
-      existing.push(event.color);
-      map.set(day, existing);
-    }
-    return map;
-  }, [events]);
+  useFocusEffect(
+    useCallback(() => {
+      fetchMonthEvents();
+      fetchDayEvents();
+      fetchDayPhotos();
 
-  // ─── Events for selected day ───────────────────────────────
-  const selectedDayEvents = useMemo(() => {
-    const dayStart = new Date(selectedDate);
-    dayStart.setHours(0, 0, 0, 0);
-    const dayEnd = new Date(selectedDate);
-    dayEnd.setHours(23, 59, 59, 999);
+      const subscription = supabase
+        .channel(`calendar-events-realtime:${id}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "events",
+            filter: `group_id=eq.${id}`,
+          },
+          () => {
+            fetchMonthEvents();
+            fetchDayEvents();
+          },
+        )
+        .subscribe();
 
-    return events.filter((e) => {
-      const eventDate = new Date(e.starts_at);
-      return eventDate >= dayStart && eventDate <= dayEnd;
-    });
-  }, [events, selectedDate]);
+      return () => {
+        subscription.unsubscribe();
+      };
+    }, [id, fetchMonthEvents, fetchDayEvents, fetchDayPhotos]),
+  );
+
+  const handleSelectDate = useCallback((date: Date) => {
+    setDayEvents([]);
+    setSelectedDate(date);
+  }, []);
+
+  const calendarLayout = useMemo(
+    () => buildCalendarMonthLayout(events, currentYear, currentMonth),
+    [events, currentYear, currentMonth],
+  );
 
   // ─── Navigation ────────────────────────────────────────────
   const goToPreviousMonth = useCallback(() => {
     setEvents([]);
+    setDayEvents([]);
     let newMonth = currentMonth - 1;
     let newYear = currentYear;
     if (newMonth < 0) {
@@ -588,6 +697,7 @@ export default function CalendarScreen() {
 
   const goToNextMonth = useCallback(() => {
     setEvents([]);
+    setDayEvents([]);
     let newMonth = currentMonth + 1;
     let newYear = currentYear;
     if (newMonth > 11) {
@@ -609,6 +719,7 @@ export default function CalendarScreen() {
       currentYear !== today.getFullYear() || currentMonth !== today.getMonth();
     if (isDifferent) {
       setEvents([]);
+      setDayEvents([]);
       setCurrentYear(today.getFullYear());
       setCurrentMonth(today.getMonth());
     }
@@ -776,8 +887,10 @@ export default function CalendarScreen() {
                     year={currentYear}
                     month={currentMonth}
                     selectedDate={selectedDate}
-                    eventDays={eventDays}
-                    onSelectDate={setSelectedDate}
+                    singleDayDots={calendarLayout.singleDayDots}
+                    weekBarsByRow={calendarLayout.weekBarsByRow}
+                    maxLanesByRow={calendarLayout.maxLanesByRow}
+                    onSelectDate={handleSelectDate}
                     todayDate={today}
                   />
                 </SquircleView>
@@ -811,9 +924,21 @@ export default function CalendarScreen() {
               </Animated.View>
 
               {/* ─── Events List ─── */}
-              {selectedDayEvents.length > 0 ? (
+              {isLoadingDayEvents ? (
+                <SquircleView
+                  style={[
+                    styles.skeletonEvent,
+                    {
+                      backgroundColor: theme.colors.surfaceVariant,
+                      borderColor: theme.colors.outlineVariant,
+                      borderWidth: 1,
+                    },
+                  ]}
+                  cornerSmoothing={1}
+                />
+              ) : dayEvents.length > 0 ? (
                 <View style={styles.eventsList}>
-                  {selectedDayEvents.map((event, index) => (
+                  {dayEvents.map((event, index) => (
                     <EventCard
                       key={event.id}
                       event={event}
@@ -962,12 +1087,12 @@ const styles = StyleSheet.create({
   },
   dayRow: {
     flexDirection: "row",
+    marginBottom: 2,
   },
   dayCell: {
     flex: 1,
     alignItems: "center",
     paddingVertical: 2,
-    height: 46,
     justifyContent: "flex-start",
   },
   dayCircleContainer: {

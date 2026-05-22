@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ConfirmDialog, DialogType } from "@/components/ui/ConfirmDialog";
 import { CustomHeader } from "@/components/ui/CustomHeader";
 import { MemberChecklist } from "@/components/ui/MemberChecklist";
+import { getMemberAvatarUrl, getMemberDisplayName } from "@/lib/memberProfile";
 import { UserAvatar } from "@/components/ui/UserAvatar";
 import { useAuth, useGroup } from "@/hooks";
 import { sharedExpensesService } from "@/services/sharedExpenses.service";
@@ -289,8 +290,7 @@ export default function CreateExpenseScreen() {
             >
               {activeMembers.map((member) => {
                 const isSelected = paidBy === member.user_id;
-                const name =
-                  member.group_display_name || member.display_name;
+                const name = getMemberDisplayName(member);
                 return (
                   <Pressable
                     key={member.user_id}
@@ -315,7 +315,7 @@ export default function CreateExpenseScreen() {
                       cornerSmoothing={1}
                     >
                       <UserAvatar
-                        uri={member.avatar_url}
+                        uri={getMemberAvatarUrl(member)}
                         name={name}
                         size={28}
                       />

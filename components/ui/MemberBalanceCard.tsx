@@ -7,6 +7,7 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 import { GroupMemberView } from "../../types/database";
 import { MemberBalance } from "../../lib/sharedExpenses";
 import { formatCents } from "../../lib/sharedExpenses";
+import { getMemberAvatarUrl, getMemberDisplayName } from "@/lib/memberProfile";
 import { UserAvatar } from "./UserAvatar";
 
 interface MemberBalanceCardProps {
@@ -50,8 +51,8 @@ export const MemberBalanceCard = React.memo<MemberBalanceCardProps>(
         >
           <View style={styles.cardContent}>
             <UserAvatar
-              uri={member.avatar_url}
-              name={member.group_display_name || member.display_name}
+              uri={getMemberAvatarUrl(member)}
+              name={getMemberDisplayName(member)}
               size="sm"
             />
 
@@ -60,7 +61,7 @@ export const MemberBalanceCard = React.memo<MemberBalanceCardProps>(
                 style={[styles.name, { color: theme.colors.onSurface }]}
                 numberOfLines={1}
               >
-                {member.group_display_name || member.display_name}
+                {getMemberDisplayName(member)}
               </Text>
               <Text style={[styles.status, { color: balanceColor }]}>
                 {statusText}

@@ -16,50 +16,59 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { MessageView } from '@/types/database';
 
-// ─── Helpers ────────────────────────────────────────────────────────────
 const formatTime = (dateStr: string): string => {
   const d = new Date(dateStr);
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
 
-// ─── Types ──────────────────────────────────────────────────────────────
 interface MessageBubbleProps {
   message: MessageView;
   isMine: boolean;
   showAvatar: boolean;
   showName: boolean;
-  isOptimistic?: boolean;
-  currentUserId: string;
-  isAdmin: boolean;
-  canEdit: boolean;
   onReply: (message: MessageView) => void;
-  onEdit: (message: MessageView) => void;
-  onDelete: (message: MessageView) => void;
   onLongPress: (message: MessageView) => void;
 }
-
-
 
 // ─── Reply Quote ────────────────────────────────────────────────────────
 const ReplyQuote = React.memo(({
   senderName,
   content,
+  isMine,
 }: {
   senderName: string | null;
   content: string | null;
+  isMine: boolean;
 }) => {
   const theme = useTheme();
-  if (!senderName && !content) return null;
+
+  const bgColor = isMine
+    ? 'rgba(255,255,255,0.15)'
+    : theme.dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+
+  const barColor = isMine
+    ? 'rgba(255,255,255,0.6)'
+    : theme.colors.primary;
+
+  const nameColor = isMine
+    ? 'rgba(255,255,255,0.95)'
+    : theme.colors.primary;
+
+  const contentColor = isMine
+    ? 'rgba(255,255,255,0.85)'
+    : theme.colors.onSurface;
+
+  const preview = (content || '').trim() || '...';
 
   return (
-    <View style={[s.replyQuote, { backgroundColor: theme.dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }]}>
-      <View style={[s.replyBar, { backgroundColor: theme.colors.primary }]} />
+    <View style={[s.replyQuote, { backgroundColor: bgColor }]}>
+      <View style={[s.replyBar, { backgroundColor: barColor }]} />
       <View style={s.replyTextBlock}>
-        <Text style={[s.replyName, { color: theme.colors.primary }]} numberOfLines={1}>
+        <Text style={[s.replyName, { color: nameColor }]} numberOfLines={1}>
           {senderName || 'Usuario'}
         </Text>
-        <Text style={[s.replyContent, { color: theme.colors.onSurfaceVariant }]} numberOfLines={1}>
-          {content || '...'}
+        <Text style={[s.replyContent, { color: contentColor }]} numberOfLines={2}>
+          {preview}
         </Text>
       </View>
     </View>
@@ -77,18 +86,12 @@ const MessageBubble = React.memo(({
   isMine,
   showAvatar,
   showName,
-  isOptimistic,
-  currentUserId,
   onReply,
-  onEdit,
-  onDelete,
   onLongPress,
-  canEdit,
 }: MessageBubbleProps) => {
   const theme = useTheme();
   const translateX = useSharedValue(0);
 
-  // ─── Swipe gesture for reply ────────────────
   const triggerReply = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     onReply(message);
@@ -117,15 +120,12 @@ const MessageBubble = React.memo(({
     transform: [{ scale: Math.min(translateX.value / SWIPE_THRESHOLD, 1) }],
   }));
 
-  // ─── Long press ─────────────────────────────
   const handleLongPress = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     onLongPress(message);
   }, [message, onLongPress]);
 
-
-
-  // ─── Deleted message ────────────────────────
+  // ─── Deleted message ────────────────────────────
   if (message.is_deleted) {
     return (
       <Animated.View
@@ -157,15 +157,14 @@ const MessageBubble = React.memo(({
   // ─── Colors ─────────────────────────────────
   const bubbleBg = isMine ? theme.colors.primary : theme.colors.surfaceVariant;
   const textColor = isMine ? theme.colors.onPrimary : theme.colors.onSurface;
+  const metaColor = isMine ? 'rgba(255,255,255,0.55)' : theme.colors.outline;
 
   return (
     <View style={[s.messageRow, isMine ? s.myMessageRow : s.theirMessageRow]}>
-      {/* Reply swipe icon */}
       <Animated.View style={[s.swipeReplyIcon, replyIconStyle]}>
         <Ionicons name="arrow-undo" size={18} color={theme.colors.primary} />
       </Animated.View>
 
-      {/* Avatar slot */}
       {!isMine && (
         <View style={s.avatarSlot}>
           {showAvatar && (
@@ -184,54 +183,47 @@ const MessageBubble = React.memo(({
           isMine ? s.myBubbleColumn : s.theirBubbleColumn,
           swipeStyle,
         ]}>
-          {/* Sender name */}
           {!isMine && showName && (
             <Text style={[s.senderName, { color: theme.colors.primary }]}>
               {message.sender_name}
             </Text>
           )}
 
-          {/* Bubble */}
           <Pressable onLongPress={handleLongPress} delayLongPress={400}>
             <SquircleView
               style={[
                 s.bubble,
                 { backgroundColor: bubbleBg },
                 isMine ? s.myBubble : s.theirBubble,
-                isOptimistic && { opacity: 0.7 },
               ]}
               cornerSmoothing={1}
             >
-              {/* Reply quote inside bubble */}
-              {message.reply_to_id && (
-                <ReplyQuote
-                  senderName={message.reply_to_sender_name}
-                  content={message.reply_to_content}
-                />
-              )}
-
-              <Text style={[s.messageText, { color: textColor }]}>
-                {message.content}
-              </Text>
-
-              {/* Timestamp + edited label inside bubble */}
-              <View style={[s.inlineMeta, isMine ? s.myInlineMeta : s.theirInlineMeta]}>
-                {message.is_edited && (
-                  <Text style={[s.editedLabel, { color: isMine ? 'rgba(255,255,255,0.6)' : theme.colors.outline }]}>
-                    editado
-                  </Text>
+              <View style={s.bubbleInner}>
+                {(message.reply_to_id || message.reply_to_content) && (
+                  <ReplyQuote
+                    senderName={message.reply_to_sender_name}
+                    content={message.reply_to_content}
+                    isMine={isMine}
+                  />
                 )}
-                <Text style={[s.timestamp, { color: isMine ? 'rgba(255,255,255,0.6)' : theme.colors.outline }]}>
-                  {formatTime(message.created_at)}
+
+                <Text style={[s.messageText, { color: textColor }]}>
+                  {message.content}
                 </Text>
-                {isOptimistic && (
-                  <Ionicons name="time-outline" size={10} color={isMine ? 'rgba(255,255,255,0.5)' : theme.colors.outline} />
-                )}
+
+                <View style={[s.inlineMeta, isMine ? s.myInlineMeta : s.theirInlineMeta]}>
+                  {message.is_edited && (
+                    <Text style={[s.editedLabel, { color: metaColor }]}>
+                      editado
+                    </Text>
+                  )}
+                  <Text style={[s.timestamp, { color: metaColor }]}>
+                    {formatTime(message.created_at)}
+                  </Text>
+                </View>
               </View>
             </SquircleView>
           </Pressable>
-
-
         </Animated.View>
       </GestureDetector>
     </View>
@@ -246,7 +238,7 @@ const s = StyleSheet.create({
   messageRow: {
     flexDirection: 'row',
     marginVertical: 2,
-    paddingHorizontal: 4,
+    paddingHorizontal: 6,
     position: 'relative',
   },
   myMessageRow: { justifyContent: 'flex-end' },
@@ -265,7 +257,7 @@ const s = StyleSheet.create({
     zIndex: -1,
   },
 
-  avatarSlot: { width: 32, marginRight: 8, alignSelf: 'flex-end', marginBottom: 4 },
+  avatarSlot: { width: 30, marginRight: 6, alignSelf: 'flex-end', marginBottom: 4 },
 
   bubbleColumn: { maxWidth: '78%' },
   myBubbleColumn: { alignItems: 'flex-end' },
@@ -279,11 +271,16 @@ const s = StyleSheet.create({
   },
 
   bubble: {
-    paddingHorizontal: 14,
-    paddingTop: 10,
-    paddingBottom: 6,
     borderRadius: 20,
     minHeight: 36,
+    overflow: 'hidden',
+  },
+  bubbleInner: {
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    paddingBottom: 6,
+    alignSelf: 'stretch',
+    width: '100%',
   },
   myBubble: { borderBottomRightRadius: 6 },
   theirBubble: { borderBottomLeftRadius: 6 },
@@ -317,7 +314,7 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    marginTop: 4,
+    marginTop: 3,
   },
   myInlineMeta: { justifyContent: 'flex-end' },
   theirInlineMeta: { justifyContent: 'flex-start' },
@@ -333,18 +330,30 @@ const s = StyleSheet.create({
     fontStyle: 'italic',
   },
 
-  // Reply quote
   replyQuote: {
     flexDirection: 'row',
-    borderRadius: 8,
-    padding: 8,
+    alignItems: 'flex-start',
+    borderRadius: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
     marginBottom: 6,
-    overflow: 'hidden',
   },
-  replyBar: { width: 3, borderRadius: 2, marginRight: 8 },
-  replyTextBlock: { flex: 1 },
-  replyName: { fontFamily: 'Archivo-Bold', fontSize: 11 },
-  replyContent: { fontFamily: 'Archivo-Medium', fontSize: 12, marginTop: 1 },
-
-
+  replyBar: {
+    width: 3,
+    borderRadius: 2,
+    marginRight: 8,
+    marginTop: 2,
+    alignSelf: 'stretch',
+    minHeight: 28,
+  },
+  replyTextBlock: {
+    flexShrink: 1,
+    maxWidth: 240,
+  },
+  replyName: { fontFamily: 'Archivo-Bold', fontSize: 12, marginBottom: 2 },
+  replyContent: {
+    fontFamily: 'Archivo-Medium',
+    fontSize: 13,
+    lineHeight: 18,
+  },
 });

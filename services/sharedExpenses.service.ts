@@ -1,3 +1,4 @@
+import { groupsService } from './groups.service';
 import { supabase } from '../lib/supabase';
 import {
   SharedExpense,
@@ -20,19 +21,15 @@ class SharedExpensesService {
     const expenseIds = expenses.map((e: SharedExpense) => e.id);
     const payerIds = [...new Set(expenses.map((e: SharedExpense) => e.paid_by))];
 
-    const [splitsResult, profilesResult] = await Promise.all([
+    const [splitsResult, allMembers] = await Promise.all([
       supabase
         .from('shared_expense_splits')
         .select('*')
         .in('expense_id', expenseIds),
-      supabase
-        .from('profiles')
-        .select('id, display_name, avatar_url')
-        .in('id', payerIds),
+      groupsService.fetchMembersForGroup(groupId),
     ]);
 
     if (splitsResult.error) throw splitsResult.error;
-    if (profilesResult.error) throw profilesResult.error;
 
     const splitsByExpense = new Map<string, { expense_id: string; user_id: string }[]>();
     for (const s of splitsResult.data || []) {
@@ -41,15 +38,21 @@ class SharedExpensesService {
       splitsByExpense.set(s.expense_id, arr);
     }
 
-    const profilesById = new Map<string, { display_name: string; avatar_url: string | null }>();
-    for (const p of profilesResult.data || []) {
-      profilesById.set(p.id, { display_name: p.display_name, avatar_url: p.avatar_url });
+    const payerIdSet = new Set(payerIds);
+    const membersById = new Map<string, { display_name: string; avatar_url: string | null }>();
+    for (const m of allMembers) {
+      if (payerIdSet.has(m.user_id)) {
+        membersById.set(m.user_id, {
+          display_name: m.display_name,
+          avatar_url: m.avatar_url,
+        });
+      }
     }
 
     return expenses.map((e: SharedExpense) => ({
       ...e,
       splits: splitsByExpense.get(e.id) || [],
-      payer: profilesById.get(e.paid_by),
+      payer: membersById.get(e.paid_by),
     }));
   }
 

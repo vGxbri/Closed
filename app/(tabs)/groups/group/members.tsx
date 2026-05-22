@@ -15,6 +15,7 @@ import {
   useTheme
 } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { getMemberAvatarUrl, getMemberDisplayName } from "@/lib/memberProfile";
 import { UserAvatar } from "../../../../components/ui/UserAvatar";
 import { ConfirmDialog, DialogType } from "../../../../components/ui/ConfirmDialog";
 import { CustomHeader } from "../../../../components/ui/CustomHeader";
@@ -201,8 +202,8 @@ export default function GroupMembersScreen() {
                   ]}
                 >
                   <UserAvatar 
-                    uri={member.avatar_url} 
-                    name={member.display_name} 
+                    uri={getMemberAvatarUrl(member)} 
+                    name={getMemberDisplayName(member)} 
                     size="md" 
                   />
                   <View style={styles.memberInfo}>

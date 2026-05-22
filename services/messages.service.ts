@@ -1,27 +1,70 @@
+import { enrichMessagesWithReplies } from '@/lib/messageReplies';
+import { groupsService } from '@/services/groups.service';
 import { supabase } from '@/lib/supabase';
 import { Message, MessageView } from '@/types/database';
+
+const MESSAGE_VIEW_COLUMNS =
+  'id, group_id, sender_id, content, type, metadata, is_edited, is_deleted, created_at, reply_to_id, sender_name, sender_avatar, reply_to_content, reply_to_sender_name';
 
 // Time window (ms) in which a message can be edited
 const EDIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
 
+type MemberDisplay = { display_name: string; avatar_url: string | null };
+
 class MessagesService {
+  private async getGroupMemberDisplayMap(
+    groupId: string,
+  ): Promise<Map<string, MemberDisplay>> {
+    const members = await groupsService.fetchMembersForGroup(groupId);
+
+    return new Map(
+      members.map((m) => [
+        m.user_id,
+        { display_name: m.display_name, avatar_url: m.avatar_url },
+      ]),
+    );
+  }
+
+  private enrichMessageView(
+    message: MessageView,
+    membersByUserId: Map<string, MemberDisplay>,
+  ): MessageView {
+    const member = membersByUserId.get(message.sender_id);
+    if (!member) return message;
+
+    return {
+      ...message,
+      sender_name: member.display_name,
+      sender_avatar: member.avatar_url,
+    };
+  }
+
   /**
    * Fetches messages for a group with sender details, replies, and reactions.
    */
   async getMessages(groupId: string, limit = 50, offset = 0): Promise<MessageView[]> {
-    const { data, error } = await supabase
-      .from('messages_view')
-      .select('*')
-      .eq('group_id', groupId)
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
+    const [messagesResult, membersByUserId] = await Promise.all([
+      supabase
+        .from('messages_view')
+        .select(MESSAGE_VIEW_COLUMNS)
+        .eq('group_id', groupId)
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1),
+      this.getGroupMemberDisplayMap(groupId),
+    ]);
+
+    const { data, error } = messagesResult;
 
     if (error) {
       console.error('Error fetching messages:', error);
       throw error;
     }
 
-    return (data || []).map(this.parseMessageView);
+    const parsed = (data || [])
+      .map((row) => this.parseMessageView(row))
+      .map((msg) => this.enrichMessageView(msg, membersByUserId));
+
+    return enrichMessagesWithReplies(parsed);
   }
 
   /**
@@ -158,7 +201,7 @@ class MessagesService {
           filter: `group_id=eq.${groupId}`,
         },
         async (payload) => {
-          const fullMsg = await this.fetchMessageViewById(payload.new.id);
+          const fullMsg = await this.fetchMessageViewById(payload.new.id, groupId);
           if (fullMsg) callbacks.onNewMessage(fullMsg);
         }
       )
@@ -174,10 +217,10 @@ class MessagesService {
           if (payload.new.is_deleted) {
             // Treat as a delete visually — fetch the updated view row so
             // the UI can render the "message deleted" placeholder.
-            const fullMsg = await this.fetchMessageViewById(payload.new.id);
+            const fullMsg = await this.fetchMessageViewById(payload.new.id, groupId);
             if (fullMsg) callbacks.onMessageUpdated(fullMsg);
           } else {
-            const fullMsg = await this.fetchMessageViewById(payload.new.id);
+            const fullMsg = await this.fetchMessageViewById(payload.new.id, groupId);
             if (fullMsg) callbacks.onMessageUpdated(fullMsg);
           }
         }
@@ -191,17 +234,22 @@ class MessagesService {
    * Fetches a single message from the view by ID.
    * Includes retries for view replication lag.
    */
-  private async fetchMessageViewById(messageId: string): Promise<MessageView | null> {
+  private async fetchMessageViewById(
+    messageId: string,
+    groupId: string,
+  ): Promise<MessageView | null> {
     const maxRetries = 3;
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       const { data, error } = await supabase
         .from('messages_view')
-        .select('*')
+        .select(MESSAGE_VIEW_COLUMNS)
         .eq('id', messageId)
         .single();
 
       if (!error && data) {
-        return this.parseMessageView(data);
+        const membersByUserId = await this.getGroupMemberDisplayMap(groupId);
+        const parsed = this.enrichMessageView(this.parseMessageView(data), membersByUserId);
+        return (await this.hydrateReplyFromParent(parsed))[0];
       }
 
       if (attempt < maxRetries - 1) {
@@ -214,15 +262,69 @@ class MessagesService {
   /**
    * Re-fetches a single message to get updated reactions.
    */
-  async refreshMessage(messageId: string): Promise<MessageView | null> {
-    return this.fetchMessageViewById(messageId);
+  async refreshMessage(
+    messageId: string,
+    groupId: string,
+  ): Promise<MessageView | null> {
+    return this.fetchMessageViewById(messageId, groupId);
+  }
+
+  /**
+   * When the view row has reply_to_id but empty preview fields, load the parent message.
+   */
+  private async hydrateReplyFromParent(message: MessageView): Promise<MessageView[]> {
+    const needsParent =
+      message.reply_to_id &&
+      (!message.reply_to_content?.trim() || !message.reply_to_sender_name?.trim());
+
+    if (!needsParent) return [message];
+
+    const { data: parent, error } = await supabase
+      .from('messages_view')
+      .select(MESSAGE_VIEW_COLUMNS)
+      .eq('id', message.reply_to_id!)
+      .maybeSingle();
+
+    if (error || !parent) {
+      return enrichMessagesWithReplies([message]);
+    }
+
+    const parentMsg = this.parseMessageView(parent);
+    return enrichMessagesWithReplies([
+      {
+        ...message,
+        reply_to_content: message.reply_to_content?.trim()
+          ? message.reply_to_content
+          : parentMsg.is_deleted
+            ? 'Mensaje eliminado'
+            : parentMsg.content?.slice(0, 100) ?? null,
+        reply_to_sender_name: message.reply_to_sender_name?.trim()
+          ? message.reply_to_sender_name
+          : parentMsg.sender_name,
+      },
+    ]);
   }
 
   /**
    * Parses raw DB row to view type.
    */
   private parseMessageView(raw: Record<string, unknown>): MessageView {
-    return raw as MessageView;
+    return {
+      id: String(raw.id),
+      group_id: String(raw.group_id),
+      sender_id: String(raw.sender_id),
+      content: String(raw.content ?? ''),
+      type: (raw.type as Message['type']) ?? 'text',
+      metadata: raw.metadata ?? null,
+      is_edited: Boolean(raw.is_edited),
+      is_deleted: Boolean(raw.is_deleted),
+      reply_to_id: raw.reply_to_id ? String(raw.reply_to_id) : null,
+      created_at: String(raw.created_at),
+      sender_name: String(raw.sender_name ?? 'Usuario'),
+      sender_avatar: (raw.sender_avatar as string | null) ?? null,
+      reply_to_content: (raw.reply_to_content as string | null) ?? null,
+      reply_to_sender_name: (raw.reply_to_sender_name as string | null) ?? null,
+    };
   }
 }
 

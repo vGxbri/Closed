@@ -39,6 +39,10 @@ export default function GroupsStackLayout() {
         options={{ headerShown: false }}
       />
       <Stack.Screen
+        name="group/awards"
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
         name="group/createExpense"
         options={{ title: "Nuevo Gasto", presentation: "modal" }}
       />
