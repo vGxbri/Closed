@@ -7,6 +7,8 @@ import { supabase } from "@/lib/supabase";
 import { galleryService } from "@/services/gallery.service";
 import { eventsService } from "@/services/events.service";
 import { bucketListService } from "@/services/bucketList.service";
+import { sharedExpensesService } from "@/services/sharedExpenses.service";
+import { formatCents } from "@/lib/sharedExpenses";
 import { widgetsService } from "@/services/widgets.service";
 import { CalendarEvent, GroupWidgetWithDetails } from "@/types/database";
 import { Ionicons } from "@expo/vector-icons";
@@ -44,6 +46,7 @@ const WIDGET_ARCHIVO = "Archivo";
 const WIDGET_AGENDA = "Agenda";
 const WIDGET_PLANES = "Planes";
 const WIDGET_PLANES_LEGACY = "Bucket List";
+const WIDGET_GASTOS = "Gastos";
 
 interface WidgetCardProps {
   widget: GroupWidgetWithDetails;
@@ -610,6 +613,124 @@ const PlanesWidgetCard = React.memo<WidgetCardProps>(
 
 PlanesWidgetCard.displayName = "PlanesWidgetCard";
 
+// Gastos widget card — shows total spent + expense count
+const GastosWidgetCard = React.memo<WidgetCardProps>(
+  ({ widget, index, onPress, groupId }) => {
+    const theme = useTheme();
+    const [expenseCount, setExpenseCount] = useState(0);
+    const [totalSpent, setTotalSpent] = useState(0);
+
+    useFocusEffect(
+      React.useCallback(() => {
+        let cancelled = false;
+        const load = async () => {
+          try {
+            const [count, total] = await Promise.all([
+              sharedExpensesService.getExpenseCount(groupId),
+              sharedExpensesService.getTotalSpent(groupId),
+            ]);
+            if (!cancelled) {
+              setExpenseCount(count);
+              setTotalSpent(total);
+            }
+          } catch (e) {
+            console.error("Error loading expenses preview:", e);
+          }
+        };
+        load();
+
+        const subscription = supabase
+          .channel(`group-expenses-realtime:${groupId}`)
+          .on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table: 'shared_expenses',
+              filter: `group_id=eq.${groupId}`,
+            },
+            () => { load(); }
+          )
+          .subscribe();
+
+        return () => {
+          cancelled = true;
+          subscription.unsubscribe();
+        };
+      }, [groupId])
+    );
+
+    return (
+      <Animated.View
+        entering={FadeIn.duration(400).delay(200 + index * 80)}
+        style={styles.bentoItem}
+      >
+        <Pressable
+          onPress={() => onPress(widget)}
+          style={({ pressed }) => [
+            {
+              opacity: pressed ? 0.92 : 1,
+              transform: [{ scale: pressed ? 0.97 : 1 }],
+            },
+          ]}
+        >
+          <SquircleView
+            style={[
+              styles.widgetCard,
+              {
+                backgroundColor: theme.colors.surface,
+                borderColor: theme.colors.outlineVariant,
+                borderWidth: 1,
+              },
+            ]}
+            cornerSmoothing={1}
+          >
+            <SquircleView
+              style={[
+                styles.widgetIconContainer,
+                {
+                  backgroundColor: theme.colors.surfaceVariant,
+                  borderColor: theme.colors.outlineVariant,
+                  borderWidth: 1,
+                },
+              ]}
+              cornerSmoothing={1}
+            >
+              <Ionicons
+                name="wallet-outline"
+                size={24}
+                color="#FFFFFF"
+              />
+            </SquircleView>
+
+            <View style={styles.widgetInfo}>
+              <Text
+                style={[styles.widgetName, { color: theme.colors.onSurface }]}
+                numberOfLines={1}
+              >
+                {widget.widget.name}
+              </Text>
+              <Text
+                style={[
+                  styles.widgetSubtitle,
+                  { color: theme.colors.onSurfaceVariant },
+                ]}
+                numberOfLines={1}
+              >
+                {expenseCount > 0
+                  ? `${expenseCount} gasto${expenseCount !== 1 ? 's' : ''} · ${formatCents(totalSpent)}`
+                  : widget.widget.subtitle || "Gastos compartidos del viaje"}
+              </Text>
+            </View>
+          </SquircleView>
+        </Pressable>
+      </Animated.View>
+    );
+  }
+);
+
+GastosWidgetCard.displayName = "GastosWidgetCard";
+
 // Widget Card dispatcher — chooses the right card type
 const WidgetCard = React.memo<WidgetCardProps>((props) => {
   if (props.widget.widget.name === WIDGET_ARCHIVO) {
@@ -623,6 +744,9 @@ const WidgetCard = React.memo<WidgetCardProps>((props) => {
     props.widget.widget.name === WIDGET_PLANES_LEGACY
   ) {
     return <PlanesWidgetCard {...props} />;
+  }
+  if (props.widget.widget.name === WIDGET_GASTOS) {
+    return <GastosWidgetCard {...props} />;
   }
   return <GenericWidgetCard {...props} />;
 });
@@ -801,6 +925,13 @@ export default function GroupDetailScreen() {
     ) {
       router.push({
         pathname: "/groups/group/bucketList",
+        params: { id },
+      } as any);
+      return;
+    }
+    if (widget.widget.name === WIDGET_GASTOS) {
+      router.push({
+        pathname: "/groups/group/sharedExpenses",
         params: { id },
       } as any);
       return;

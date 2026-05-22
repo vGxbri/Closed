@@ -9,7 +9,7 @@ import { Text, useTheme } from "react-native-paper";
 import Animated, {
   FadeIn,
   FadeInDown,
-  FadeInUp
+  FadeInUp,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 

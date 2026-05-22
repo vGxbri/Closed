@@ -445,6 +445,52 @@ export interface CreateBucketListItemInput {
   image_url?: string;
 }
 
+// ─── Gastos compartidos (widget; tablas shared_expenses/*) ──────────────
+
+export interface SharedExpense {
+  id: string;
+  group_id: string;
+  amount_cents: number;
+  description: string;
+  paid_by: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SharedExpenseWithDetails extends SharedExpense {
+  splits: SharedExpenseSplit[];
+  payer?: {
+    display_name: string;
+    avatar_url: string | null;
+  };
+}
+
+export interface SharedExpenseSplit {
+  expense_id: string;
+  user_id: string;
+}
+
+export interface SharedExpenseSettlement {
+  id: string;
+  group_id: string;
+  from_user_id: string;
+  to_user_id: string;
+  amount_cents: number;
+  is_resolved: boolean;
+  resolved_at: string | null;
+  resolved_by: string | null;
+  created_at: string;
+}
+
+export interface CreateSharedExpenseInput {
+  group_id: string;
+  amount_cents: number;
+  description: string;
+  paid_by: string;
+  split_user_ids: string[];
+}
+
 // Database schema type for Supabase client
 export interface Database {
   public: {
@@ -518,6 +564,21 @@ export interface Database {
         Row: EventGalleryLink;
         Insert: Omit<EventGalleryLink, 'id' | 'created_at'>;
         Update: never;
+      };
+      shared_expenses: {
+        Row: SharedExpense;
+        Insert: Omit<SharedExpense, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<SharedExpense, 'id' | 'created_at'>>;
+      };
+      shared_expense_splits: {
+        Row: SharedExpenseSplit;
+        Insert: SharedExpenseSplit;
+        Update: never;
+      };
+      shared_expense_settlements: {
+        Row: SharedExpenseSettlement;
+        Insert: Omit<SharedExpenseSettlement, 'id' | 'created_at'>;
+        Update: Partial<Omit<SharedExpenseSettlement, 'id' | 'created_at'>>;
       };
     };
     Views: {

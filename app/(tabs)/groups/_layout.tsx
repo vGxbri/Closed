@@ -38,6 +38,14 @@ export default function GroupsStackLayout() {
         name="group/gallery"
         options={{ headerShown: false }}
       />
+      <Stack.Screen
+        name="group/sharedExpenses"
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="group/createExpense"
+        options={{ title: "Nuevo Gasto", presentation: "modal" }}
+      />
     </Stack>
   );
 }
