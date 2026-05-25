@@ -46,6 +46,18 @@ export default function GroupsStackLayout() {
         name="group/createExpense"
         options={{ title: "Nuevo Gasto", presentation: "modal" }}
       />
+      <Stack.Screen
+        name="group/flashback"
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="group/flashbackCamera"
+        options={{ headerShown: false, animation: "fade" }}
+      />
+      <Stack.Screen
+        name="group/flashbackParty"
+        options={{ headerShown: false }}
+      />
     </Stack>
   );
 }

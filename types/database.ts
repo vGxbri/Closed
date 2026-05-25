@@ -491,6 +491,54 @@ export interface CreateSharedExpenseInput {
   split_user_ids: string[];
 }
 
+// ─── Flashback (widget; cámara desechable compartida) ─────────────────
+export type FlashbackPartyStatus = 'scheduled' | 'active' | 'film_used' | 'revealing' | 'archived';
+
+export interface FlashbackParty {
+  id: string;
+  group_id: string;
+  name: string;
+  created_by: string;
+  starts_at: string;
+  reveals_at: string;
+  photo_limit: number;
+  status: FlashbackPartyStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FlashbackPhoto {
+  id: string;
+  party_id: string;
+  taken_by: string;
+  photo_url: string;
+  shot_number: number;
+  created_at: string;
+}
+
+export interface FlashbackPhotoWithUser extends FlashbackPhoto {
+  user?: {
+    display_name: string;
+    avatar_url: string | null;
+  };
+}
+
+export interface FlashbackPartyWithDetails extends FlashbackParty {
+  photos_count: number;
+  creator?: {
+    display_name: string;
+    avatar_url: string | null;
+  };
+}
+
+export interface CreateFlashbackPartyInput {
+  group_id: string;
+  name: string;
+  starts_at: string;
+  reveals_at: string;
+  photo_limit?: number;
+}
+
 // Database schema type for Supabase client
 export interface Database {
   public: {
@@ -579,6 +627,16 @@ export interface Database {
         Row: SharedExpenseSettlement;
         Insert: Omit<SharedExpenseSettlement, 'id' | 'created_at'>;
         Update: Partial<Omit<SharedExpenseSettlement, 'id' | 'created_at'>>;
+      };
+      flashback_parties: {
+        Row: FlashbackParty;
+        Insert: Omit<FlashbackParty, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<FlashbackParty, 'id' | 'created_at'>>;
+      };
+      flashback_photos: {
+        Row: FlashbackPhoto;
+        Insert: Omit<FlashbackPhoto, 'id' | 'created_at'>;
+        Update: never;
       };
     };
     Views: {

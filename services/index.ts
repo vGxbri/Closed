@@ -9,3 +9,4 @@ export { messagesService } from './messages.service';
 export { notesService } from './notes.service';
 export { eventsService } from './events.service';
 export { sharedExpensesService } from './sharedExpenses.service';
+export { flashbackService } from './flashback.service';

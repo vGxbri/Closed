@@ -9,6 +9,8 @@ import { eventsService } from "@/services/events.service";
 import { bucketListService } from "@/services/bucketList.service";
 import { sharedExpensesService } from "@/services/sharedExpenses.service";
 import { awardsService } from "@/services/awards.service";
+import { flashbackService } from "@/services/flashback.service";
+import { FlashbackPartyStatus } from "@/types/database";
 import { formatCents } from "@/lib/sharedExpenses";
 import { widgetsService } from "@/services/widgets.service";
 import { CalendarEvent, GroupWidgetWithDetails } from "@/types/database";
@@ -49,6 +51,7 @@ const WIDGET_PLANES = "Planes";
 const WIDGET_PLANES_LEGACY = "Bucket List";
 const WIDGET_GASTOS = "Gastos";
 const WIDGET_PREMIOS = "Premios";
+const WIDGET_FLASHBACK = "Flashback";
 
 interface WidgetCardProps {
   widget: GroupWidgetWithDetails;
@@ -853,6 +856,134 @@ const PremiosWidgetCard = React.memo<WidgetCardProps>(
 
 PremiosWidgetCard.displayName = "PremiosWidgetCard";
 
+// Flashback widget card — shows party status
+const FlashbackWidgetCard = React.memo<WidgetCardProps>(
+  ({ widget, index, onPress, groupId }) => {
+    const theme = useTheme();
+    const [status, setStatus] = useState<FlashbackPartyStatus | null>(null);
+    const [remaining, setRemaining] = useState(0);
+    const [partyName, setPartyName] = useState<string | null>(null);
+
+    useFocusEffect(
+      React.useCallback(() => {
+        let cancelled = false;
+        const load = async () => {
+          try {
+            const preview = await flashbackService.getWidgetPreview(groupId);
+            if (!cancelled) {
+              setStatus(preview.status);
+              setRemaining(preview.remaining);
+              setPartyName(preview.partyName);
+            }
+          } catch (e) {
+            console.error("Error loading flashback preview:", e);
+          }
+        };
+        load();
+        return () => { cancelled = true; };
+      }, [groupId])
+    );
+
+    const getSubtitleText = () => {
+      if (!status) return "Crear fiesta";
+      switch (status) {
+        case "scheduled":
+          return partyName || "Empieza pronto...";
+        case "active":
+          return `En vivo · ${remaining} fotos`;
+        case "film_used":
+          return "Carrete agotado";
+        case "revealing":
+          return "¡Fotos listas!";
+        default:
+          return "Crear fiesta";
+      }
+    };
+
+    const isLive = status === "active";
+
+    return (
+      <Animated.View
+        entering={FadeIn.duration(400).delay(200 + index * 80)}
+        style={styles.bentoItem}
+      >
+        <Pressable
+          onPress={() => onPress(widget)}
+          style={({ pressed }) => [
+            {
+              opacity: pressed ? 0.92 : 1,
+              transform: [{ scale: pressed ? 0.97 : 1 }],
+            },
+          ]}
+        >
+          <SquircleView
+            style={[
+              styles.widgetCard,
+              {
+                backgroundColor: theme.colors.surface,
+                borderColor: isLive ? theme.colors.primary : theme.colors.outlineVariant,
+                borderWidth: isLive ? 2 : 1,
+              },
+            ]}
+            cornerSmoothing={1}
+          >
+            <SquircleView
+              style={[
+                styles.widgetIconContainer,
+                {
+                  backgroundColor: theme.colors.surfaceVariant,
+                  borderColor: theme.colors.outlineVariant,
+                  borderWidth: 1,
+                },
+              ]}
+              cornerSmoothing={1}
+            >
+              <Ionicons name="camera-outline" size={24} color="#FFFFFF" />
+            </SquircleView>
+
+            <View style={styles.widgetInfo}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                <Text
+                  style={[styles.widgetName, { color: theme.colors.onSurface }]}
+                  numberOfLines={1}
+                >
+                  Flashback
+                </Text>
+                {isLive && (
+                  <View
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: 4,
+                      backgroundColor: theme.colors.primary,
+                    }}
+                  />
+                )}
+              </View>
+              <Text
+                style={[
+                  styles.widgetSubtitle,
+                  {
+                    color:
+                      status === "revealing"
+                        ? theme.colors.primary
+                        : theme.colors.onSurfaceVariant,
+                  },
+                ]}
+                numberOfLines={1}
+              >
+                {getSubtitleText()}
+              </Text>
+            </View>
+          </SquircleView>
+        </Pressable>
+      </Animated.View>
+    );
+  }
+);
+
+FlashbackWidgetCard.displayName = "FlashbackWidgetCard";
+
 // Widget Card dispatcher — chooses the right card type
 const WidgetCard = React.memo<WidgetCardProps>((props) => {
   if (props.widget.widget.name === WIDGET_ARCHIVO) {
@@ -872,6 +1003,9 @@ const WidgetCard = React.memo<WidgetCardProps>((props) => {
   }
   if (props.widget.widget.name === WIDGET_PREMIOS) {
     return <PremiosWidgetCard {...props} />;
+  }
+  if (props.widget.widget.name === WIDGET_FLASHBACK) {
+    return <FlashbackWidgetCard {...props} />;
   }
   return <GenericWidgetCard {...props} />;
 });
@@ -1064,6 +1198,13 @@ export default function GroupDetailScreen() {
     if (widget.widget.name === WIDGET_PREMIOS) {
       router.push({
         pathname: "/groups/group/awards",
+        params: { id },
+      } as any);
+      return;
+    }
+    if (widget.widget.name === WIDGET_FLASHBACK) {
+      router.push({
+        pathname: "/groups/group/flashback",
         params: { id },
       } as any);
       return;
