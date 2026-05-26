@@ -1,9 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
-import DateTimePicker from "@react-native-community/datetimepicker";
+import DateTimePicker, { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
 import { useFocusEffect } from "@react-navigation/native";
 import * as Haptics from "expo-haptics";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Platform,
   Pressable,
@@ -14,17 +14,16 @@ import {
 } from "react-native";
 import SquircleView from "react-native-fast-squircle";
 import { Text, useTheme } from "react-native-paper";
-import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
+import Animated, { FadeIn, FadeInDown, FadeInUp } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { BottomSheetModal } from "../../../../components/ui/BottomSheetModal";
-import { CustomHeader } from "../../../../components/ui/CustomHeader";
 import { useSnackbar } from "@/components/ui/SnackbarContext";
 import { flashbackService } from "@/services/flashback.service";
 import {
-  FlashbackPartyStatus,
-  FlashbackPartyWithDetails,
+  FlashbackPartyWithDetails
 } from "@/types/database";
+import { BottomSheetModal } from "../../../../components/ui/BottomSheetModal";
+import { CustomHeader } from "../../../../components/ui/CustomHeader";
 
 // ─── Countdown helper ─────────────────────────────────────────────────
 function useCountdown(targetDate: string | null) {
@@ -64,15 +63,21 @@ export default function FlashbackScreen() {
   const { showSnackbar } = useSnackbar();
 
   const [party, setParty] = useState<FlashbackPartyWithDetails | null>(null);
+  const [archivedParties, setArchivedParties] = useState<FlashbackPartyWithDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showArchiveSheet, setShowArchiveSheet] = useState(false);
 
   const loadParty = useCallback(async () => {
     if (!id) return;
     try {
       setIsLoading(true);
-      const active = await flashbackService.getActiveParty(id);
+      const [active, archived] = await Promise.all([
+        flashbackService.getActiveParty(id),
+        flashbackService.getPartyArchive(id),
+      ]);
       setParty(active);
+      setArchivedParties(archived);
     } catch (e) {
       console.error("Error loading flashback party:", e);
     } finally {
@@ -111,12 +116,105 @@ export default function FlashbackScreen() {
     status === "film_used" ? party!.reveals_at : null
   );
 
-  const handleViewArchive = () => {
+  const handleOpenParty = (partyId: string) => {
     router.push({
       pathname: "/groups/group/flashbackParty",
-      params: { id, archive: "true" },
+      params: { id, partyId },
     } as any);
   };
+
+  const formatPartyDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString("es-ES", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  };
+
+  // ─── Archived parties dropdown button + sheet ───────────────────────
+  const archivedSection = archivedParties.length > 0 && (
+    <>
+      <Animated.View entering={FadeInDown.duration(400).delay(300)}>
+        <Pressable
+          onPress={() => setShowArchiveSheet(true)}
+          style={({ pressed }) => [
+            { opacity: pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.98 : 1 }], marginTop: 32 },
+          ]}
+        >
+          <SquircleView
+            style={[
+              styles.archiveButton,
+              {
+                backgroundColor: theme.colors.surface,
+                borderColor: theme.colors.outlineVariant,
+                borderWidth: 1,
+              },
+            ]}
+            cornerSmoothing={1}
+          >
+            <Ionicons name="images-outline" size={18} color={theme.colors.onSurfaceVariant} />
+            <Text style={[styles.archiveButtonText, { color: theme.colors.onSurface }]}>
+              Flashbacks anteriores
+            </Text>
+            <View style={styles.archiveButtonBadge}>
+              <Text style={[styles.archiveButtonBadgeText, { color: theme.colors.onSurfaceVariant }]}>
+                {archivedParties.length}
+              </Text>
+            </View>
+            <Ionicons name="chevron-down" size={16} color={theme.colors.onSurfaceVariant} />
+          </SquircleView>
+        </Pressable>
+      </Animated.View>
+
+      <BottomSheetModal
+        visible={showArchiveSheet}
+        onDismiss={() => setShowArchiveSheet(false)}
+      >
+        <View style={styles.archiveSheetContent}>
+          <Text style={[styles.archiveSheetTitle, { color: theme.colors.onSurface }]}>
+            Flashbacks anteriores
+          </Text>
+          <ScrollView
+            style={styles.archiveSheetScroll}
+            showsVerticalScrollIndicator={false}
+          >
+            {archivedParties.map((ap) => (
+              <Pressable
+                key={ap.id}
+                onPress={() => {
+                  setShowArchiveSheet(false);
+                  handleOpenParty(ap.id);
+                }}
+                style={({ pressed }) => [
+                  styles.archiveSheetRow,
+                  {
+                    backgroundColor: pressed
+                      ? theme.colors.surfaceVariant
+                      : "transparent",
+                  },
+                ]}
+              >
+                <Text
+                  style={[styles.archiveSheetName, { color: theme.colors.onSurface }]}
+                  numberOfLines={1}
+                >
+                  {ap.name}
+                </Text>
+                <Text style={[styles.archiveSheetMeta, { color: theme.colors.onSurfaceVariant }]}>
+                  {formatPartyDate(ap.starts_at)}
+                </Text>
+                <Text style={[styles.archiveSheetPhotos, { color: theme.colors.onSurfaceVariant }]}>
+                  {ap.photos_count} foto{ap.photos_count !== 1 ? "s" : ""}
+                </Text>
+                <Ionicons name="chevron-forward" size={16} color={theme.colors.onSurfaceVariant} />
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
+      </BottomSheetModal>
+    </>
+  );
 
   // ─── Loading ────────────────────────────────────────────────────────
   if (isLoading) {
@@ -147,48 +245,82 @@ export default function FlashbackScreen() {
       <>
         <Stack.Screen options={{ headerShown: false }} />
         <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-          <CustomHeader title="Flashback" showBackButton />
+          <CustomHeader title="" showBackButton />
           <ScrollView
             contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 40 }]}
             showsVerticalScrollIndicator={false}
           >
-            <Animated.View entering={FadeInDown.duration(500)} style={styles.centerContent}>
-              <SquircleView
-                style={[styles.iconBadgeLarge, { backgroundColor: theme.colors.surfaceVariant }]}
-                cornerSmoothing={1}
-              >
-                <Ionicons name="time-outline" size={48} color={theme.colors.primary} />
-              </SquircleView>
-
-              <Text style={[styles.title, { color: theme.colors.onSurface }]}>
+            {/* ─── Title ─── */}
+            <Animated.View entering={FadeInUp.duration(500)} style={styles.titleBlock}>
+              <Text style={[styles.screenTitle, { color: theme.colors.primary }]}>
+                Flashback
+              </Text>
+              <Text style={[styles.screenSubtitle, { color: theme.colors.onSurfaceVariant }]}>
                 {party!.name}
-              </Text>
-              <Text style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }]}>
-                La fiesta empieza en
-              </Text>
-
-              <SquircleView
-                style={[
-                  styles.countdownCard,
-                  { backgroundColor: theme.colors.surface, borderColor: theme.colors.outlineVariant, borderWidth: 1 },
-                ]}
-                cornerSmoothing={1}
-              >
-                <Text style={[styles.countdownText, { color: theme.colors.primary }]}>
-                  {formatCountdown(startsCountdown)}
-                </Text>
-              </SquircleView>
-
-              <Text style={[styles.hint, { color: theme.colors.onSurfaceVariant }]}>
-                {party!.photo_limit} fotos · Revelación después de la fiesta
               </Text>
             </Animated.View>
 
-            <Pressable onPress={handleViewArchive} style={styles.archiveLink}>
-              <Text style={[styles.archiveLinkText, { color: theme.colors.primary }]}>
-                Ver archivo
-              </Text>
-            </Pressable>
+            <Animated.View
+              entering={FadeIn.duration(400).delay(50)}
+              style={[styles.divider, { backgroundColor: theme.colors.outlineVariant }]}
+            />
+
+            {/* ─── Countdown card ─── */}
+            <Animated.View
+              entering={FadeInDown.duration(400).delay(100)}
+              style={styles.emptyContainer}
+            >
+              <SquircleView
+                style={[
+                  styles.emptyCard,
+                  {
+                    backgroundColor: theme.colors.surface,
+                    borderColor: theme.colors.outlineVariant,
+                    borderWidth: 1,
+                  },
+                ]}
+                cornerSmoothing={1}
+              >
+                <SquircleView
+                  style={[
+                    styles.emptyIconContainer,
+                    {
+                      backgroundColor: theme.dark
+                        ? "rgba(42,138,112,0.15)"
+                        : "rgba(42,138,112,0.08)",
+                    },
+                  ]}
+                  cornerSmoothing={1}
+                >
+                  <Ionicons name="time-outline" size={36} color={theme.colors.primary} />
+                </SquircleView>
+
+                <Text style={[styles.emptyTitle, { color: theme.colors.onSurface }]}>
+                  La fiesta empieza en
+                </Text>
+
+                <SquircleView
+                  style={[
+                    styles.countdownCard,
+                    { backgroundColor: theme.dark ? "rgba(42,138,112,0.1)" : "rgba(42,138,112,0.05)", borderColor: theme.colors.outlineVariant, borderWidth: 1 },
+                  ]}
+                  cornerSmoothing={1}
+                >
+                  <Text style={[styles.countdownText, { color: theme.colors.primary }]}>
+                    {formatCountdown(startsCountdown)}
+                  </Text>
+                </SquircleView>
+
+                <Text style={[styles.emptySubtitle, { color: theme.colors.onSurfaceVariant, marginTop: 12 }]}>
+                  {party!.photo_limit} fotos · Fin:{" "}
+                  {new Date(party!.ends_at).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}
+                  {" "}· Revelación:{" "}
+                  {new Date(party!.reveals_at).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}
+                </Text>
+              </SquircleView>
+            </Animated.View>
+
+            {archivedSection}
           </ScrollView>
         </View>
       </>
@@ -201,90 +333,244 @@ export default function FlashbackScreen() {
       <>
         <Stack.Screen options={{ headerShown: false }} />
         <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-          <CustomHeader title="Flashback" showBackButton />
+          <CustomHeader title="" showBackButton />
           <ScrollView
             contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 40 }]}
             showsVerticalScrollIndicator={false}
           >
-            <Animated.View entering={FadeInDown.duration(500)} style={styles.centerContent}>
-              <SquircleView
-                style={[styles.iconBadgeLarge, { backgroundColor: theme.colors.surfaceVariant }]}
-                cornerSmoothing={1}
-              >
-                <Ionicons name="film-outline" size={48} color={theme.colors.onSurfaceVariant} />
-              </SquircleView>
-
-              <Text style={[styles.title, { color: theme.colors.onSurface }]}>
-                Carrete agotado
+            {/* ─── Title ─── */}
+            <Animated.View entering={FadeInUp.duration(500)} style={styles.titleBlock}>
+              <Text style={[styles.screenTitle, { color: theme.colors.primary }]}>
+                Flashback
               </Text>
-              <Text style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }]}>
-                ¡Se acabaron las {party!.photo_limit} fotos! Las fotos se revelan en
+              <Text style={[styles.screenSubtitle, { color: theme.colors.onSurfaceVariant }]}>
+                Fiesta terminada
               </Text>
+            </Animated.View>
 
+            <Animated.View
+              entering={FadeIn.duration(400).delay(50)}
+              style={[styles.divider, { backgroundColor: theme.colors.outlineVariant }]}
+            />
+
+            {/* ─── Countdown card ─── */}
+            <Animated.View
+              entering={FadeInDown.duration(400).delay(100)}
+              style={styles.emptyContainer}
+            >
               <SquircleView
                 style={[
-                  styles.countdownCard,
-                  { backgroundColor: theme.colors.surface, borderColor: theme.colors.outlineVariant, borderWidth: 1 },
+                  styles.emptyCard,
+                  {
+                    backgroundColor: theme.colors.surface,
+                    borderColor: theme.colors.outlineVariant,
+                    borderWidth: 1,
+                  },
                 ]}
                 cornerSmoothing={1}
               >
-                <Text style={[styles.countdownText, { color: theme.colors.primary }]}>
-                  {formatCountdown(revealsCountdown)}
+                <SquircleView
+                  style={[
+                    styles.emptyIconContainer,
+                    {
+                      backgroundColor: theme.dark
+                        ? "rgba(42,138,112,0.15)"
+                        : "rgba(42,138,112,0.08)",
+                    },
+                  ]}
+                  cornerSmoothing={1}
+                >
+                  <Ionicons name="film-outline" size={36} color={theme.colors.primary} />
+                </SquircleView>
+
+                <Text style={[styles.emptyTitle, { color: theme.colors.onSurface }]}>
+                  Las fotos se revelan en
                 </Text>
+
+                <SquircleView
+                  style={[
+                    styles.countdownCard,
+                    { backgroundColor: theme.dark ? "rgba(42,138,112,0.1)" : "rgba(42,138,112,0.05)", borderColor: theme.colors.outlineVariant, borderWidth: 1 },
+                  ]}
+                  cornerSmoothing={1}
+                >
+                  <Text style={[styles.countdownText, { color: theme.colors.primary }]}>
+                    {formatCountdown(revealsCountdown)}
+                  </Text>
+                </SquircleView>
+
+                {/* Secondary CTA */}
+                <Pressable
+                  onPress={() => setShowCreateModal(true)}
+                  style={({ pressed }) => [
+                    styles.emptyButton,
+                    {
+                      opacity: pressed ? 0.9 : 1,
+                      transform: [{ scale: pressed ? 0.97 : 1 }],
+                      marginTop: 20,
+                    },
+                  ]}
+                >
+                  <SquircleView
+                    style={[
+                      styles.emptyButtonInner,
+                      {
+                        backgroundColor: "transparent",
+                        borderColor: theme.colors.outlineVariant,
+                        borderWidth: 1,
+                      },
+                    ]}
+                    cornerSmoothing={1}
+                  >
+                    <Ionicons name="add" size={20} color={theme.colors.onSurface} />
+                    <Text style={[styles.emptyButtonText, { color: theme.colors.onSurface }]}>
+                      Crear otra fiesta
+                    </Text>
+                  </SquircleView>
+                </Pressable>
               </SquircleView>
             </Animated.View>
+
+            {archivedSection}
           </ScrollView>
+          
+          <CreatePartyModal
+            visible={showCreateModal}
+            onDismiss={() => setShowCreateModal(false)}
+            groupId={id!}
+            onCreated={loadParty}
+          />
         </View>
       </>
     );
   }
+
+  // ─── Feature items for empty state ─────────────────────────────────
+  const features: { icon: keyof typeof Ionicons.glyphMap; title: string; desc: string }[] = [
+    { icon: "camera-outline", title: "Sacad fotos a ciegas", desc: "Nadie ve las fotos hasta que se revelen" },
+    { icon: "film-outline", title: "Carrete limitado", desc: "24 o 36 fotos, como las cámaras de verdad" },
+    { icon: "eye-outline", title: "Revelado sorpresa", desc: "Revive la noche al día siguiente" },
+  ];
 
   // ─── Empty state (no party or archived) ─────────────────────────────
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <CustomHeader title="Flashback" showBackButton />
+        <CustomHeader title="" showBackButton />
+
         <ScrollView
           contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 40 }]}
           showsVerticalScrollIndicator={false}
         >
-          <Animated.View entering={FadeInDown.duration(500).delay(100)} style={styles.centerContent}>
-            <SquircleView
-              style={[styles.iconBadgeLarge, { backgroundColor: theme.colors.surfaceVariant }]}
-              cornerSmoothing={1}
-            >
-              <Ionicons name="camera-outline" size={48} color={theme.colors.primary} />
-            </SquircleView>
-
-            <Text style={[styles.title, { color: theme.colors.onSurface }]}>
-              No hay ninguna fiesta creada
+          {/* ─── Title ─── */}
+          <Animated.View entering={FadeInUp.duration(500)} style={styles.titleBlock}>
+            <Text style={[styles.screenTitle, { color: theme.colors.primary }]}>
+              Flashback
             </Text>
-            <Text style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }]}>
-              Crea una fiesta y revive la noche al día siguiente
+            <Text style={[styles.screenSubtitle, { color: theme.colors.onSurfaceVariant }]}>
+              Cámara desechable compartida
             </Text>
-
-            <Pressable
-              onPress={() => setShowCreateModal(true)}
-              style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.97 : 1 }] }]}
-            >
-              <SquircleView
-                style={[styles.ctaButton, { backgroundColor: theme.colors.primary }]}
-                cornerSmoothing={1}
-              >
-                <Ionicons name="add" size={20} color={theme.colors.onPrimary} />
-                <Text style={[styles.ctaText, { color: theme.colors.onPrimary }]}>
-                  Crear fiesta
-                </Text>
-              </SquircleView>
-            </Pressable>
           </Animated.View>
 
-          <Pressable onPress={handleViewArchive} style={styles.archiveLink}>
-            <Text style={[styles.archiveLinkText, { color: theme.colors.primary }]}>
-              Ver archivo
-            </Text>
-          </Pressable>
+          {/* ─── Divider ─── */}
+          <Animated.View
+            entering={FadeIn.duration(400).delay(50)}
+            style={[styles.divider, { backgroundColor: theme.colors.outlineVariant }]}
+          />
+
+          {/* ─── Empty card ─── */}
+          <Animated.View
+            entering={FadeInDown.duration(400).delay(100)}
+            style={styles.emptyContainer}
+          >
+            <SquircleView
+              style={[
+                styles.emptyCard,
+                {
+                  backgroundColor: theme.colors.surface,
+                  borderColor: theme.colors.outlineVariant,
+                  borderWidth: 1,
+                },
+              ]}
+              cornerSmoothing={1}
+            >
+              <SquircleView
+                style={[
+                  styles.emptyIconContainer,
+                  {
+                    backgroundColor: theme.dark
+                      ? "rgba(42,138,112,0.15)"
+                      : "rgba(42,138,112,0.08)",
+                  },
+                ]}
+                cornerSmoothing={1}
+              >
+                <Ionicons name="camera-outline" size={36} color={theme.colors.primary} />
+              </SquircleView>
+
+              <Text style={[styles.emptyTitle, { color: theme.colors.onSurface }]}>
+                Crea tu primer Flashback
+              </Text>
+
+              {/* Feature highlights */}
+              <View style={styles.featuresContainer}>
+                {features.map((f, i) => (
+                  <Animated.View
+                    key={f.icon}
+                    entering={FadeInDown.duration(300).delay(200 + i * 80)}
+                    style={styles.featureRow}
+                  >
+                    <SquircleView
+                      style={[
+                        styles.featureIconBox,
+                        {
+                          backgroundColor: theme.dark
+                            ? "rgba(42,138,112,0.12)"
+                            : "rgba(42,138,112,0.06)",
+                        },
+                      ]}
+                      cornerSmoothing={1}
+                    >
+                      <Ionicons name={f.icon} size={18} color={theme.colors.primary} />
+                    </SquircleView>
+                    <View style={styles.featureText}>
+                      <Text style={[styles.featureTitle, { color: theme.colors.onSurface }]}>
+                        {f.title}
+                      </Text>
+                      <Text style={[styles.featureDesc, { color: theme.colors.onSurfaceVariant }]}>
+                        {f.desc}
+                      </Text>
+                    </View>
+                  </Animated.View>
+                ))}
+              </View>
+
+              {/* CTA Button */}
+              <Pressable
+                onPress={() => setShowCreateModal(true)}
+                style={({ pressed }) => [
+                  styles.emptyButton,
+                  {
+                    opacity: pressed ? 0.9 : 1,
+                    transform: [{ scale: pressed ? 0.97 : 1 }],
+                  },
+                ]}
+              >
+                <SquircleView
+                  style={[styles.emptyButtonInner, { backgroundColor: theme.colors.primary }]}
+                  cornerSmoothing={1}
+                >
+                  <Ionicons name="add" size={20} color={theme.colors.onPrimary} />
+                  <Text style={[styles.emptyButtonText, { color: theme.colors.onPrimary }]}>
+                    Empezar Flashback
+                  </Text>
+                </SquircleView>
+              </Pressable>
+            </SquircleView>
+          </Animated.View>
+
+          {archivedSection}
         </ScrollView>
 
         <CreatePartyModal
@@ -299,37 +585,67 @@ export default function FlashbackScreen() {
 }
 
 // ─── Create Party Modal ───────────────────────────────────────────────
-interface CreatePartyModalProps {
+export interface CreatePartyModalProps {
   visible: boolean;
   onDismiss: () => void;
   groupId: string;
   onCreated: () => void;
 }
 
-function CreatePartyModal({ visible, onDismiss, groupId, onCreated }: CreatePartyModalProps) {
+export function CreatePartyModal({ visible, onDismiss, groupId, onCreated }: CreatePartyModalProps) {
   const theme = useTheme();
   const { showSnackbar } = useSnackbar();
 
   const [name, setName] = useState("");
   const [startsAt, setStartsAt] = useState(new Date());
+  const [endsAt, setEndsAt] = useState(() => {
+    const d = new Date();
+    d.setHours(d.getHours() + 4);
+    return d;
+  });
   const [revealsAt, setRevealsAt] = useState(() => {
     const d = new Date();
-    d.setHours(d.getHours() + 6);
+    d.setHours(d.getHours() + 12);
     return d;
   });
   const [photoLimit, setPhotoLimit] = useState<24 | 36>(36);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [showStartPicker, setShowStartPicker] = useState(Platform.OS === "ios");
-  const [showRevealPicker, setShowRevealPicker] = useState(Platform.OS === "ios");
+  const isIOS = Platform.OS === "ios";
+
+  const openAndroidDatetime = (value: Date, onChange: (d: Date) => void, minimumDate?: Date) => {
+    DateTimePickerAndroid.open({
+      value,
+      mode: "date",
+      minimumDate,
+      onChange: (event, selectedDate) => {
+        if (event.type === "dismissed" || !selectedDate) return;
+        const datePart = selectedDate;
+        DateTimePickerAndroid.open({
+          value: new Date(datePart.getFullYear(), datePart.getMonth(), datePart.getDate(), value.getHours(), value.getMinutes()),
+          mode: "time",
+          is24Hour: true,
+          onChange: (evt, timeDate) => {
+            if (evt.type === "dismissed" || !timeDate) return;
+            const final = new Date(datePart.getFullYear(), datePart.getMonth(), datePart.getDate(), timeDate.getHours(), timeDate.getMinutes());
+            onChange(final);
+          },
+        });
+      },
+    });
+  };
 
   const handleCreate = async () => {
     if (!name.trim()) {
       showSnackbar("Pon un nombre a la fiesta", "info");
       return;
     }
-    if (revealsAt <= startsAt) {
-      showSnackbar("La revelación debe ser después del inicio", "info");
+    if (endsAt <= startsAt) {
+      showSnackbar("La hora de fin debe ser después del inicio", "info");
+      return;
+    }
+    if (revealsAt <= endsAt) {
+      showSnackbar("La revelación debe ser después del fin", "info");
       return;
     }
 
@@ -340,6 +656,7 @@ function CreatePartyModal({ visible, onDismiss, groupId, onCreated }: CreatePart
         group_id: groupId,
         name: name.trim(),
         starts_at: startsAt.toISOString(),
+        ends_at: endsAt.toISOString(),
         reveals_at: revealsAt.toISOString(),
         photo_limit: photoLimit,
       });
@@ -367,14 +684,10 @@ function CreatePartyModal({ visible, onDismiss, groupId, onCreated }: CreatePart
   return (
     <BottomSheetModal visible={visible} onDismiss={onDismiss}>
       <View style={styles.modalContent}>
-        <Text style={[styles.modalTitle, { color: theme.colors.onSurface }]}>
-          Crear fiesta
-        </Text>
-
         {/* Name */}
         <View style={styles.fieldGroup}>
           <Text style={[styles.fieldLabel, { color: theme.colors.onSurfaceVariant }]}>
-            Nombre de la fiesta
+            Nombre
           </Text>
           <SquircleView
             style={[
@@ -394,79 +707,69 @@ function CreatePartyModal({ visible, onDismiss, groupId, onCreated }: CreatePart
           </SquircleView>
         </View>
 
-        {/* Start time */}
+        {/* Schedule */}
         <View style={styles.fieldGroup}>
           <Text style={[styles.fieldLabel, { color: theme.colors.onSurfaceVariant }]}>
-            Hora de inicio
+            Horario
           </Text>
-          {Platform.OS === "android" && (
-            <Pressable onPress={() => setShowStartPicker(true)}>
-              <SquircleView
-                style={[
-                  styles.dateButton,
-                  { backgroundColor: theme.colors.surfaceVariant, borderColor: theme.colors.outlineVariant, borderWidth: 1 },
-                ]}
-                cornerSmoothing={1}
-              >
-                <Ionicons name="time-outline" size={18} color={theme.colors.primary} />
-                <Text style={[styles.dateButtonText, { color: theme.colors.onSurface }]}>
-                  {formatDateTime(startsAt)}
-                </Text>
-              </SquircleView>
-            </Pressable>
-          )}
-          {showStartPicker && (
-            <DateTimePicker
-              value={startsAt}
-              mode="datetime"
-              display={Platform.OS === "ios" ? "compact" : "default"}
-              onChange={(_, date) => {
-                if (Platform.OS === "android") setShowStartPicker(false);
-                if (date) setStartsAt(date);
-              }}
-              minimumDate={new Date()}
-              locale="es-ES"
-            />
-          )}
+
+          {/* Start + End — same row */}
+          <View style={styles.dateRow}>
+            <SquircleView
+              style={[styles.dateCard, styles.dateCardHalf, { backgroundColor: theme.colors.surfaceVariant, borderColor: theme.colors.outlineVariant, borderWidth: 1 }]}
+              cornerSmoothing={1}
+            >
+              <Ionicons name="play-outline" size={18} color={theme.colors.primary} />
+              <View style={styles.dateInfo}>
+                <Text style={[styles.dateLabel, { color: theme.colors.onSurfaceVariant }]}>Inicio</Text>
+                {isIOS ? (
+                  <DateTimePicker value={startsAt} mode="datetime" display="compact" onChange={(_, d) => { if (d) setStartsAt(d); }} minimumDate={new Date()} locale="es-ES" />
+                ) : (
+                  <Pressable onPress={() => openAndroidDatetime(startsAt, setStartsAt, new Date())}>
+                    <Text style={[styles.dateValue, { color: theme.colors.onSurface }]}>{formatDateTime(startsAt)}</Text>
+                  </Pressable>
+                )}
+              </View>
+            </SquircleView>
+
+            <SquircleView
+              style={[styles.dateCard, styles.dateCardHalf, { backgroundColor: theme.colors.surfaceVariant, borderColor: theme.colors.outlineVariant, borderWidth: 1 }]}
+              cornerSmoothing={1}
+            >
+              <Ionicons name="stop-outline" size={18} color={theme.colors.primary} />
+              <View style={styles.dateInfo}>
+                <Text style={[styles.dateLabel, { color: theme.colors.onSurfaceVariant }]}>Fin</Text>
+                {isIOS ? (
+                  <DateTimePicker value={endsAt} mode="datetime" display="compact" onChange={(_, d) => { if (d) setEndsAt(d); }} minimumDate={startsAt} locale="es-ES" />
+                ) : (
+                  <Pressable onPress={() => openAndroidDatetime(endsAt, setEndsAt, startsAt)}>
+                    <Text style={[styles.dateValue, { color: theme.colors.onSurface }]}>{formatDateTime(endsAt)}</Text>
+                  </Pressable>
+                )}
+              </View>
+            </SquircleView>
+          </View>
+
+          {/* Reveal */}
+          <SquircleView
+            style={[styles.dateCard, { backgroundColor: theme.colors.surfaceVariant, borderColor: theme.colors.outlineVariant, borderWidth: 1 }]}
+            cornerSmoothing={1}
+          >
+            <Ionicons name="eye-outline" size={18} color={theme.colors.primary} />
+            <View style={styles.dateInfo}>
+              <Text style={[styles.dateLabel, { color: theme.colors.onSurfaceVariant }]}>Revelación</Text>
+              {isIOS ? (
+                <DateTimePicker value={revealsAt} mode="datetime" display="compact" onChange={(_, d) => { if (d) setRevealsAt(d); }} minimumDate={endsAt} locale="es-ES" />
+              ) : (
+                <Pressable onPress={() => openAndroidDatetime(revealsAt, setRevealsAt, endsAt)}>
+                  <Text style={[styles.dateValue, { color: theme.colors.onSurface }]}>{formatDateTime(revealsAt)}</Text>
+                </Pressable>
+              )}
+            </View>
+          </SquircleView>
         </View>
 
-        {/* Reveal time */}
-        <View style={styles.fieldGroup}>
-          <Text style={[styles.fieldLabel, { color: theme.colors.onSurfaceVariant }]}>
-            Hora de revelación
-          </Text>
-          {Platform.OS === "android" && (
-            <Pressable onPress={() => setShowRevealPicker(true)}>
-              <SquircleView
-                style={[
-                  styles.dateButton,
-                  { backgroundColor: theme.colors.surfaceVariant, borderColor: theme.colors.outlineVariant, borderWidth: 1 },
-                ]}
-                cornerSmoothing={1}
-              >
-                <Ionicons name="eye-outline" size={18} color={theme.colors.primary} />
-                <Text style={[styles.dateButtonText, { color: theme.colors.onSurface }]}>
-                  {formatDateTime(revealsAt)}
-                </Text>
-              </SquircleView>
-            </Pressable>
-          )}
-          {showRevealPicker && (
-            <DateTimePicker
-              value={revealsAt}
-              mode="datetime"
-              display={Platform.OS === "ios" ? "compact" : "default"}
-              onChange={(_, date) => {
-                if (Platform.OS === "android") setShowRevealPicker(false);
-                if (date) setRevealsAt(date);
-              }}
-              minimumDate={startsAt}
-              locale="es-ES"
-            />
-          )}
-        </View>
-
-        {/* Photo limit toggle */}
+        {/* Photo limit */}
         <View style={styles.fieldGroup}>
           <Text style={[styles.fieldLabel, { color: theme.colors.onSurfaceVariant }]}>
             Fotos del carrete
@@ -475,23 +778,14 @@ function CreatePartyModal({ visible, onDismiss, groupId, onCreated }: CreatePart
             {([24, 36] as const).map((limit) => (
               <Pressable
                 key={limit}
-                onPress={() => {
-                  setPhotoLimit(limit);
-                  Haptics.selectionAsync();
-                }}
+                onPress={() => { setPhotoLimit(limit); Haptics.selectionAsync(); }}
               >
                 <SquircleView
                   style={[
                     styles.limitOption,
                     {
-                      backgroundColor:
-                        photoLimit === limit
-                          ? theme.colors.primary
-                          : theme.colors.surfaceVariant,
-                      borderColor:
-                        photoLimit === limit
-                          ? theme.colors.primary
-                          : theme.colors.outlineVariant,
+                      backgroundColor: photoLimit === limit ? theme.colors.primary : theme.colors.surfaceVariant,
+                      borderColor: photoLimit === limit ? theme.colors.primary : theme.colors.outlineVariant,
                       borderWidth: 1,
                     },
                   ]}
@@ -500,12 +794,7 @@ function CreatePartyModal({ visible, onDismiss, groupId, onCreated }: CreatePart
                   <Text
                     style={[
                       styles.limitOptionText,
-                      {
-                        color:
-                          photoLimit === limit
-                            ? theme.colors.onPrimary
-                            : theme.colors.onSurface,
-                      },
+                      { color: photoLimit === limit ? theme.colors.onPrimary : theme.colors.onSurface },
                     ]}
                   >
                     {limit} fotos
@@ -526,9 +815,9 @@ function CreatePartyModal({ visible, onDismiss, groupId, onCreated }: CreatePart
             style={[styles.createButton, { backgroundColor: theme.colors.primary }]}
             cornerSmoothing={1}
           >
-            <Ionicons name="sparkles" size={18} color={theme.colors.onPrimary} />
+            <Ionicons name="camera" size={18} color={theme.colors.onPrimary} />
             <Text style={[styles.createButtonText, { color: theme.colors.onPrimary }]}>
-              {isSubmitting ? "Creando..." : "Crear fiesta"}
+              {isSubmitting ? "Creando..." : "Empezar Flashback"}
             </Text>
           </SquircleView>
         </Pressable>
@@ -540,8 +829,103 @@ function CreatePartyModal({ visible, onDismiss, groupId, onCreated }: CreatePart
 // ─── Styles ───────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  scrollContent: { paddingHorizontal: 24, paddingTop: 16 },
+  scrollContent: { paddingHorizontal: 24, paddingTop: 0 },
   centerContent: { alignItems: "center", marginTop: 60, gap: 12 },
+
+  // Title (matches Bloc/Planes screens)
+  titleBlock: { marginTop: 4, marginBottom: 4 },
+  screenTitle: {
+    fontFamily: "InstrumentSerif-Italic",
+    fontSize: 38,
+    letterSpacing: 0.5,
+    lineHeight: 44,
+  },
+  screenSubtitle: {
+    fontFamily: "Archivo-Medium",
+    fontSize: 14,
+    letterSpacing: 0.3,
+    marginTop: 2,
+  },
+  divider: { height: 1, marginTop: 16, marginBottom: 20 },
+
+  // Empty state card
+  emptyContainer: { marginTop: 0 },
+  emptyCard: {
+    borderRadius: 24,
+    padding: 32,
+    alignItems: "center",
+  },
+  emptyIconContainer: {
+    width: 72,
+    height: 72,
+    borderRadius: 22,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  emptyTitle: {
+    fontFamily: "Archivo-Bold",
+    fontSize: 20,
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    fontFamily: "Archivo-Medium",
+    fontSize: 13,
+    textAlign: "center",
+    lineHeight: 19,
+    letterSpacing: 0.1,
+    paddingHorizontal: 8,
+    marginBottom: 20,
+  },
+
+  // Feature highlights
+  featuresContainer: {
+    width: "100%",
+    gap: 12,
+    marginBottom: 24,
+  },
+  featureRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  featureIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  featureText: {
+    flex: 1,
+  },
+  featureTitle: {
+    fontFamily: "Archivo-SemiBold",
+    fontSize: 14,
+    marginBottom: 1,
+  },
+  featureDesc: {
+    fontFamily: "Archivo-Medium",
+    fontSize: 12,
+    letterSpacing: 0.1,
+  },
+
+  // Empty CTA button
+  emptyButton: { width: "100%" },
+  emptyButtonInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 16,
+  },
+  emptyButtonText: {
+    fontFamily: "Archivo-Bold",
+    fontSize: 16,
+    letterSpacing: 0.3,
+  },
 
   iconBadgeLarge: {
     width: 96,
@@ -605,13 +989,64 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
 
-  archiveLink: {
+  archiveButton: {
+    flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 24,
+    gap: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 16,
   },
-  archiveLinkText: {
+  archiveButtonText: {
     fontFamily: "Archivo-SemiBold",
     fontSize: 14,
+    flex: 1,
+  },
+  archiveButtonBadge: {
+    minWidth: 22,
+    height: 22,
+    borderRadius: 11,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 6,
+  },
+  archiveButtonBadgeText: {
+    fontFamily: "Archivo-Bold",
+    fontSize: 12,
+  },
+
+  archiveSheetContent: {
+    paddingHorizontal: 24,
+    paddingBottom: 16,
+  },
+  archiveSheetTitle: {
+    fontFamily: "Archivo-Bold",
+    fontSize: 18,
+    marginBottom: 12,
+  },
+  archiveSheetScroll: {
+    maxHeight: 400,
+  },
+  archiveSheetRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+  },
+  archiveSheetName: {
+    fontFamily: "Archivo-SemiBold",
+    fontSize: 15,
+    flex: 1,
+  },
+  archiveSheetMeta: {
+    fontFamily: "Archivo-Medium",
+    fontSize: 12,
+  },
+  archiveSheetPhotos: {
+    fontFamily: "Archivo-Medium",
+    fontSize: 12,
   },
 
   // Modal
@@ -622,27 +1057,38 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 4,
   },
-  fieldGroup: { gap: 6 },
+  fieldGroup: { gap: 8 },
   fieldLabel: {
     fontFamily: "Archivo-SemiBold",
     fontSize: 13,
     letterSpacing: 0.3,
   },
-  inputContainer: { borderRadius: 14, paddingHorizontal: 14, paddingVertical: 2 },
+  inputContainer: { borderRadius: 16, paddingHorizontal: 16, paddingVertical: 2 },
   textInput: {
     fontFamily: "Archivo-Medium",
     fontSize: 15,
     paddingVertical: 12,
   },
-  dateButton: {
+  dateRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  dateCard: {
+    borderRadius: 16,
+    padding: 14,
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 14,
+    gap: 12,
   },
-  dateButtonText: { fontFamily: "Archivo-Medium", fontSize: 14 },
+  dateCardHalf: { flex: 1 },
+  dateInfo: { flex: 1 },
+  dateLabel: {
+    fontFamily: "Archivo-Medium",
+    fontSize: 11,
+    letterSpacing: 0.3,
+    marginBottom: 2,
+  },
+  dateValue: { fontFamily: "Archivo-SemiBold", fontSize: 14 },
 
   limitToggleRow: { flexDirection: "row", gap: 10 },
   limitOption: {
@@ -658,7 +1104,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
     paddingVertical: 16,
-    borderRadius: 18,
+    borderRadius: 16,
     marginTop: 4,
   },
   createButtonText: {

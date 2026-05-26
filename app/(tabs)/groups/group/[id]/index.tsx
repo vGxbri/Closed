@@ -856,13 +856,16 @@ const PremiosWidgetCard = React.memo<WidgetCardProps>(
 
 PremiosWidgetCard.displayName = "PremiosWidgetCard";
 
-// Flashback widget card — shows party status
+// Flashback widget card — shows party status with rich design
 const FlashbackWidgetCard = React.memo<WidgetCardProps>(
   ({ widget, index, onPress, groupId }) => {
     const theme = useTheme();
     const [status, setStatus] = useState<FlashbackPartyStatus | null>(null);
     const [remaining, setRemaining] = useState(0);
     const [partyName, setPartyName] = useState<string | null>(null);
+    const [startsAt, setStartsAt] = useState<string | null>(null);
+    const [photoLimit, setPhotoLimit] = useState(36);
+    const [photosTaken, setPhotosTaken] = useState(0);
 
     useFocusEffect(
       React.useCallback(() => {
@@ -874,6 +877,9 @@ const FlashbackWidgetCard = React.memo<WidgetCardProps>(
               setStatus(preview.status);
               setRemaining(preview.remaining);
               setPartyName(preview.partyName);
+              setStartsAt(preview.startsAt);
+              setPhotoLimit(preview.photoLimit);
+              setPhotosTaken(preview.photosTaken);
             }
           } catch (e) {
             console.error("Error loading flashback preview:", e);
@@ -887,12 +893,21 @@ const FlashbackWidgetCard = React.memo<WidgetCardProps>(
     const getSubtitleText = () => {
       if (!status) return "Crear fiesta";
       switch (status) {
-        case "scheduled":
+        case "scheduled": {
+          if (startsAt) {
+            const d = new Date(startsAt);
+            const day = d.getDate();
+            const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+            const h = d.getHours().toString().padStart(2, '0');
+            const m = d.getMinutes().toString().padStart(2, '0');
+            return `${day} ${months[d.getMonth()]} · ${h}:${m}`;
+          }
           return partyName || "Empieza pronto...";
+        }
         case "active":
-          return `En vivo · ${remaining} fotos`;
+          return null;
         case "film_used":
-          return "Carrete agotado";
+          return "Revelando pronto...";
         case "revealing":
           return "¡Fotos listas!";
         default:
@@ -901,6 +916,16 @@ const FlashbackWidgetCard = React.memo<WidgetCardProps>(
     };
 
     const isLive = status === "active";
+    const filmRatio = photoLimit > 0 ? Math.min(photosTaken / photoLimit, 1) : 0;
+
+    const getIconBadgeBg = () => {
+      if (isLive || status === "revealing") return theme.colors.primary;
+      return theme.colors.surfaceVariant;
+    };
+
+    const getIconName = (): keyof typeof Ionicons.glyphMap => {
+      return "camera-outline";
+    };
 
     return (
       <Animated.View
@@ -927,53 +952,124 @@ const FlashbackWidgetCard = React.memo<WidgetCardProps>(
             ]}
             cornerSmoothing={1}
           >
-            <SquircleView
-              style={[
-                styles.widgetIconContainer,
-                {
-                  backgroundColor: theme.colors.surfaceVariant,
-                  borderColor: theme.colors.outlineVariant,
-                  borderWidth: 1,
-                },
-              ]}
-              cornerSmoothing={1}
-            >
-              <Ionicons name="camera-outline" size={24} color="#FFFFFF" />
-            </SquircleView>
+            {/* Top section: icon + progress */}
+            <View>
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                <SquircleView
+                  style={[
+                    styles.widgetIconContainer,
+                    {
+                      backgroundColor: getIconBadgeBg(),
+                      borderColor: isLive || status === "revealing"
+                        ? "transparent"
+                        : theme.colors.outlineVariant,
+                      borderWidth: isLive || status === "revealing" ? 0 : 1,
+                    },
+                  ]}
+                  cornerSmoothing={1}
+                >
+                  <Ionicons
+                    name={getIconName()}
+                    size={24}
+                    color={
+                      isLive || status === "revealing"
+                        ? theme.colors.onPrimary
+                        : theme.colors.onSurfaceVariant
+                    }
+                  />
+                </SquircleView>
 
+                {/* Live pulsing dot */}
+                {isLive && (
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                    <View
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: 4,
+                        backgroundColor: theme.colors.primary,
+                      }}
+                    />
+                    <Text
+                      style={{
+                        fontFamily: "Archivo-Bold",
+                        fontSize: 11,
+                        color: theme.colors.primary,
+                        letterSpacing: 0.5,
+                      }}
+                    >
+                      LIVE
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Film roll progress bar */}
+              {status && (status === "active" || status === "film_used") && (
+                <View style={{ gap: 4, marginTop: 10 }}>
+                  <View
+                    style={{
+                      height: 5,
+                      borderRadius: 3,
+                      backgroundColor: theme.dark
+                        ? "rgba(255,255,255,0.1)"
+                        : "rgba(0,0,0,0.06)",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <View
+                      style={{
+                        height: "100%",
+                        borderRadius: 3,
+                        width: `${Math.max(filmRatio * 100, 2)}%`,
+                        backgroundColor:
+                          filmRatio >= 1
+                            ? theme.colors.onSurfaceVariant
+                            : theme.colors.primary,
+                      }}
+                    />
+                  </View>
+                  <Text
+                    style={{
+                      fontFamily: "Archivo-Medium",
+                      fontSize: 10,
+                      letterSpacing: 0.3,
+                      color: theme.colors.onSurfaceVariant,
+                    }}
+                    numberOfLines={1}
+                  >
+                    {photosTaken}/{photoLimit} disparos
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            {/* Info */}
             <View style={styles.widgetInfo}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                 <Text
                   style={[styles.widgetName, { color: theme.colors.onSurface }]}
                   numberOfLines={1}
                 >
-                  Flashback
+                  {partyName && status !== null ? partyName : "Flashback"}
                 </Text>
-                {isLive && (
-                  <View
-                    style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: 4,
-                      backgroundColor: theme.colors.primary,
-                    }}
-                  />
-                )}
               </View>
-              <Text
-                style={[
-                  styles.widgetSubtitle,
-                  {
-                    color:
-                      status === "revealing"
-                        ? theme.colors.primary
-                        : theme.colors.onSurfaceVariant,
-                  },
-                ]}
-                numberOfLines={1}
-              >
-                {getSubtitleText()}
-              </Text>
+              {getSubtitleText() && (
+                <Text
+                  style={[
+                    styles.widgetSubtitle,
+                    {
+                      color:
+                        status === "revealing"
+                          ? theme.colors.primary
+                          : theme.colors.onSurfaceVariant,
+                    },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {getSubtitleText()}
+                </Text>
+              )}
             </View>
           </SquircleView>
         </Pressable>

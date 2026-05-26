@@ -14,6 +14,7 @@ CREATE TABLE public.flashback_parties (
   name        TEXT NOT NULL,
   created_by  UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   starts_at   TIMESTAMPTZ NOT NULL,
+  ends_at     TIMESTAMPTZ NOT NULL,
   reveals_at  TIMESTAMPTZ NOT NULL,
   photo_limit INT NOT NULL DEFAULT 36
                 CHECK (photo_limit IN (24, 36)),
@@ -21,7 +22,8 @@ CREATE TABLE public.flashback_parties (
                 CHECK (status IN ('scheduled', 'active', 'film_used', 'revealing', 'archived')),
   created_at  TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   updated_at  TIMESTAMPTZ DEFAULT NOW() NOT NULL,
-  CONSTRAINT reveals_after_start CHECK (reveals_at > starts_at)
+  CONSTRAINT ends_after_start    CHECK (ends_at > starts_at),
+  CONSTRAINT reveals_after_end   CHECK (reveals_at > ends_at)
 );
 
 CREATE TABLE public.flashback_photos (

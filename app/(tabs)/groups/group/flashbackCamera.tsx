@@ -43,7 +43,7 @@ export default function FlashbackCameraScreen() {
 
   const cameraRef = useRef<CameraView>(null);
   const [permission, requestPermission] = useCameraPermissions();
-  const [flashEnabled, setFlashEnabled] = useState(true);
+  const [flashEnabled, setFlashEnabled] = useState(false);
   const [isTaking, setIsTaking] = useState(false);
   const [remaining, setRemaining] = useState(0);
   const [photoLimit, setPhotoLimit] = useState(36);

@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { BlurTargetView } from "expo-blur";
-import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
+import DateTimePicker, { DateTimePickerAndroid, DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import {
@@ -170,6 +170,10 @@ export default function CreateEventScreen() {
     if (date) { const n = new Date(endDate); n.setHours(date.getHours(), date.getMinutes()); setEndDate(n); }
   }, [endDate]);
 
+  const openAndroidPicker = useCallback((mode: "date" | "time", value: Date, onChange: (e: DateTimePickerEvent, d?: Date) => void, minimumDate?: Date) => {
+    DateTimePickerAndroid.open({ value, mode, is24Hour: true, onChange, minimumDate });
+  }, []);
+
   const handleCreate = useCallback(async () => {
     if (!title.trim()) { setDialogConfig({ visible: true, title: "Título requerido", message: "Por favor, escribe un nombre para el evento.", type: "warning" }); return; }
     try {
@@ -227,11 +231,11 @@ export default function CreateEventScreen() {
               <View style={styles.dateInfo}>
                 <Text style={[styles.dateLabel, { color: theme.colors.onSurfaceVariant }]}>Inicio</Text>
                 <View style={styles.dateValueRow}>
-                  <TouchableOpacity onPress={() => setShowStartDate(true)} activeOpacity={0.7}>
+                  <TouchableOpacity onPress={() => Platform.OS === "android" ? openAndroidPicker("date", startDate, handleStartDateChange) : setShowStartDate(true)} activeOpacity={0.7}>
                     <Text style={[styles.dateValue, { color: theme.colors.onSurface }]}>{formatDateES(startDate)}</Text>
                   </TouchableOpacity>
                   {!isAllDay && (
-                    <TouchableOpacity onPress={() => setShowStartTime(true)} activeOpacity={0.7}>
+                    <TouchableOpacity onPress={() => Platform.OS === "android" ? openAndroidPicker("time", startDate, handleStartTimeChange) : setShowStartTime(true)} activeOpacity={0.7}>
                       <Text style={[styles.timeValue, { color: theme.colors.primary }]}>{formatTime(startDate)}</Text>
                     </TouchableOpacity>
                   )}
@@ -263,7 +267,7 @@ export default function CreateEventScreen() {
                 </Text>
                 <View style={styles.dateValueRow}>
                   <TouchableOpacity
-                    onPress={() => setShowEndDate(true)}
+                    onPress={() => Platform.OS === "android" ? openAndroidPicker("date", endDate, handleEndDateChange, startDate) : setShowEndDate(true)}
                     activeOpacity={0.7}
                   >
                     <Text style={[styles.dateValue, { color: theme.colors.onSurface }]}>
@@ -272,7 +276,7 @@ export default function CreateEventScreen() {
                   </TouchableOpacity>
                   {!isAllDay && (
                     <TouchableOpacity
-                      onPress={() => setShowEndTime(true)}
+                      onPress={() => Platform.OS === "android" ? openAndroidPicker("time", endDate, handleEndTimeChange) : setShowEndTime(true)}
                       activeOpacity={0.7}
                     >
                       <Text style={[styles.timeValue, { color: theme.colors.primary }]}>
@@ -284,10 +288,10 @@ export default function CreateEventScreen() {
               </View>
             </SquircleView>
 
-            {showStartDate && <DateTimePicker value={startDate} mode="date" display={Platform.OS === "ios" ? "spinner" : "default"} onChange={handleStartDateChange} />}
-            {showStartTime && <DateTimePicker value={startDate} mode="time" is24Hour display={Platform.OS === "ios" ? "spinner" : "default"} onChange={handleStartTimeChange} />}
-            {showEndDate && <DateTimePicker value={endDate} mode="date" display={Platform.OS === "ios" ? "spinner" : "default"} onChange={handleEndDateChange} minimumDate={startDate} />}
-            {showEndTime && <DateTimePicker value={endDate} mode="time" is24Hour display={Platform.OS === "ios" ? "spinner" : "default"} onChange={handleEndTimeChange} />}
+            {Platform.OS === "ios" && showStartDate && <DateTimePicker value={startDate} mode="date" display="spinner" onChange={handleStartDateChange} />}
+            {Platform.OS === "ios" && showStartTime && <DateTimePicker value={startDate} mode="time" is24Hour display="spinner" onChange={handleStartTimeChange} />}
+            {Platform.OS === "ios" && showEndDate && <DateTimePicker value={endDate} mode="date" display="spinner" onChange={handleEndDateChange} minimumDate={startDate} />}
+            {Platform.OS === "ios" && showEndTime && <DateTimePicker value={endDate} mode="time" is24Hour display="spinner" onChange={handleEndTimeChange} />}
           </Animated.View>
 
           {/* Location */}

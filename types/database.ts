@@ -500,6 +500,7 @@ export interface FlashbackParty {
   name: string;
   created_by: string;
   starts_at: string;
+  ends_at: string;
   reveals_at: string;
   photo_limit: number;
   status: FlashbackPartyStatus;
@@ -535,6 +536,7 @@ export interface CreateFlashbackPartyInput {
   group_id: string;
   name: string;
   starts_at: string;
+  ends_at: string;
   reveals_at: string;
   photo_limit?: number;
 }

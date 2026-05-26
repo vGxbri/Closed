@@ -17,13 +17,14 @@ class FlashbackService {
   computeStatus(party: FlashbackParty): FlashbackPartyStatus {
     const now = new Date();
     const starts = new Date(party.starts_at);
+    const ends = new Date(party.ends_at);
     const reveals = new Date(party.reveals_at);
     const archiveAt = new Date(reveals.getTime() + 12 * 60 * 60 * 1000);
 
     if (now < starts) return 'scheduled';
     if (now >= archiveAt) return 'archived';
     if (now >= reveals) return 'revealing';
-    if (party.status === 'film_used') return 'film_used';
+    if (now >= ends || party.status === 'film_used') return 'film_used';
     return 'active';
   }
 
@@ -107,6 +108,7 @@ class FlashbackService {
         name: input.name,
         created_by: user.id,
         starts_at: input.starts_at,
+        ends_at: input.ends_at,
         reveals_at: input.reveals_at,
         photo_limit: input.photo_limit ?? 36,
         status: 'scheduled',
@@ -220,7 +222,7 @@ class FlashbackService {
     }
 
     const shotNumber = currentCount + 1;
-    const fileName = `${shotNumber}.jpg`;
+    const fileName = `${shotNumber}_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.jpg`;
 
     const result = await uploadMediaToStorage({
       bucket: BUCKET,
@@ -283,23 +285,60 @@ class FlashbackService {
     hasParty: boolean;
     status: FlashbackPartyStatus | null;
     remaining: number;
+    photoLimit: number;
+    photosTaken: number;
     partyName: string | null;
-    revealsAt: string | null;
     startsAt: string | null;
+    endsAt: string | null;
+    revealsAt: string | null;
   }> {
     const party = await this.getActiveParty(groupId);
     if (!party) {
-      return { hasParty: false, status: null, remaining: 0, partyName: null, revealsAt: null, startsAt: null };
+      return { hasParty: false, status: null, remaining: 0, photoLimit: 36, photosTaken: 0, partyName: null, startsAt: null, endsAt: null, revealsAt: null };
     }
     const remaining = party.photo_limit - party.photos_count;
     return {
       hasParty: true,
       status: party.status,
       remaining,
+      photoLimit: party.photo_limit,
+      photosTaken: party.photos_count,
       partyName: party.name,
-      revealsAt: party.reveals_at,
       startsAt: party.starts_at,
+      endsAt: party.ends_at,
+      revealsAt: party.reveals_at,
     };
+  }
+
+  // ─── Delete ─────────────────────────────────────────────────────────
+  async deleteParty(partyId: string): Promise<void> {
+    const photos = await this.getPartyPhotos(partyId);
+
+    if (photos.length > 0) {
+      const storagePaths = photos.map((p) => {
+        const marker = `/storage/v1/object/public/${BUCKET}/`;
+        const parts = p.photo_url.split(marker);
+        return parts.length === 2 ? parts[1] : null;
+      }).filter(Boolean) as string[];
+
+      if (storagePaths.length > 0) {
+        await supabase.storage.from(BUCKET).remove(storagePaths);
+      }
+
+      const { error: photosError } = await supabase
+        .from('flashback_photos')
+        .delete()
+        .eq('party_id', partyId);
+
+      if (photosError) throw photosError;
+    }
+
+    const { error: partyError } = await supabase
+      .from('flashback_parties')
+      .delete()
+      .eq('id', partyId);
+
+    if (partyError) throw partyError;
   }
 
   // ─── Private ────────────────────────────────────────────────────────
