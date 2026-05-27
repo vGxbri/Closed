@@ -171,7 +171,7 @@ const GroupCardItem = React.memo<GroupCardItemProps>(
                     { color: theme.colors.primary },
                   ]}
                 >
-                  {group.my_role === "owner" ? "Admin" : "Mod"}
+                  {group.my_role === "owner" ? "Propietario" : "Administrador"}
                 </Text>
               </View>
             )}

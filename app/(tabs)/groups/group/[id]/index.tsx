@@ -1005,7 +1005,7 @@ const FlashbackWidgetCard = React.memo<WidgetCardProps>(
               </View>
 
               {/* Film roll progress bar */}
-              {status && (status === "active" || status === "film_used") && (
+              {status === "active" && (
                 <View style={{ gap: 4, marginTop: 10 }}>
                   <View
                     style={{

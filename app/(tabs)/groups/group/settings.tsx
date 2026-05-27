@@ -968,6 +968,7 @@ export default function GroupSettingsScreen() {
         title={optionsMenu.title}
         options={optionsMenu.options}
         onDismiss={hideOptionsMenu}
+        blurTarget={backgroundRef}
       />
     </>
   );

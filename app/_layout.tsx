@@ -4,7 +4,7 @@ import {
   ThemeProvider,
 } from "@react-navigation/native";
 import { useFonts } from "expo-font";
-import { Stack, useRouter } from "expo-router";
+import { Stack, usePathname, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
@@ -33,12 +33,16 @@ const fontConfig = {
 function RootLayoutNav({ paperTheme, navigationTheme, colorScheme }: any) {
   const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
+
+  const isPublicRoute =
+    pathname?.startsWith("/join") || pathname?.startsWith("/auth");
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    if (!isLoading && !isAuthenticated && !isPublicRoute) {
       router.replace("/auth/login");
     }
-  }, [isAuthenticated, isLoading]);
+  }, [isAuthenticated, isLoading, isPublicRoute, router]);
 
   return (
     <ThemeProvider value={navigationTheme}>
@@ -61,6 +65,7 @@ function RootLayoutNav({ paperTheme, navigationTheme, colorScheme }: any) {
               name="createGroup"
               options={{ presentation: "modal", gestureEnabled: false }}
             />
+            <Stack.Screen name="join" options={{ gestureEnabled: true }} />
           </Stack>
         </SnackbarProvider>
       </PaperProvider>

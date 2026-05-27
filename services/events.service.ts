@@ -121,7 +121,6 @@ class EventsService {
         group_id: input.group_id,
         title: input.title,
         description: input.description || null,
-        emoji: input.emoji || '📅',
         location: input.location || null,
         starts_at: input.starts_at,
         ends_at: input.ends_at || null,
@@ -177,7 +176,7 @@ class EventsService {
     updates: Partial<
       Pick<
         CalendarEvent,
-        'title' | 'description' | 'emoji' | 'location' | 'starts_at' | 'ends_at' | 'is_all_day' | 'color'
+        'title' | 'description' | 'location' | 'starts_at' | 'ends_at' | 'is_all_day' | 'color'
       >
     >,
   ): Promise<void> {

@@ -668,8 +668,40 @@ CREATE POLICY "Admins can update members"
   TO authenticated
   USING (
     group_id IN (
-      SELECT group_id FROM public.group_members 
-      WHERE user_id = auth.uid() AND role IN ('owner', 'admin') AND is_active = true
+      SELECT gm.group_id
+      FROM public.group_members gm
+      WHERE gm.user_id = auth.uid()
+        AND gm.role IN ('owner', 'admin')
+        AND gm.is_active = true
+    )
+    AND (
+      role <> 'owner'
+      OR group_id IN (
+        SELECT gm.group_id
+        FROM public.group_members gm
+        WHERE gm.user_id = auth.uid()
+          AND gm.role = 'owner'
+          AND gm.is_active = true
+      )
+    )
+  )
+  WITH CHECK (
+    group_id IN (
+      SELECT gm.group_id
+      FROM public.group_members gm
+      WHERE gm.user_id = auth.uid()
+        AND gm.role IN ('owner', 'admin')
+        AND gm.is_active = true
+    )
+    AND (
+      role <> 'owner'
+      OR group_id IN (
+        SELECT gm.group_id
+        FROM public.group_members gm
+        WHERE gm.user_id = auth.uid()
+          AND gm.role = 'owner'
+          AND gm.is_active = true
+      )
     )
   );
 
@@ -690,11 +722,18 @@ CREATE POLICY "Admins can create awards"
   ON public.awards FOR INSERT
   TO authenticated
   WITH CHECK (
-    group_id IN (
-      SELECT group_id FROM public.group_members 
-      WHERE user_id = auth.uid() AND role IN ('owner', 'admin') AND is_active = true
+    created_by = auth.uid()
+    AND group_id IN (
+      SELECT g.id
+      FROM public.groups g
+      JOIN public.group_members gm ON gm.group_id = g.id
+      WHERE gm.user_id = auth.uid()
+        AND gm.is_active = true
+        AND (
+          gm.role IN ('owner', 'admin')
+          OR COALESCE((g.settings->>'allow_member_nominations')::boolean, false)
+        )
     )
-    AND created_by = auth.uid()
   );
 
 CREATE POLICY "Admins can update awards"
@@ -763,10 +802,37 @@ CREATE POLICY "Users can cast votes"
   WITH CHECK (
     voter_id = auth.uid()
     AND award_id IN (
-      SELECT a.id FROM public.awards a
+      SELECT a.id
+      FROM public.awards a
+      JOIN public.groups g ON g.id = a.group_id
       JOIN public.group_members gm ON a.group_id = gm.group_id
       WHERE gm.user_id = auth.uid() AND gm.is_active = true
       AND a.status = 'voting'
+      AND (
+        gm.role IN ('owner', 'admin')
+        OR COALESCE((g.settings->>'allow_member_voting')::boolean, false)
+      )
+    )
+  );
+
+CREATE POLICY "Users can remove own votes when vote change enabled"
+  ON public.votes FOR DELETE
+  TO authenticated
+  USING (
+    voter_id = auth.uid()
+    AND award_id IN (
+      SELECT a.id
+      FROM public.awards a
+      JOIN public.groups g ON g.id = a.group_id
+      JOIN public.group_members gm ON a.group_id = gm.group_id
+      WHERE gm.user_id = auth.uid()
+        AND gm.is_active = true
+        AND a.status = 'voting'
+        AND COALESCE((a.voting_settings->>'allow_vote_change')::boolean, false)
+        AND (
+          gm.role IN ('owner', 'admin')
+          OR COALESCE((g.settings->>'allow_member_voting')::boolean, false)
+        )
     )
   );
 

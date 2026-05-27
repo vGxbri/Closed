@@ -5,7 +5,7 @@ import {
   statusCodes,
 } from "@react-native-google-signin/google-signin";
 import { Image } from "expo-image";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -27,9 +27,19 @@ import { supabase } from "../../lib/supabase";
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { returnTo } = useLocalSearchParams<{ returnTo?: string | string[] }>();
   const theme = useTheme();
   const { signIn } = useAuth();
   const { showSnackbar } = useSnackbar();
+
+  const postLoginPath = Array.isArray(returnTo) ? returnTo[0] : returnTo;
+  const navigateAfterLogin = () => {
+    if (postLoginPath?.startsWith("/join/")) {
+      router.replace(postLoginPath as never);
+      return;
+    }
+    router.replace("/");
+  };
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -65,7 +75,7 @@ export default function LoginScreen() {
           token: idToken,
         });
         if (error) throw error;
-        router.replace("/");
+        navigateAfterLogin();
       } else {
         throw new Error("No token found");
       }
@@ -92,7 +102,7 @@ export default function LoginScreen() {
     try {
       setLoading(true);
       await signIn(email.trim(), password);
-      router.replace("/");
+      navigateAfterLogin();
     } catch (err: any) {
       let friendlyMessage = "Error al iniciar sesión";
       const errorMessage = err?.message || "";

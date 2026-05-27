@@ -1,6 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
-import React from "react";
+import React, { useMemo } from "react";
+import {
+  getGroupInviteUrl,
+  getInviteShareMessage,
+  normalizeInviteCode,
+} from "@/lib/inviteLink";
 import {
   Share,
   StyleSheet,
@@ -27,11 +32,17 @@ export const InviteModal: React.FC<InviteModalProps> = ({
   const theme = useTheme();
   const { showSnackbar } = useSnackbar();
 
-  // App link for sharing and copying
-  const appLink = `closed://join/${inviteCode}`;
+  const inviteCodeNormalized = useMemo(
+    () => normalizeInviteCode(inviteCode) ?? inviteCode,
+    [inviteCode],
+  );
+  const appLink = useMemo(
+    () => getGroupInviteUrl(inviteCodeNormalized),
+    [inviteCodeNormalized],
+  );
 
   const handleCopyCode = async () => {
-    await Clipboard.setStringAsync(inviteCode);
+    await Clipboard.setStringAsync(inviteCodeNormalized);
     showSnackbar("Código copiado al portapapeles", "success");
   };
 
@@ -43,8 +54,9 @@ export const InviteModal: React.FC<InviteModalProps> = ({
   const handleShare = async () => {
     try {
       await Share.share({
-        message: `¡Únete a mi grupo "${groupName}" en Closed! 🏆\n\nUsa el código: ${inviteCode}\n\nO abre este enlace:\n${appLink}`,
+        message: getInviteShareMessage(groupName, inviteCodeNormalized),
         title: `Únete a ${groupName} en Closed`,
+        url: appLink,
       });
     } catch (error) {
       console.error(error);
@@ -60,7 +72,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({
       <View style={styles.header}>
         <View style={{ width: 40 }} />
         <Text variant="titleLarge" style={{ fontWeight: "700" }}>
-          Invitar Amigos
+          Invitar al grupo
         </Text>
         <TouchableOpacity onPress={onClose} style={styles.closeButton}>
           <Ionicons
@@ -81,7 +93,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({
             marginBottom: 16,
           }}
         >
-          Comparte este código con tus amigos
+          Comparte este código para que se unan al grupo
         </Text>
 
         <TouchableOpacity onPress={handleCopyCode} activeOpacity={0.7}>
@@ -105,7 +117,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({
                 letterSpacing: 4,
               }}
             >
-              {inviteCode}
+              {inviteCodeNormalized}
             </Text>
             <View style={styles.tapToCopy}>
               <Ionicons
@@ -141,7 +153,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({
               paddingHorizontal: 12,
             }}
           >
-            O COMPARTE EL ENLACE
+            O COMPARTE EL ENLACE DE LA APP
           </Text>
           <View
             style={[
@@ -191,14 +203,26 @@ export const InviteModal: React.FC<InviteModalProps> = ({
         </Surface>
 
         {/* Share Button */}
+        <Text
+          variant="bodySmall"
+          style={{
+            textAlign: "center",
+            color: theme.colors.onSurfaceVariant,
+            marginTop: 4,
+          }}
+        >
+          El enlace abre la app si está instalada. Si no funciona, usa el código en
+          Unirse a un grupo.
+        </Text>
+
         <Button
           mode="contained"
           onPress={handleShare}
           icon="share-variant"
-          style={{ borderRadius: 12, marginTop: 8 }}
+          style={{ borderRadius: 12, marginTop: 4 }}
           contentStyle={{ paddingVertical: 6 }}
         >
-          Compartir enlace
+          Compartir invitación
         </Button>
       </View>
     </BottomSheetModal>

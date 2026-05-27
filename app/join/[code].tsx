@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { normalizeInviteCode } from "@/lib/inviteLink";
 import {
   StyleSheet,
   View,
@@ -25,7 +26,8 @@ import { ConfirmDialog, DialogType } from "../../components/ui/ConfirmDialog";
 type JoinState = "loading" | "preview" | "joining" | "success" | "error" | "already_member";
 
 export default function JoinGroupScreen() {
-  const { code } = useLocalSearchParams<{ code: string }>();
+  const params = useLocalSearchParams<{ code: string | string[] }>();
+  const inviteCode = normalizeInviteCode(params.code);
   const router = useRouter();
   const theme = useTheme();
   const insets = useSafeAreaInsets();
@@ -58,9 +60,14 @@ export default function JoinGroupScreen() {
   const loadGroupPreview = useCallback(async () => {
     try {
       setState("loading");
-      const groupData = await groupsService.getGroupByInviteCode(code!);
-      
+      const groupData = await groupsService.getGroupByInviteCode(inviteCode!);
+
       if (!groupData) {
+        if (!isAuthenticated) {
+          setGroup(null);
+          setState("preview");
+          return;
+        }
         setError("Este enlace de invitación no es válido o ha expirado");
         setState("error");
         return;
@@ -70,22 +77,27 @@ export default function JoinGroupScreen() {
       setState("preview");
     } catch (err) {
       console.error("Error loading group preview:", err);
+      if (!isAuthenticated) {
+        setGroup(null);
+        setState("preview");
+        return;
+      }
       setError("Error al cargar la información del grupo");
       setState("error");
     }
-  }, [code]);
+  }, [inviteCode, isAuthenticated]);
 
   useEffect(() => {
     if (authLoading) return;
-    
-    if (!code) {
+
+    if (!inviteCode) {
       setError("Código de invitación no válido");
       setState("error");
       return;
     }
 
     loadGroupPreview();
-  }, [code, authLoading, loadGroupPreview]);
+  }, [inviteCode, authLoading, loadGroupPreview]);
 
   const handleJoin = async () => {
     if (!isAuthenticated) {
@@ -96,7 +108,11 @@ export default function JoinGroupScreen() {
         type: "info",
         confirmText: "Iniciar Sesión",
         cancelText: "Cancelar",
-        onConfirm: () => router.push("/auth/login"),
+        onConfirm: () =>
+          router.push({
+            pathname: "/auth/login",
+            params: { returnTo: `/join/${inviteCode}` },
+          }),
         showCancel: true
       });
       return;
@@ -104,7 +120,7 @@ export default function JoinGroupScreen() {
 
     try {
       setState("joining");
-      const joinedGroup = await groupsService.joinGroup(code!);
+      const joinedGroup = await groupsService.joinGroup(inviteCode!);
       setState("success");
       
       setTimeout(() => {
@@ -329,7 +345,7 @@ export default function JoinGroupScreen() {
 
             {/* Group Name */}
             <Text variant="headlineSmall" style={{ fontWeight: "700", textAlign: "center", marginTop: 4 }}>
-              {group?.name}
+              {group?.name ?? "un grupo"}
             </Text>
             
             {/* Group Description */}
@@ -344,7 +360,7 @@ export default function JoinGroupScreen() {
           <View style={[styles.codeChip, { backgroundColor: theme.colors.surfaceVariant }]}>
             <Ionicons name="key-outline" size={14} color={theme.colors.onSurfaceVariant} />
             <Text variant="labelMedium" style={{ marginLeft: 6, color: theme.colors.onSurfaceVariant }}>
-              {code}
+              {inviteCode}
             </Text>
           </View>
         </View>

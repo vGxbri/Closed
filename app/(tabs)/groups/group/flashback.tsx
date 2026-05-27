@@ -241,17 +241,52 @@ export default function FlashbackScreen() {
         <Stack.Screen options={{ headerShown: false }} />
         <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
           <CustomHeader title="Flashback" showBackButton />
-          <View style={styles.centerContent}>
-            <Animated.View entering={FadeIn.duration(300)}>
+          <ScrollView
+            contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 40 }]}
+            showsVerticalScrollIndicator={false}
+          >
+            <Animated.View entering={FadeIn.duration(250)} style={styles.titleBlock}>
+              <View style={[styles.skeletonTitle, { backgroundColor: theme.colors.surfaceVariant }]} />
+              <View style={[styles.skeletonSubtitle, { backgroundColor: theme.colors.surfaceVariant }]} />
+            </Animated.View>
+
+            <Animated.View
+              entering={FadeIn.duration(250).delay(50)}
+              style={[styles.divider, { backgroundColor: theme.colors.outlineVariant }]}
+            />
+
+            <Animated.View entering={FadeInDown.duration(250).delay(80)}>
               <SquircleView
-                style={[
-                  styles.skeletonIcon,
-                  { backgroundColor: theme.colors.surfaceVariant },
-                ]}
+                style={[styles.skeletonSelector, { backgroundColor: theme.colors.surfaceVariant }]}
                 cornerSmoothing={1}
               />
             </Animated.View>
-          </View>
+
+            <Animated.View entering={FadeInDown.duration(250).delay(120)} style={styles.emptyContainer}>
+              <SquircleView
+                style={[
+                  styles.skeletonCard,
+                  {
+                    backgroundColor: theme.colors.surface,
+                    borderColor: theme.colors.outlineVariant,
+                    borderWidth: 1,
+                  },
+                ]}
+                cornerSmoothing={1}
+              >
+                <SquircleView
+                  style={[
+                    styles.skeletonIcon,
+                    { backgroundColor: theme.colors.surfaceVariant },
+                  ]}
+                  cornerSmoothing={1}
+                />
+                <View style={[styles.skeletonLineLg, { backgroundColor: theme.colors.surfaceVariant }]} />
+                <View style={[styles.skeletonLineMd, { backgroundColor: theme.colors.surfaceVariant }]} />
+                <View style={[styles.skeletonLineSm, { backgroundColor: theme.colors.surfaceVariant }]} />
+              </SquircleView>
+            </Animated.View>
+          </ScrollView>
         </View>
       </>
     );
@@ -960,6 +995,45 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 28,
+  },
+  skeletonTitle: {
+    width: 160,
+    height: 40,
+    borderRadius: 12,
+    marginBottom: 8,
+  },
+  skeletonSubtitle: {
+    width: 210,
+    height: 16,
+    borderRadius: 8,
+  },
+  skeletonSelector: {
+    height: 42,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  skeletonCard: {
+    borderRadius: 24,
+    padding: 32,
+    alignItems: "center",
+  },
+  skeletonLineLg: {
+    width: "72%",
+    height: 20,
+    borderRadius: 10,
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  skeletonLineMd: {
+    width: "90%",
+    height: 14,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  skeletonLineSm: {
+    width: "56%",
+    height: 14,
+    borderRadius: 8,
   },
 
   title: {

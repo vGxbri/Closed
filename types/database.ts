@@ -134,7 +134,6 @@ export interface AwardCategory {
 export interface Award {
   id: string;
   group_id: string;
-  category_id: string | null;
   name: string;
   description: string | null;
   icon: string;
@@ -269,7 +268,6 @@ export interface CalendarEvent {
   group_id: string;
   title: string;
   description: string | null;
-  emoji: string;
   location: string | null;
   starts_at: string;
   ends_at: string | null;
@@ -319,7 +317,6 @@ export interface CreateEventInput {
   group_id: string;
   title: string;
   description?: string;
-  emoji?: string;
   location?: string;
   starts_at: string;
   ends_at?: string;
@@ -392,7 +389,6 @@ export interface CreateAwardInput {
   name: string;
   description?: string;
   icon?: string;
-  category_id?: string;
   vote_type?: VoteType;
   nominee_ids: string[];
   voting_settings?: Partial<VotingSettings>;

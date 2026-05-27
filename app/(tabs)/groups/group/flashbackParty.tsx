@@ -331,6 +331,7 @@ export default function FlashbackPartyScreen() {
 
   const [party, setParty] = useState<FlashbackPartyWithDetails | null>(null);
   const [photos, setPhotos] = useState<FlashbackPhotoWithUser[]>([]);
+  const [activeParty, setActiveParty] = useState<FlashbackPartyWithDetails | null>(null);
   const [archivedParties, setArchivedParties] = useState<FlashbackPartyWithDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -355,12 +356,17 @@ export default function FlashbackPartyScreen() {
     if (!id) return;
     try {
       setIsLoading(true);
-      const [archived, initialPartyId] = await (async () => {
-        const arch = await flashbackService.getPartyArchive(id);
-        const target = partyId || (arch.length > 0 ? arch[0].id : null);
-        return [arch, target] as const;
+      const [archived, active, initialPartyId] = await (async () => {
+        const [arch, act] = await Promise.all([
+          flashbackService.getPartyArchive(id),
+          flashbackService.getActiveParty(id),
+        ]);
+        const target =
+          partyId || (arch.length > 0 ? arch[0].id : null) || act?.id || null;
+        return [arch, act, target] as const;
       })();
       setArchivedParties(archived);
+      setActiveParty(active);
       if (initialPartyId) {
         await loadPartyData(initialPartyId);
       }
@@ -377,8 +383,43 @@ export default function FlashbackPartyScreen() {
     }, [loadData])
   );
 
+  const allParties = (() => {
+    const seen = new Set<string>();
+    const list: FlashbackPartyWithDetails[] = [];
+    const add = (p: FlashbackPartyWithDetails | null | undefined) => {
+      if (p && !seen.has(p.id)) {
+        seen.add(p.id);
+        list.push(p);
+      }
+    };
+    add(party);
+    add(activeParty);
+    for (const ap of archivedParties) add(ap);
+    return list;
+  })();
+
   const handleSwitchParty = async (pId: string) => {
     setShowSwitchSheet(false);
+    const selected =
+      allParties.find((p) => p.id === pId) ??
+      (await flashbackService.getPartyById(pId));
+    if (!selected) return;
+
+    if (selected.status === "active") {
+      router.replace({
+        pathname: "/groups/group/flashbackCamera",
+        params: { id, partyId: pId },
+      } as any);
+      return;
+    }
+    if (selected.status === "scheduled" || selected.status === "film_used") {
+      router.replace({
+        pathname: "/groups/group/flashback",
+        params: { id },
+      } as any);
+      return;
+    }
+
     setIsLoading(true);
     await loadPartyData(pId);
     setIsLoading(false);
@@ -394,15 +435,6 @@ export default function FlashbackPartyScreen() {
   };
 
   const uniquePhotographers = new Set(photos.map((p) => p.taken_by)).size;
-
-  const allParties = (() => {
-    const list: FlashbackPartyWithDetails[] = [];
-    if (party) list.push(party);
-    for (const ap of archivedParties) {
-      if (!party || ap.id !== party.id) list.push(ap);
-    }
-    return list;
-  })();
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);

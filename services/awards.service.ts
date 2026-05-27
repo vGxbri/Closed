@@ -13,6 +13,45 @@ import {
 } from '../types/database';
 
 export const awardsService = {
+  async getVotingPermissionContext(awardId: string) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    const { data: award, error: awardError } = await supabase
+      .from('awards')
+      .select('group_id, vote_type, voting_settings')
+      .eq('id', awardId)
+      .single();
+
+    if (awardError) throw awardError;
+
+    const { data: group, error: groupError } = await supabase
+      .from('groups')
+      .select('settings')
+      .eq('id', award.group_id)
+      .single();
+
+    if (groupError) throw groupError;
+
+    const { data: membership, error: membershipError } = await supabase
+      .from('group_members')
+      .select('role')
+      .eq('group_id', award.group_id)
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .single();
+
+    if (membershipError) throw membershipError;
+
+    const isAdmin = membership.role === 'owner' || membership.role === 'admin';
+    const allowMemberVoting = !!group.settings?.allow_member_voting;
+    if (!isAdmin && !allowMemberVoting) {
+      throw new Error('La votación para miembros está desactivada en este grupo.');
+    }
+
+    return { user, award };
+  },
+
   /**
    * Get awards for a group
    */
@@ -98,8 +137,7 @@ export const awardsService = {
         group_id: input.group_id,
         name: input.name,
         description: input.description || null,
-        icon: input.icon || '🏆',
-        category_id: input.category_id || null,
+        icon: input.icon || 'trophy',
         vote_type: input.vote_type || 'person',
         status: 'draft',
         created_by: user.id,
@@ -227,17 +265,7 @@ export const awardsService = {
    * Cast a vote
    */
   async vote(awardId: string, nomineeId: string): Promise<void> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Not authenticated');
-
-    // Get award details including voting settings
-    const { data: award, error: awardFetchError } = await supabase
-      .from('awards')
-      .select('vote_type, voting_settings')
-      .eq('id', awardId)
-      .single();
-
-    if (awardFetchError) throw awardFetchError;
+    const { user, award } = await this.getVotingPermissionContext(awardId);
 
     const votingSettings = award.voting_settings || {};
 
@@ -318,17 +346,7 @@ export const awardsService = {
    * Remove a vote (retract)
    */
   async removeVote(awardId: string): Promise<void> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Not authenticated');
-
-    // Get award details to check settings
-    const { data: award, error: awardFetchError } = await supabase
-      .from('awards')
-      .select('voting_settings')
-      .eq('id', awardId)
-      .single();
-
-    if (awardFetchError) throw awardFetchError;
+    const { user, award } = await this.getVotingPermissionContext(awardId);
 
     const votingSettings = award.voting_settings || {};
 
@@ -435,23 +453,9 @@ export const awardsService = {
   /**
    * Get global award categories
    */
-  async getCategories(groupId?: string) {
-    let query = supabase
-      .from('award_categories')
-      .select('*');
-
-    if (groupId) {
-      // Get global + group-specific categories
-      query = query.or(`is_global.eq.true,group_id.eq.${groupId}`);
-    } else {
-      // Get only global categories
-      query = query.eq('is_global', true);
-    }
-
-    const { data, error } = await query.order('name');
-
-    if (error) throw error;
-    return data || [];
+  async getCategories(_groupId?: string) {
+    // Legacy placeholder: categories were removed from the data model.
+    return [];
   },
 
   /**
