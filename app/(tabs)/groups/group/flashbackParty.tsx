@@ -395,6 +395,15 @@ export default function FlashbackPartyScreen() {
 
   const uniquePhotographers = new Set(photos.map((p) => p.taken_by)).size;
 
+  const allParties = (() => {
+    const list: FlashbackPartyWithDetails[] = [];
+    if (party) list.push(party);
+    for (const ap of archivedParties) {
+      if (!party || ap.id !== party.id) list.push(ap);
+    }
+    return list;
+  })();
+
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -441,7 +450,7 @@ export default function FlashbackPartyScreen() {
           showsVerticalScrollIndicator={false}
         >
           {/* Switch flashback dropdown */}
-          {archivedParties.length > 1 && (
+          {allParties.length > 0 && (
             <Pressable
               onPress={() => setShowSwitchSheet(true)}
               style={({ pressed }) => [
@@ -461,7 +470,7 @@ export default function FlashbackPartyScreen() {
               >
                 <Ionicons name="swap-horizontal-outline" size={16} color={theme.colors.onSurfaceVariant} />
                 <Text style={[styles.switchButtonText, { color: theme.colors.onSurfaceVariant }]}>
-                  Cambiar flashback
+                  {party?.name ?? "Cambiar flashback"}
                 </Text>
                 <Ionicons name="chevron-down" size={14} color={theme.colors.onSurfaceVariant} />
               </SquircleView>
@@ -629,10 +638,10 @@ export default function FlashbackPartyScreen() {
         >
           <View style={styles.sheetContent}>
             <Text style={[styles.sheetTitle, { color: theme.colors.onSurface }]}>
-              Flashbacks anteriores
+              Flashbacks
             </Text>
             <ScrollView style={styles.sheetScroll} showsVerticalScrollIndicator={false}>
-              {archivedParties.map((ap) => {
+              {allParties.map((ap) => {
                 const isCurrent = party?.id === ap.id;
                 return (
                   <Pressable

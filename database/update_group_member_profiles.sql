@@ -15,10 +15,7 @@ CREATE OR REPLACE VIEW public.group_members_view AS
     COALESCE(NULLIF(gm.group_display_name, ''), p.display_name) AS display_name,
     gm.group_display_name,
     p.username,
-    CASE
-      WHEN gm.group_avatar_url IS NOT NULL THEN NULLIF(gm.group_avatar_url, '')
-      ELSE p.avatar_url
-    END AS avatar_url,
+    NULLIF(gm.group_avatar_url, '') AS avatar_url,
     gm.group_avatar_url,
     gm.group_bio,
     p.bio AS user_bio

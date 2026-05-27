@@ -132,71 +132,85 @@ export default function FlashbackScreen() {
     });
   };
 
-  // ─── Archived parties dropdown button + sheet ───────────────────────
-  const archivedSection = archivedParties.length > 0 && (
-    <>
-      <Animated.View entering={FadeInDown.duration(400).delay(300)}>
-        <Pressable
-          onPress={() => setShowArchiveSheet(true)}
-          style={({ pressed }) => [
-            { opacity: pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.98 : 1 }], marginTop: 32 },
-          ]}
-        >
-          <SquircleView
-            style={[
-              styles.archiveButton,
-              {
-                backgroundColor: theme.colors.surface,
-                borderColor: theme.colors.outlineVariant,
-                borderWidth: 1,
-              },
-            ]}
-            cornerSmoothing={1}
-          >
-            <Ionicons name="images-outline" size={18} color={theme.colors.onSurfaceVariant} />
-            <Text style={[styles.archiveButtonText, { color: theme.colors.onSurface }]}>
-              Flashbacks anteriores
-            </Text>
-            <View style={styles.archiveButtonBadge}>
-              <Text style={[styles.archiveButtonBadgeText, { color: theme.colors.onSurfaceVariant }]}>
-                {archivedParties.length}
-              </Text>
-            </View>
-            <Ionicons name="chevron-down" size={16} color={theme.colors.onSurfaceVariant} />
-          </SquircleView>
-        </Pressable>
-      </Animated.View>
+  // ─── Combined list: current party + archived ─────────────────────────
+  const allParties = (() => {
+    const list: FlashbackPartyWithDetails[] = [];
+    if (party) list.push(party);
+    for (const ap of archivedParties) {
+      if (!party || ap.id !== party.id) list.push(ap);
+    }
+    return list;
+  })();
 
-      <BottomSheetModal
-        visible={showArchiveSheet}
-        onDismiss={() => setShowArchiveSheet(false)}
+  // ─── Flashback selector button (top of screen) ──────────────────────
+  const selectorButton = allParties.length > 0 && (
+    <Pressable
+      onPress={() => setShowArchiveSheet(true)}
+      style={({ pressed }) => [
+        { opacity: pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.98 : 1 }], marginBottom: 12 },
+      ]}
+    >
+      <SquircleView
+        style={[
+          styles.selectorButton,
+          {
+            backgroundColor: theme.colors.surface,
+            borderColor: theme.colors.outlineVariant,
+            borderWidth: 1,
+          },
+        ]}
+        cornerSmoothing={1}
       >
-        <View style={styles.archiveSheetContent}>
-          <Text style={[styles.archiveSheetTitle, { color: theme.colors.onSurface }]}>
-            Flashbacks anteriores
-          </Text>
-          <ScrollView
-            style={styles.archiveSheetScroll}
-            showsVerticalScrollIndicator={false}
-          >
-            {archivedParties.map((ap) => (
+        <Ionicons name="swap-horizontal-outline" size={16} color={theme.colors.onSurfaceVariant} />
+        <Text style={[styles.selectorButtonText, { color: theme.colors.onSurfaceVariant }]}>
+          {party?.name ?? "Cambiar flashback"}
+        </Text>
+        <Ionicons name="chevron-down" size={14} color={theme.colors.onSurfaceVariant} />
+      </SquircleView>
+    </Pressable>
+  );
+
+  // ─── Archive modal ───────────────────────────────────────────────────
+  const archiveModal = (
+    <BottomSheetModal
+      visible={showArchiveSheet}
+      onDismiss={() => setShowArchiveSheet(false)}
+    >
+      <View style={styles.archiveSheetContent}>
+        <Text style={[styles.archiveSheetTitle, { color: theme.colors.onSurface }]}>
+          Flashbacks
+        </Text>
+        <ScrollView
+          style={styles.archiveSheetScroll}
+          showsVerticalScrollIndicator={false}
+        >
+          {allParties.map((ap) => {
+            const isCurrent = party?.id === ap.id;
+            return (
               <Pressable
                 key={ap.id}
                 onPress={() => {
-                  setShowArchiveSheet(false);
-                  handleOpenParty(ap.id);
+                  if (!isCurrent) {
+                    setShowArchiveSheet(false);
+                    handleOpenParty(ap.id);
+                  }
                 }}
                 style={({ pressed }) => [
                   styles.archiveSheetRow,
                   {
-                    backgroundColor: pressed
-                      ? theme.colors.surfaceVariant
-                      : "transparent",
+                    backgroundColor: isCurrent
+                      ? theme.colors.primaryContainer
+                      : pressed
+                        ? theme.colors.surfaceVariant
+                        : "transparent",
                   },
                 ]}
               >
                 <Text
-                  style={[styles.archiveSheetName, { color: theme.colors.onSurface }]}
+                  style={[
+                    styles.archiveSheetName,
+                    { color: isCurrent ? theme.colors.onPrimaryContainer : theme.colors.onSurface },
+                  ]}
                   numberOfLines={1}
                 >
                   {ap.name}
@@ -207,13 +221,17 @@ export default function FlashbackScreen() {
                 <Text style={[styles.archiveSheetPhotos, { color: theme.colors.onSurfaceVariant }]}>
                   {ap.photos_count} foto{ap.photos_count !== 1 ? "s" : ""}
                 </Text>
-                <Ionicons name="chevron-forward" size={16} color={theme.colors.onSurfaceVariant} />
+                {isCurrent ? (
+                  <Ionicons name="checkmark" size={16} color={theme.colors.primary} />
+                ) : (
+                  <Ionicons name="chevron-forward" size={16} color={theme.colors.onSurfaceVariant} />
+                )}
               </Pressable>
-            ))}
-          </ScrollView>
-        </View>
-      </BottomSheetModal>
-    </>
+            );
+          })}
+        </ScrollView>
+      </View>
+    </BottomSheetModal>
   );
 
   // ─── Loading ────────────────────────────────────────────────────────
@@ -264,6 +282,8 @@ export default function FlashbackScreen() {
               entering={FadeIn.duration(400).delay(50)}
               style={[styles.divider, { backgroundColor: theme.colors.outlineVariant }]}
             />
+
+            {selectorButton}
 
             {/* ─── Countdown card ─── */}
             <Animated.View
@@ -319,9 +339,8 @@ export default function FlashbackScreen() {
                 </Text>
               </SquircleView>
             </Animated.View>
-
-            {archivedSection}
           </ScrollView>
+          {archiveModal}
         </View>
       </>
     );
@@ -352,6 +371,8 @@ export default function FlashbackScreen() {
               entering={FadeIn.duration(400).delay(50)}
               style={[styles.divider, { backgroundColor: theme.colors.outlineVariant }]}
             />
+
+            {selectorButton}
 
             {/* ─── Countdown card ─── */}
             <Animated.View
@@ -430,16 +451,15 @@ export default function FlashbackScreen() {
                 </Pressable>
               </SquircleView>
             </Animated.View>
-
-            {archivedSection}
           </ScrollView>
-          
+
           <CreatePartyModal
             visible={showCreateModal}
             onDismiss={() => setShowCreateModal(false)}
             groupId={id!}
             onCreated={loadParty}
           />
+          {archiveModal}
         </View>
       </>
     );
@@ -478,6 +498,8 @@ export default function FlashbackScreen() {
             entering={FadeIn.duration(400).delay(50)}
             style={[styles.divider, { backgroundColor: theme.colors.outlineVariant }]}
           />
+
+          {selectorButton}
 
           {/* ─── Empty card ─── */}
           <Animated.View
@@ -569,8 +591,6 @@ export default function FlashbackScreen() {
               </Pressable>
             </SquircleView>
           </Animated.View>
-
-          {archivedSection}
         </ScrollView>
 
         <CreatePartyModal
@@ -579,6 +599,7 @@ export default function FlashbackScreen() {
           groupId={id!}
           onCreated={loadParty}
         />
+        {archiveModal}
       </View>
     </>
   );
@@ -989,30 +1010,18 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
 
-  archiveButton: {
+  selectorButton: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 16,
-  },
-  archiveButtonText: {
-    fontFamily: "Archivo-SemiBold",
-    fontSize: 14,
-    flex: 1,
-  },
-  archiveButtonBadge: {
-    minWidth: 22,
-    height: 22,
-    borderRadius: 11,
     justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 6,
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 12,
   },
-  archiveButtonBadgeText: {
-    fontFamily: "Archivo-Bold",
-    fontSize: 12,
+  selectorButtonText: {
+    fontFamily: "Archivo-Medium",
+    fontSize: 13,
   },
 
   archiveSheetContent: {

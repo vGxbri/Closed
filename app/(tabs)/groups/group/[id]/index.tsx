@@ -1992,6 +1992,7 @@ const styles = StyleSheet.create({
   widgetInfo: {
     flex: 1,
     justifyContent: "flex-end",
+    marginTop: 8,
   },
   widgetName: {
     fontFamily: "Archivo-Bold",
@@ -2002,7 +2003,9 @@ const styles = StyleSheet.create({
   widgetSubtitle: {
     fontFamily: "Archivo-Medium",
     fontSize: 12,
+    lineHeight: 16,
     letterSpacing: 0.2,
+    marginTop: 2,
   },
   agendaDate: {
     fontFamily: "Archivo-SemiBold",

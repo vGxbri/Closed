@@ -445,10 +445,7 @@ SELECT
   p.username,
   p.bio AS user_bio,
   COALESCE(NULLIF(gm.group_display_name, ''), p.display_name) AS display_name,
-  CASE
-    WHEN gm.group_avatar_url IS NOT NULL THEN NULLIF(gm.group_avatar_url, '')
-    ELSE p.avatar_url
-  END AS avatar_url
+  NULLIF(gm.group_avatar_url, '') AS avatar_url
 FROM public.group_members gm
 JOIN public.profiles p ON gm.user_id = p.id
 WHERE gm.is_active = true;

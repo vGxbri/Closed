@@ -35,8 +35,42 @@ class FlashbackService {
         .from('flashback_parties')
         .update({ status: computed })
         .eq('id', party.id);
+
+      if (computed === 'revealing') {
+        this.copyPhotosToGallery(party.id, party.group_id).catch((e) =>
+          console.error('Error copying flashback photos to gallery:', e)
+        );
+      }
     }
     return computed;
+  }
+
+  private async copyPhotosToGallery(partyId: string, groupId: string): Promise<void> {
+    const { data: existing } = await supabase
+      .from('gallery_images')
+      .select('media_url')
+      .eq('group_id', groupId)
+      .like('media_url', `%flashback/${partyId}/%`);
+
+    if (existing && existing.length > 0) return;
+
+    const { data: photos, error } = await supabase
+      .from('flashback_photos')
+      .select('*')
+      .eq('party_id', partyId)
+      .order('shot_number', { ascending: true });
+
+    if (error || !photos || photos.length === 0) return;
+
+    const rows = photos.map((p: FlashbackPhoto) => ({
+      group_id: groupId,
+      uploaded_by: p.taken_by,
+      media_url: p.photo_url,
+      media_type: 'image' as const,
+      caption: null,
+    }));
+
+    await supabase.from('gallery_images').insert(rows);
   }
 
   // ─── Parties ────────────────────────────────────────────────────────
@@ -171,10 +205,10 @@ class FlashbackService {
     return count || 0;
   }
 
-  async getActivityFeed(partyId: string): Promise<{ user_name: string; avatar_url: string | null; taken_at: string }[]> {
+  async getActivityFeed(partyId: string, groupId: string): Promise<{ user_name: string; avatar_url: string | null; taken_at: string; photo_url: string }[]> {
     const { data, error } = await supabase
       .from('flashback_photos')
-      .select('taken_by, created_at')
+      .select('taken_by, created_at, photo_url')
       .eq('party_id', partyId)
       .order('created_at', { ascending: false });
 
@@ -182,22 +216,24 @@ class FlashbackService {
     if (!data || data.length === 0) return [];
 
     const userIds = [...new Set(data.map((p: { taken_by: string }) => p.taken_by))];
-    const { data: profiles } = await supabase
-      .from('profiles')
-      .select('id, display_name, avatar_url')
-      .in('id', userIds);
+    const { data: members } = await supabase
+      .from('group_members_view')
+      .select('user_id, display_name, avatar_url')
+      .eq('group_id', groupId)
+      .in('user_id', userIds);
 
-    const profileMap = new Map(
-      (profiles || []).map((p: { id: string; display_name: string; avatar_url: string | null }) => [
-        p.id,
-        { display_name: p.display_name, avatar_url: p.avatar_url },
+    const memberMap = new Map(
+      (members || []).map((m: { user_id: string; display_name: string; avatar_url: string | null }) => [
+        m.user_id,
+        { display_name: m.display_name, avatar_url: m.avatar_url },
       ])
     );
 
-    return data.map((row: { taken_by: string; created_at: string }) => ({
-      user_name: profileMap.get(row.taken_by)?.display_name || 'Alguien',
-      avatar_url: profileMap.get(row.taken_by)?.avatar_url || null,
+    return data.map((row: { taken_by: string; created_at: string; photo_url: string }) => ({
+      user_name: memberMap.get(row.taken_by)?.display_name || 'Alguien',
+      avatar_url: memberMap.get(row.taken_by)?.avatar_url || null,
       taken_at: row.created_at,
+      photo_url: row.photo_url,
     }));
   }
 

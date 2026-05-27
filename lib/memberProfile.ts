@@ -19,10 +19,10 @@ export function resolveMemberAvatarUrl(
   globalAvatarUrl: string | null | undefined,
   groupAvatarUrl: string | null | undefined,
 ): string | null {
-  if (groupAvatarUrl !== null && groupAvatarUrl !== undefined) {
-    return groupAvatarUrl === '' ? null : groupAvatarUrl;
+  if (groupAvatarUrl !== null && groupAvatarUrl !== undefined && groupAvatarUrl !== '') {
+    return groupAvatarUrl;
   }
-  return globalAvatarUrl ?? null;
+  return null;
 }
 
 export function resolveMemberDisplayName(
