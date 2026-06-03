@@ -14,13 +14,13 @@ import Animated, {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useSnackbar } from "@/components/ui/SnackbarContext";
-import { BottomSheetModal } from "../../../../components/ui/BottomSheetModal";
-import { BucketListCard } from "../../../../components/ui/BucketListCard";
-import { CategoryFilter } from "../../../../components/ui/CategoryFilter";
-import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
-import { CustomHeader } from "../../../../components/ui/CustomHeader";
-import { useBucketList } from "../../../../hooks/useBucketList";
-import { BucketListItem } from "../../../../types/database";
+import { BottomSheetModal } from "@/components/ui/BottomSheetModal";
+import { BucketListCard } from "@/components/ui/BucketListCard";
+import { CategoryFilter } from "@/components/ui/CategoryFilter";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { CustomHeader } from "@/components/ui/CustomHeader";
+import { useBucketList } from "@/hooks/useBucketList";
+import { BucketListItem } from "@/types/database";
 
 type TabKey = "pending" | "completed";
 

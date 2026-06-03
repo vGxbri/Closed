@@ -19,8 +19,8 @@ import {
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { SnackbarProvider } from "@/components/ui/SnackbarContext";
-import { customColors, customColorsDark } from "../constants/Colors";
-import { AuthProvider, useAuth } from "../hooks/useAuth";
+import { customColors, customColorsDark } from "@/constants/Colors";
+import { AuthProvider, useAuth } from "@/hooks/useAuth";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();

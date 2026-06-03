@@ -25,8 +25,6 @@ import { UserAvatar } from "@/components/ui/UserAvatar";
 import { Image } from "expo-image";
 import { useSnackbar } from "@/components/ui/SnackbarContext";
 import { flashbackService } from "@/services/flashback.service";
-import { supabase } from "@/lib/supabase";
-
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);

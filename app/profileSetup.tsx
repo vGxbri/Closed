@@ -6,9 +6,9 @@ import { Alert, StyleSheet, TouchableOpacity, View } from "react-native";
 import { Avatar, Button, Surface, Text, TextInput, useTheme } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BlurTargetView } from "expo-blur";
-import { useAuth } from "../hooks/useAuth";
-import { supabase } from "../lib/supabase";
-import { ConfirmDialog, DialogType } from "../components/ui/ConfirmDialog";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/lib/supabase";
+import { ConfirmDialog, DialogType } from "@/components/ui/ConfirmDialog";
 
 export default function ProfileSetup() {
   const router = useRouter();

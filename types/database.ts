@@ -29,7 +29,47 @@ export interface GroupSettings {
   allow_member_voting: boolean;
   max_members: number;
   require_approval: boolean;
+  // Per-widget member permissions (optional for backwards compatibility).
+  // When undefined, the app and RLS fall back to WIDGET_PERMISSION_DEFAULTS:
+  // "open" actions stay allowed for members and privileged ones stay admin-only.
+  allow_member_manage_widgets?: boolean;
+  allow_member_create_events?: boolean;
+  allow_member_edit_events?: boolean;
+  allow_member_upload_gallery?: boolean;
+  allow_member_delete_others_gallery?: boolean;
+  allow_member_create_notes?: boolean;
+  allow_member_create_expenses?: boolean;
+  allow_member_settle_expenses?: boolean;
+  allow_member_create_flashback_party?: boolean;
 }
+
+export type WidgetPermissionKey =
+  | 'allow_member_manage_widgets'
+  | 'allow_member_create_events'
+  | 'allow_member_edit_events'
+  | 'allow_member_upload_gallery'
+  | 'allow_member_delete_others_gallery'
+  | 'allow_member_create_notes'
+  | 'allow_member_create_expenses'
+  | 'allow_member_settle_expenses'
+  | 'allow_member_create_flashback_party';
+
+/**
+ * Default value for each widget permission when it is missing from group
+ * settings. "Open" actions default to true to preserve the previous behaviour
+ * where any member could act; privileged actions default to false.
+ */
+export const WIDGET_PERMISSION_DEFAULTS: Record<WidgetPermissionKey, boolean> = {
+  allow_member_manage_widgets: false,
+  allow_member_create_events: true,
+  allow_member_edit_events: false,
+  allow_member_upload_gallery: true,
+  allow_member_delete_others_gallery: false,
+  allow_member_create_notes: true,
+  allow_member_create_expenses: true,
+  allow_member_settle_expenses: true,
+  allow_member_create_flashback_party: true,
+};
 
 export interface VotingSettings {
   nominees_can_vote: boolean;  // Can nominees vote in this award? (default: false)

@@ -2,9 +2,9 @@ import { Redirect, Stack } from "expo-router"; // <-- Añadido Stack aquí
 import { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { useTheme } from "react-native-paper";
-import { CircleLoadingIndicator } from "../components/premade/molecules/circle-loader";
-import { useAuth } from "../hooks";
-import { groupsService } from "../services";
+import { CircleLoadingIndicator } from "@/components/premade/molecules/circle-loader";
+import { useAuth } from "@/hooks";
+import { groupsService } from "@/services";
 
 // Root index - Invisible Router that handles initial redirection
 export default function Index() {

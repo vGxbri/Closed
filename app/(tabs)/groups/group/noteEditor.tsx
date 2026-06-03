@@ -16,12 +16,12 @@ import { Text, useTheme } from "react-native-paper";
 import Animated, { FadeIn, FadeInDown, FadeInUp } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
-import { CustomHeader } from "../../../../components/ui/CustomHeader";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { CustomHeader } from "@/components/ui/CustomHeader";
 import { useSnackbar } from "@/components/ui/SnackbarContext";
-import { useAuth, useGroup } from "../../../../hooks";
-import { notesService } from "../../../../services/notes.service";
-import { ChecklistItem, Note, NoteBlock } from "../../../../types/database";
+import { useAuth, useGroup } from "@/hooks";
+import { notesService } from "@/services/notes.service";
+import { ChecklistItem, Note, NoteBlock } from "@/types/database";
 
 // ─── ID Generator ───────────────────────────────────────────────────────
 const genId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;

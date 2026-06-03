@@ -24,8 +24,8 @@ import Animated, {
   SlideOutRight,
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ParallaxCarousel } from "../components/premade/molecules/parallax-carousel";
-import { groupsService } from "../services";
+import { ParallaxCarousel } from "@/components/premade/molecules/parallax-carousel";
+import { groupsService } from "@/services";
 
 const { height, width } = Dimensions.get("window");
 

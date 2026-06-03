@@ -14,19 +14,19 @@ import Animated, {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useSnackbar } from "@/components/ui/SnackbarContext";
-import { BottomSheetModal } from "../../../../components/ui/BottomSheetModal";
+import { BottomSheetModal } from "@/components/ui/BottomSheetModal";
 import {
   ConfirmDialog,
   DialogType,
-} from "../../../../components/ui/ConfirmDialog";
-import { CustomHeader } from "../../../../components/ui/CustomHeader";
-import { ExpenseCard } from "../../../../components/ui/ExpenseCard";
-import { MemberBalanceCard } from "../../../../components/ui/MemberBalanceCard";
-import { SettlementCard } from "../../../../components/ui/SettlementCard";
-import { useGroup } from "../../../../hooks";
-import { useSharedExpenses } from "../../../../hooks/useSharedExpenses";
-import { SharedExpenseWithDetails, GroupMemberView } from "../../../../types/database";
-import { formatCents, DebtTransfer } from "../../../../lib/sharedExpenses";
+} from "@/components/ui/ConfirmDialog";
+import { CustomHeader } from "@/components/ui/CustomHeader";
+import { ExpenseCard } from "@/components/ui/ExpenseCard";
+import { MemberBalanceCard } from "@/components/ui/MemberBalanceCard";
+import { SettlementCard } from "@/components/ui/SettlementCard";
+import { useGroup } from "@/hooks";
+import { useSharedExpenses } from "@/hooks/useSharedExpenses";
+import { SharedExpenseWithDetails, GroupMemberView } from "@/types/database";
+import { formatCents, DebtTransfer } from "@/lib/sharedExpenses";
 
 type TabKey = "expenses" | "balances" | "settle";
 
@@ -167,7 +167,9 @@ export default function SharedExpensesScreen() {
     useState<SharedExpenseWithDetails | null>(null);
   const [settlingDebt, setSettlingDebt] = useState<string | null>(null);
 
-  const { group } = useGroup(id);
+  const { group, isAdmin } = useGroup(id);
+  const canCreateExpenses =
+    isAdmin || (group?.settings?.allow_member_create_expenses ?? true);
   const activeMembers: GroupMemberView[] = useMemo(
     () => (group?.members || []).filter((m) => m.is_active),
     [group?.members]
@@ -206,12 +208,19 @@ export default function SharedExpensesScreen() {
   }, [deleteTarget, deleteExpense, showSnackbar]);
 
   const handleCreatePress = useCallback(() => {
+    if (!canCreateExpenses) {
+      showSnackbar(
+        "Solo los administradores pueden crear gastos en este grupo",
+        "info"
+      );
+      return;
+    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push({
       pathname: "/groups/group/createExpense",
       params: { id },
     } as any);
-  }, [router, id]);
+  }, [router, id, canCreateExpenses, showSnackbar]);
 
   const handleSettle = useCallback(
     async (debt: DebtTransfer) => {
@@ -292,6 +301,7 @@ export default function SharedExpensesScreen() {
               Registra los gastos del viaje para dividirlos entre el grupo de forma justa.
             </Text>
 
+            {canCreateExpenses && (
             <Pressable
               onPress={handleCreatePress}
               style={({ pressed }) => [
@@ -324,6 +334,7 @@ export default function SharedExpensesScreen() {
                 </Text>
               </SquircleView>
             </Pressable>
+            )}
           </SquircleView>
         </Animated.View>
       );
@@ -625,7 +636,7 @@ export default function SharedExpensesScreen() {
         </ScrollView>
 
         {/* ─── FAB ─── */}
-        {!isLoading && activeTab === "expenses" && expenses.length > 0 && (
+        {!isLoading && activeTab === "expenses" && expenses.length > 0 && canCreateExpenses && (
           <Animated.View
             entering={FadeIn.duration(400).delay(300)}
             style={[

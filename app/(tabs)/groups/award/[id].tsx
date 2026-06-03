@@ -36,22 +36,22 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AwardDetailSkeleton } from "@/components/award/AwardSkeletons";
 import { useSnackbar } from "@/components/ui/SnackbarContext";
-import { MemberAvatar } from "../../../../components/MemberAvatar";
+import { MemberAvatar } from "@/components/MemberAvatar";
 import {
     ConfirmDialog,
     DialogType,
-} from "../../../../components/ui/ConfirmDialog";
-import { CustomHeader } from "../../../../components/ui/CustomHeader";
-import { MemberSelectMenu } from "../../../../components/ui/MemberSelectMenu";
+} from "@/components/ui/ConfirmDialog";
+import { CustomHeader } from "@/components/ui/CustomHeader";
+import { MemberSelectMenu } from "@/components/ui/MemberSelectMenu";
 import {
     defaultAwardIcon,
     getIconComponent,
     IconName,
-} from "../../../../constants/icons";
-import { useAuth, useGroup } from "../../../../hooks";
-import { supabase } from "../../../../lib/supabase";
-import { awardsService } from "../../../../services";
-import { AwardWithNominees } from "../../../../types/database";
+} from "@/constants/icons";
+import { useAuth, useGroup } from "@/hooks";
+import { supabase } from "@/lib/supabase";
+import { awardsService } from "@/services";
+import { AwardWithNominees } from "@/types/database";
 
 // ... constants ...
 

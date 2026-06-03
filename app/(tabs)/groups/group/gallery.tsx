@@ -37,13 +37,13 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 
-import { CustomHeader } from "../../../../components/ui/CustomHeader";
+import { CustomHeader } from "@/components/ui/CustomHeader";
 import { useSnackbar } from "@/components/ui/SnackbarContext";
-import { useAuth, useGroup } from "../../../../hooks";
-import { galleryService } from "../../../../services/gallery.service";
-import { GalleryImageWithUser } from "../../../../types/database";
-import { ConfirmDialog, DialogType } from "../../../../components/ui/ConfirmDialog";
-import { getOptimizedMediaUrl } from "../../../../lib/storage";
+import { useAuth, useGroup } from "@/hooks";
+import { galleryService } from "@/services/gallery.service";
+import { GalleryImageWithUser } from "@/types/database";
+import { ConfirmDialog, DialogType } from "@/components/ui/ConfirmDialog";
+import { getOptimizedMediaUrl } from "@/lib/storage";
 
 const AnimatedImage = Animated.createAnimatedComponent(Image);
 
@@ -556,6 +556,9 @@ export default function GalleryScreen() {
 
   const { group, isAdmin } = useGroup(id);
 
+  const canUploadGallery =
+    isAdmin || (group?.settings?.allow_member_upload_gallery ?? true);
+
   const [images, setImages] = useState<GalleryImageWithUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
@@ -637,6 +640,13 @@ export default function GalleryScreen() {
   }, [hasMore, isLoading, page, fetchImages]);
 
   const handleUpload = useCallback(async () => {
+    if (!canUploadGallery) {
+      showSnackbar(
+        "Solo los administradores pueden subir al archivo en este grupo",
+        "info"
+      );
+      return;
+    }
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images', 'videos'],
@@ -661,7 +671,7 @@ export default function GalleryScreen() {
     } finally {
       setIsUploading(false);
     }
-  }, [id, showSnackbar, fetchImages]);
+  }, [id, showSnackbar, fetchImages, canUploadGallery]);
 
   const handleDelete = useCallback(async (image: GalleryImageWithUser) => {
     setConfirmDialog({
@@ -825,6 +835,7 @@ export default function GalleryScreen() {
               </TouchableOpacity>
 
               {/* Botón de Subir */}
+              {canUploadGallery && (
               <TouchableOpacity onPress={handleUpload} disabled={isUploading || isSelectionMode}>
                 {isUploading ? (
                   <ActivityIndicator size="small" color={theme.colors.primary} style={{ marginHorizontal: 12 }} />
@@ -846,6 +857,7 @@ export default function GalleryScreen() {
                   </SquircleView>
                 )}
               </TouchableOpacity>
+              )}
             </View>
           }
         />
@@ -913,14 +925,16 @@ export default function GalleryScreen() {
                 </SquircleView>
 
                 <Text style={[styles.emptyTitle, { color: theme.colors.onSurface }]}>Aún no hay fotos</Text>
-                <Text style={[styles.emptySubtitle, { color: theme.colors.onSurfaceVariant }]}>Sube la primera foto y empieza a llenar el archivo de recuerdos del grupo.</Text>
+                <Text style={[styles.emptySubtitle, { color: theme.colors.onSurfaceVariant }]}>{canUploadGallery ? "Sube la primera foto y empieza a llenar el archivo de recuerdos del grupo." : "El archivo de recuerdos del grupo aún está vacío."}</Text>
 
+                {canUploadGallery && (
                 <Pressable onPress={handleUpload} disabled={isUploading} style={({ pressed }) => [styles.emptyButton, { opacity: pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.97 : 1 }] }]}>
                   <SquircleView style={[styles.emptyButtonInner, { backgroundColor: theme.colors.primary }]} cornerSmoothing={1}>
                     <Ionicons name="camera-outline" size={20} color={theme.colors.onPrimary} />
                     <Text style={[styles.emptyButtonText, { color: theme.colors.onPrimary }]}>Subir fotos</Text>
                   </SquircleView>
                 </Pressable>
+                )}
               </SquircleView>
             </Animated.View>
           )}

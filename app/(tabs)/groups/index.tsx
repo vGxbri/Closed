@@ -12,10 +12,10 @@ import Animated, {
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
-import { UserAvatar } from "../../../components/ui/UserAvatar";
-import { useAuth, useGroups } from "../../../hooks";
-import { GroupWithDetails } from "../../../types/database";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { UserAvatar } from "@/components/ui/UserAvatar";
+import { useAuth, useGroups } from "@/hooks";
+import { GroupWithDetails } from "@/types/database";
 
 const CARD_GAP = 14;
 

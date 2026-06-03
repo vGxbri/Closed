@@ -22,12 +22,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   ConfirmDialog,
   DialogType,
-} from "../../../../components/ui/ConfirmDialog";
-import { CustomHeader } from "../../../../components/ui/CustomHeader";
+} from "@/components/ui/ConfirmDialog";
+import { CustomHeader } from "@/components/ui/CustomHeader";
 import { useSnackbar } from "@/components/ui/SnackbarContext";
-import { useGroup } from "../../../../hooks";
-import { widgetsService } from "../../../../services/widgets.service";
-import { Widget } from "../../../../types/database";
+import { useGroup } from "@/hooks";
+import { widgetsService } from "@/services/widgets.service";
+import { Widget } from "@/types/database";
 
 // ─── Widget Catalog Card ────────────────────────────────────────────────
 interface WidgetCatalogCardProps {
@@ -200,6 +200,9 @@ export default function ExploreWidgetsScreen() {
 
   const { group, isLoading: isGroupLoading, isAdmin } = useGroup(id);
 
+  const canManageWidgets =
+    isAdmin || (group?.settings?.allow_member_manage_widgets ?? false);
+
   const [allWidgets, setAllWidgets] = useState<Widget[]>([]);
   const [activeWidgetIds, setActiveWidgetIds] = useState<Set<string>>(
     new Set()
@@ -333,7 +336,7 @@ export default function ExploreWidgetsScreen() {
   }, [allWidgets, activeWidgetIds]);
 
   // Access denied
-  if (!isGroupLoading && (!group || !isAdmin)) {
+  if (!isGroupLoading && (!group || !canManageWidgets)) {
     return (
       <>
         <Stack.Screen options={{ headerShown: false }} />

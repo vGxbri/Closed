@@ -30,7 +30,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CustomHeader } from "@/components/ui/CustomHeader";
 import { useSnackbar } from "@/components/ui/SnackbarContext";
 import { UserAvatar } from "@/components/ui/UserAvatar";
-import { useAuth } from "@/hooks";
+import { useAuth, useGroup } from "@/hooks";
 import {
   buildCalendarMonthLayout,
   CalendarWeekBar,
@@ -39,7 +39,6 @@ import {
   getMondayBasedOffset,
 } from "@/lib/calendarMonthLayout";
 import { getEventScheduleCompact } from "@/lib/eventSchedule";
-import { supabase } from "@/lib/supabase";
 import { eventsService } from "@/services/events.service";
 import {
   CalendarEventWithDetails,
@@ -555,6 +554,10 @@ export default function CalendarScreen() {
   const theme = useTheme();
   const { showSnackbar } = useSnackbar();
   const { user } = useAuth();
+  const { group, isAdmin } = useGroup(id);
+
+  const canCreateEvents =
+    isAdmin || (group?.settings?.allow_member_create_events ?? true);
 
   const today = useMemo(() => new Date(), []);
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
@@ -727,11 +730,18 @@ export default function CalendarScreen() {
   }, [today, currentYear, currentMonth]);
 
   const handleCreateEvent = useCallback(() => {
+    if (!canCreateEvents) {
+      showSnackbar(
+        "Solo los administradores pueden crear eventos en este grupo",
+        "info"
+      );
+      return;
+    }
     router.push({
       pathname: "/groups/group/createEvent",
       params: { id, date: selectedDate.toISOString() },
     } as never);
-  }, [router, id, selectedDate]);
+  }, [router, id, selectedDate, canCreateEvents, showSnackbar]);
 
   const handleEventPress = useCallback(
     (event: CalendarEventWithDetails) => {
@@ -768,25 +778,27 @@ export default function CalendarScreen() {
           title=""
           showBackButton={true}
           rightAction={
-            <TouchableOpacity onPress={handleCreateEvent} activeOpacity={0.7}>
-              <SquircleView
-                style={[
-                  styles.addButton,
-                  {
-                    backgroundColor: theme.colors.primaryContainer,
-                    borderColor: theme.colors.primary,
-                    borderWidth: 1,
-                  },
-                ]}
-                cornerSmoothing={1}
-              >
-                <Ionicons
-                  name="add"
-                  size={20}
-                  color={theme.colors.onSurfaceVariant}
-                />
-              </SquircleView>
-            </TouchableOpacity>
+            canCreateEvents ? (
+              <TouchableOpacity onPress={handleCreateEvent} activeOpacity={0.7}>
+                <SquircleView
+                  style={[
+                    styles.addButton,
+                    {
+                      backgroundColor: theme.colors.primaryContainer,
+                      borderColor: theme.colors.primary,
+                      borderWidth: 1,
+                    },
+                  ]}
+                  cornerSmoothing={1}
+                >
+                  <Ionicons
+                    name="add"
+                    size={20}
+                    color={theme.colors.onSurfaceVariant}
+                  />
+                </SquircleView>
+              </TouchableOpacity>
+            ) : undefined
           }
         />
 
@@ -978,19 +990,21 @@ export default function CalendarScreen() {
                     >
                       Sin eventos este día
                     </Text>
-                    <TouchableOpacity
-                      onPress={handleCreateEvent}
-                      activeOpacity={0.7}
-                    >
-                      <Text
-                        style={[
-                          styles.emptyDayAction,
-                          { color: theme.colors.primary },
-                        ]}
+                    {canCreateEvents && (
+                      <TouchableOpacity
+                        onPress={handleCreateEvent}
+                        activeOpacity={0.7}
                       >
-                        + Crear evento
-                      </Text>
-                    </TouchableOpacity>
+                        <Text
+                          style={[
+                            styles.emptyDayAction,
+                            { color: theme.colors.primary },
+                          ]}
+                        >
+                          + Crear evento
+                        </Text>
+                      </TouchableOpacity>
+                    )}
                   </SquircleView>
                 </Animated.View>
               )}

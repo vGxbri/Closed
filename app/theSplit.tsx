@@ -9,9 +9,9 @@ import SquircleView from "react-native-fast-squircle";
 import { Text, useTheme } from "react-native-paper";
 import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { GrainyGradient } from "../components/premade/organisms/grainy-gradient";
-import { ConfirmDialog } from "../components/ui/ConfirmDialog";
-import { useAuth } from "../hooks";
+import { GrainyGradient } from "@/components/premade/organisms/grainy-gradient";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { useAuth } from "@/hooks";
 
 export default function TheSplit() {
   const router = useRouter();

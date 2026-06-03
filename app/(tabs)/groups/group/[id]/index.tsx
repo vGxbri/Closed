@@ -3,7 +3,6 @@ import { MemberAvatarsRow } from "@/components/MemberAvatar";
 import { MemberListBottomSheet } from "@/components/MemberListBottomSheet";
 import { UserAvatar } from "@/components/ui/UserAvatar";
 import { useAuth, useGroup } from "@/hooks";
-import { supabase } from "@/lib/supabase";
 import { galleryService } from "@/services/gallery.service";
 import { eventsService } from "@/services/events.service";
 import { bucketListService } from "@/services/bucketList.service";
@@ -1229,6 +1228,9 @@ export default function GroupDetailScreen() {
     isOwner,
   } = useGroup(id);
 
+  const canManageWidgets =
+    isAdmin || (group?.settings?.allow_member_manage_widgets ?? false);
+
   const [widgets, setWidgets] = useState<GroupWidgetWithDetails[]>([]);
   const [isLoadingWidgets, setIsLoadingWidgets] = useState(true);
 
@@ -1309,7 +1311,7 @@ export default function GroupDetailScreen() {
   }, [router, id, showSnackbar]);
 
   const handleAddWidget = useCallback(() => {
-    if (!isAdmin) {
+    if (!canManageWidgets) {
       showSnackbar("Solo los administradores pueden gestionar widgets", "info");
       return;
     }
@@ -1317,7 +1319,7 @@ export default function GroupDetailScreen() {
       pathname: "/groups/group/widgets",
       params: { id },
     } as any);
-  }, [isAdmin, showSnackbar, router, id]);
+  }, [canManageWidgets, showSnackbar, router, id]);
 
   const handleMembersPress = useCallback(() => {
     if (!group) return;
@@ -1579,8 +1581,8 @@ export default function GroupDetailScreen() {
                   />
                 ))}
 
-                {/* Add Widget Card — Admin only */}
-                {isAdmin && (
+                {/* Add Widget Card — managers only */}
+                {canManageWidgets && (
                   <Animated.View
                     entering={FadeIn.duration(400).delay(
                       200 + widgets.length * 80
@@ -1695,12 +1697,12 @@ export default function GroupDetailScreen() {
                       { color: theme.colors.onSurfaceVariant },
                     ]}
                   >
-                    {isAdmin
+                    {canManageWidgets
                       ? "Añade widgets para organizar tu grupo a tu manera. Gastos, galería, tareas y mucho más."
                       : "El administrador del grupo aún no ha añadido widgets."}
                   </Text>
 
-                  {isAdmin && (
+                  {canManageWidgets && (
                     <Pressable
                       onPress={handleAddWidget}
                       style={({ pressed }) => [

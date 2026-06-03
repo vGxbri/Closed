@@ -14,9 +14,9 @@ import SquircleView from "react-native-fast-squircle";
 import { HelperText, Text, TextInput, useTheme } from "react-native-paper";
 import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { GrainyGradient } from "../../components/premade/organisms/grainy-gradient";
+import { GrainyGradient } from "@/components/premade/organisms/grainy-gradient";
 import { useSnackbar } from "@/components/ui/SnackbarContext";
-import { useAuth } from "../../hooks";
+import { useAuth } from "@/hooks";
 
 export default function RegisterScreen() {
   const router = useRouter();

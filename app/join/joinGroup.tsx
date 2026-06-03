@@ -13,7 +13,7 @@ import SquircleView from "react-native-fast-squircle";
 import { Text, useTheme } from "react-native-paper";
 import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { CustomHeader } from "../../components/ui/CustomHeader";
+import { CustomHeader } from "@/components/ui/CustomHeader";
 
 const CODE_LENGTH = 6;
 

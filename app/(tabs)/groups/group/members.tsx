@@ -16,12 +16,12 @@ import {
 } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getMemberAvatarUrl, getMemberDisplayName } from "@/lib/memberProfile";
-import { UserAvatar } from "../../../../components/ui/UserAvatar";
-import { ConfirmDialog, DialogType } from "../../../../components/ui/ConfirmDialog";
-import { CustomHeader } from "../../../../components/ui/CustomHeader";
-import { MenuOption, OptionsMenu } from "../../../../components/ui/OptionsMenu";
+import { UserAvatar } from "@/components/ui/UserAvatar";
+import { ConfirmDialog, DialogType } from "@/components/ui/ConfirmDialog";
+import { CustomHeader } from "@/components/ui/CustomHeader";
+import { MenuOption, OptionsMenu } from "@/components/ui/OptionsMenu";
 import { useSnackbar } from "@/components/ui/SnackbarContext";
-import { useAuth, useGroup } from "../../../../hooks";
+import { useAuth, useGroup } from "@/hooks";
 
 export default function GroupMembersScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();

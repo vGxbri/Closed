@@ -7,6 +7,7 @@ import {
   GroupWithDetails,
   MemberRole,
   UpdateGroupInput,
+  WIDGET_PERMISSION_DEFAULTS,
 } from '../types/database';
 
 const GROUP_MEMBERS_WITH_PROFILE_SELECT = `
@@ -162,6 +163,7 @@ export const groupsService = {
           allow_member_voting: true,
           max_members: 100,
           require_approval: false,
+          ...WIDGET_PERMISSION_DEFAULTS,
         },
       })
       .select()

@@ -32,9 +32,9 @@ import {
   FlashbackPartyWithDetails,
   FlashbackPhotoWithUser,
 } from "@/types/database";
-import { BottomSheetModal } from "../../../../components/ui/BottomSheetModal";
-import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
-import { CustomHeader } from "../../../../components/ui/CustomHeader";
+import { BottomSheetModal } from "@/components/ui/BottomSheetModal";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { CustomHeader } from "@/components/ui/CustomHeader";
 import { CreatePartyModal } from "./flashback";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");

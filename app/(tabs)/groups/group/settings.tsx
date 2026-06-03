@@ -23,19 +23,19 @@ import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import {
   IconName,
-} from "../../../../constants/icons";
-import { useAuth, useGroup } from "../../../../hooks";
-import { MemberAvatar } from "../../../../components/MemberAvatar";
-import { MenuOption, OptionsMenu } from "../../../../components/ui/OptionsMenu";
+} from "@/constants/icons";
+import { useAuth, useGroup } from "@/hooks";
+import { MemberAvatar } from "@/components/MemberAvatar";
+import { MenuOption, OptionsMenu } from "@/components/ui/OptionsMenu";
 
 import {
   ConfirmDialog,
   DialogType,
-} from "../../../../components/ui/ConfirmDialog";
-import { CustomHeader } from "../../../../components/ui/CustomHeader";
+} from "@/components/ui/ConfirmDialog";
+import { CustomHeader } from "@/components/ui/CustomHeader";
 import { useSnackbar } from "@/components/ui/SnackbarContext";
-import { UserAvatar } from "../../../../components/ui/UserAvatar";
-import { groupsService } from "../../../../services";
+import { UserAvatar } from "@/components/ui/UserAvatar";
+import { groupsService, widgetsService } from "@/services";
 
 // ─── Toggle Row Component ───────────────────────────────────────────────
 interface ToggleRowProps {
@@ -199,6 +199,22 @@ export default function GroupSettingsScreen() {
   // Settings
   const [allowMemberNominations, setAllowMemberNominations] = useState(false);
   const [allowMemberVoting, setAllowMemberVoting] = useState(true);
+  const [allowMemberManageWidgets, setAllowMemberManageWidgets] = useState(false);
+  const [allowMemberCreateEvents, setAllowMemberCreateEvents] = useState(true);
+  const [allowMemberEditEvents, setAllowMemberEditEvents] = useState(false);
+  const [allowMemberUploadGallery, setAllowMemberUploadGallery] = useState(true);
+  const [allowMemberDeleteOthersGallery, setAllowMemberDeleteOthersGallery] =
+    useState(false);
+  const [allowMemberCreateNotes, setAllowMemberCreateNotes] = useState(true);
+  const [allowMemberCreateExpenses, setAllowMemberCreateExpenses] = useState(true);
+  const [allowMemberSettleExpenses, setAllowMemberSettleExpenses] = useState(true);
+  const [allowMemberCreateFlashbackParty, setAllowMemberCreateFlashbackParty] =
+    useState(true);
+
+  // Active widget names for the group (used to only show relevant permissions)
+  const [activeWidgetNames, setActiveWidgetNames] = useState<Set<string>>(
+    new Set()
+  );
 
   const [saving, setSaving] = useState(false);
 
@@ -209,8 +225,52 @@ export default function GroupSettingsScreen() {
       setCoverImageUri(group.cover_image_url || null);
       setAllowMemberNominations(group.settings.allow_member_nominations);
       setAllowMemberVoting(group.settings.allow_member_voting);
+      setAllowMemberManageWidgets(
+        group.settings.allow_member_manage_widgets ?? false
+      );
+      setAllowMemberCreateEvents(
+        group.settings.allow_member_create_events ?? true
+      );
+      setAllowMemberEditEvents(
+        group.settings.allow_member_edit_events ?? false
+      );
+      setAllowMemberUploadGallery(
+        group.settings.allow_member_upload_gallery ?? true
+      );
+      setAllowMemberDeleteOthersGallery(
+        group.settings.allow_member_delete_others_gallery ?? false
+      );
+      setAllowMemberCreateNotes(
+        group.settings.allow_member_create_notes ?? true
+      );
+      setAllowMemberCreateExpenses(
+        group.settings.allow_member_create_expenses ?? true
+      );
+      setAllowMemberSettleExpenses(
+        group.settings.allow_member_settle_expenses ?? true
+      );
+      setAllowMemberCreateFlashbackParty(
+        group.settings.allow_member_create_flashback_party ?? true
+      );
     }
   }, [group]);
+
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+    widgetsService
+      .getGroupWidgets(id)
+      .then((widgets) => {
+        if (cancelled) return;
+        setActiveWidgetNames(new Set(widgets.map((w) => w.widget.name)));
+      })
+      .catch((error) => {
+        console.error("Error loading group widgets for settings:", error);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
 
   const hasUnsavedChanges = 
     group && (
@@ -218,7 +278,16 @@ export default function GroupSettingsScreen() {
       description.trim() !== (group.description || "") ||
       coverImageUri !== (group.cover_image_url || null) ||
       allowMemberNominations !== group.settings.allow_member_nominations ||
-      allowMemberVoting !== group.settings.allow_member_voting
+      allowMemberVoting !== group.settings.allow_member_voting ||
+      allowMemberManageWidgets !== (group.settings.allow_member_manage_widgets ?? false) ||
+      allowMemberCreateEvents !== (group.settings.allow_member_create_events ?? true) ||
+      allowMemberEditEvents !== (group.settings.allow_member_edit_events ?? false) ||
+      allowMemberUploadGallery !== (group.settings.allow_member_upload_gallery ?? true) ||
+      allowMemberDeleteOthersGallery !== (group.settings.allow_member_delete_others_gallery ?? false) ||
+      allowMemberCreateNotes !== (group.settings.allow_member_create_notes ?? true) ||
+      allowMemberCreateExpenses !== (group.settings.allow_member_create_expenses ?? true) ||
+      allowMemberSettleExpenses !== (group.settings.allow_member_settle_expenses ?? true) ||
+      allowMemberCreateFlashbackParty !== (group.settings.allow_member_create_flashback_party ?? true)
     );
 
   const handlePickPhoto = useCallback(async () => {
@@ -278,6 +347,15 @@ export default function GroupSettingsScreen() {
           ...group!.settings,
           allow_member_nominations: allowMemberNominations,
           allow_member_voting: allowMemberVoting,
+          allow_member_manage_widgets: allowMemberManageWidgets,
+          allow_member_create_events: allowMemberCreateEvents,
+          allow_member_edit_events: allowMemberEditEvents,
+          allow_member_upload_gallery: allowMemberUploadGallery,
+          allow_member_delete_others_gallery: allowMemberDeleteOthersGallery,
+          allow_member_create_notes: allowMemberCreateNotes,
+          allow_member_create_expenses: allowMemberCreateExpenses,
+          allow_member_settle_expenses: allowMemberSettleExpenses,
+          allow_member_create_flashback_party: allowMemberCreateFlashbackParty,
         },
       });
       showSnackbar("Grupo actualizado correctamente", "success");
@@ -297,6 +375,15 @@ export default function GroupSettingsScreen() {
     group,
     allowMemberNominations,
     allowMemberVoting,
+    allowMemberManageWidgets,
+    allowMemberCreateEvents,
+    allowMemberEditEvents,
+    allowMemberUploadGallery,
+    allowMemberDeleteOthersGallery,
+    allowMemberCreateNotes,
+    allowMemberCreateExpenses,
+    allowMemberSettleExpenses,
+    allowMemberCreateFlashbackParty,
     updateGroup,
     showSnackbar,
     router,
@@ -463,6 +550,130 @@ export default function GroupSettingsScreen() {
       </View>
     );
   }
+
+  // Build the list of permission toggles to show. Widget-specific permissions
+  // only appear when the related widget is active in the group.
+  const permissionRows: {
+    key: string;
+    icon: string;
+    title: string;
+    description: string;
+    value: boolean;
+    onToggle: (v: boolean) => void;
+  }[] = [
+    {
+      key: "manage_widgets",
+      icon: "grid-outline",
+      title: "Gestionar widgets",
+      description: "Los miembros pueden añadir o quitar widgets",
+      value: allowMemberManageWidgets,
+      onToggle: setAllowMemberManageWidgets,
+    },
+    ...(activeWidgetNames.has("Premios")
+      ? [
+          {
+            key: "nominations",
+            icon: "trophy-outline",
+            title: "Crear premios",
+            description: "Los miembros pueden crear premios",
+            value: allowMemberNominations,
+            onToggle: setAllowMemberNominations,
+          },
+          {
+            key: "voting",
+            icon: "checkmark-circle-outline",
+            title: "Votar en premios",
+            description: "Los miembros pueden votar",
+            value: allowMemberVoting,
+            onToggle: setAllowMemberVoting,
+          },
+        ]
+      : []),
+    ...(activeWidgetNames.has("Agenda")
+      ? [
+          {
+            key: "create_events",
+            icon: "calendar-outline",
+            title: "Crear eventos",
+            description: "Los miembros pueden crear eventos en la agenda",
+            value: allowMemberCreateEvents,
+            onToggle: setAllowMemberCreateEvents,
+          },
+          {
+            key: "edit_events",
+            icon: "create-outline",
+            title: "Editar eventos de otros",
+            description: "Los miembros pueden editar eventos ajenos",
+            value: allowMemberEditEvents,
+            onToggle: setAllowMemberEditEvents,
+          },
+        ]
+      : []),
+    ...(activeWidgetNames.has("Archivo")
+      ? [
+          {
+            key: "upload_gallery",
+            icon: "image-outline",
+            title: "Subir al archivo",
+            description: "Los miembros pueden subir fotos y vídeos",
+            value: allowMemberUploadGallery,
+            onToggle: setAllowMemberUploadGallery,
+          },
+          {
+            key: "delete_others_gallery",
+            icon: "trash-outline",
+            title: "Borrar contenido de otros",
+            description: "Los miembros pueden borrar fotos y vídeos ajenos",
+            value: allowMemberDeleteOthersGallery,
+            onToggle: setAllowMemberDeleteOthersGallery,
+          },
+        ]
+      : []),
+    ...(activeWidgetNames.has("Bloc")
+      ? [
+          {
+            key: "create_notes",
+            icon: "document-text-outline",
+            title: "Crear notas",
+            description: "Los miembros pueden crear notas en el bloc",
+            value: allowMemberCreateNotes,
+            onToggle: setAllowMemberCreateNotes,
+          },
+        ]
+      : []),
+    ...(activeWidgetNames.has("Gastos")
+      ? [
+          {
+            key: "create_expenses",
+            icon: "cash-outline",
+            title: "Crear gastos",
+            description: "Los miembros pueden registrar gastos compartidos",
+            value: allowMemberCreateExpenses,
+            onToggle: setAllowMemberCreateExpenses,
+          },
+          {
+            key: "settle_expenses",
+            icon: "checkmark-done-outline",
+            title: "Liquidar gastos",
+            description: "Los miembros pueden marcar liquidaciones",
+            value: allowMemberSettleExpenses,
+            onToggle: setAllowMemberSettleExpenses,
+          },
+        ]
+      : []),
+    ...(activeWidgetNames.has("Flashback")
+      ? [
+          {
+            key: "create_flashback_party",
+            icon: "camera-outline",
+            title: "Crear fiestas Flashback",
+            description: "Los miembros pueden crear fiestas Flashback",
+            value: allowMemberCreateFlashbackParty,
+            onToggle: setAllowMemberCreateFlashbackParty,
+          },
+        ]
+      : []),
+  ];
 
   return (
     <>
@@ -800,46 +1011,44 @@ export default function GroupSettingsScreen() {
               </Animated.View>
 
               {/* ─── Section: Permissions ─── */}
-              <Animated.View
-                entering={FadeInDown.duration(400).delay(200)}
-                style={styles.section}
-              >
-                <Text
-                  style={[
-                    styles.sectionTitle,
-                    { color: theme.colors.onSurface },
-                  ]}
+              {permissionRows.length > 0 && (
+                <Animated.View
+                  entering={FadeInDown.duration(400).delay(200)}
+                  style={styles.section}
                 >
-                  Permisos
-                </Text>
-                <SquircleView
-                  style={[
-                    styles.settingsCard,
-                    {
-                      backgroundColor: theme.colors.surface,
-                      borderColor: theme.colors.outlineVariant,
-                      borderWidth: 1,
-                    },
-                  ]}
-                  cornerSmoothing={1}
-                >
-                  <ToggleRow
-                    icon="trophy-outline"
-                    title="Crear premios"
-                    description="Los miembros pueden crear premios"
-                    value={allowMemberNominations}
-                    onToggle={setAllowMemberNominations}
-                  />
-                  <ToggleRow
-                    icon="checkmark-circle-outline"
-                    title="Votar en premios"
-                    description="Los miembros pueden votar"
-                    value={allowMemberVoting}
-                    onToggle={setAllowMemberVoting}
-                    isLast
-                  />
-                </SquircleView>
-              </Animated.View>
+                  <Text
+                    style={[
+                      styles.sectionTitle,
+                      { color: theme.colors.onSurface },
+                    ]}
+                  >
+                    Permisos
+                  </Text>
+                  <SquircleView
+                    style={[
+                      styles.settingsCard,
+                      {
+                        backgroundColor: theme.colors.surface,
+                        borderColor: theme.colors.outlineVariant,
+                        borderWidth: 1,
+                      },
+                    ]}
+                    cornerSmoothing={1}
+                  >
+                    {permissionRows.map((row, index) => (
+                      <ToggleRow
+                        key={row.key}
+                        icon={row.icon}
+                        title={row.title}
+                        description={row.description}
+                        value={row.value}
+                        onToggle={row.onToggle}
+                        isLast={index === permissionRows.length - 1}
+                      />
+                    ))}
+                  </SquircleView>
+                </Animated.View>
+              )}
 
               {/* ─── Danger Zone ─── */}
               {isOwner && (

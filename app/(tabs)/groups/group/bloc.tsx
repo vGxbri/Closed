@@ -19,13 +19,13 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { BottomSheetModal } from "../../../../components/ui/BottomSheetModal";
-import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
-import { CustomHeader } from "../../../../components/ui/CustomHeader";
+import { BottomSheetModal } from "@/components/ui/BottomSheetModal";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { CustomHeader } from "@/components/ui/CustomHeader";
 import { useSnackbar } from "@/components/ui/SnackbarContext";
-import { useAuth, useGroup } from "../../../../hooks";
-import { notesService } from "../../../../services/notes.service";
-import { Note, NoteBlock } from "../../../../types/database";
+import { useAuth, useGroup } from "@/hooks";
+import { notesService } from "@/services/notes.service";
+import { Note, NoteBlock } from "@/types/database";
 
 // ─── Helpers ────────────────────────────────────────────────────────────
 const formatRelativeDate = (dateStr: string): string => {
@@ -225,7 +225,10 @@ export default function BlocScreen() {
   const theme = useTheme();
   const { showSnackbar } = useSnackbar();
   const { user } = useAuth();
-  const { isAdmin } = useGroup(id);
+  const { group, isAdmin } = useGroup(id);
+
+  const canCreateNotes =
+    isAdmin || (group?.settings?.allow_member_create_notes ?? true);
 
   const backgroundRef = React.useRef(null);
   const isFirstLoadRef = useRef(true);
@@ -264,6 +267,13 @@ export default function BlocScreen() {
   // ─── Create note ──────────────────────────────
   const handleCreateNote = useCallback(async () => {
     if (!id) return;
+    if (!canCreateNotes) {
+      showSnackbar(
+        "Solo los administradores pueden crear notas en este grupo",
+        "info"
+      );
+      return;
+    }
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       const note = await notesService.createNote(id);
@@ -275,7 +285,7 @@ export default function BlocScreen() {
       console.error("Error creating note:", e);
       showSnackbar("Error al crear la nota", "error");
     }
-  }, [id, router, showSnackbar]);
+  }, [id, router, showSnackbar, canCreateNotes]);
 
   // ─── Open note ────────────────────────────────
   const handleOpenNote = useCallback(
@@ -474,7 +484,7 @@ export default function BlocScreen() {
                     : "Crea una nota para empezar a organizar ideas con tu grupo."}
                 </Text>
 
-                {!searchQuery && (
+                {!searchQuery && canCreateNotes && (
                   <Pressable
                     onPress={handleCreateNote}
                     style={({ pressed }) => [
@@ -526,7 +536,7 @@ export default function BlocScreen() {
         </ScrollView>
 
         {/* ─── FAB ─── */}
-        {!isLoading && filteredNotes.length > 0 && (
+        {!isLoading && filteredNotes.length > 0 && canCreateNotes && (
           <Animated.View
             entering={FadeIn.duration(400).delay(300)}
             style={[

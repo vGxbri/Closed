@@ -15,13 +15,13 @@ import {
   useTheme,
 } from "react-native-paper";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import { defaultGroupIcon, getIconComponent, IconName } from "../../constants/icons";
-import { theme as appTheme } from "../../constants/theme";
-import { useAuth } from "../../hooks";
-import { groupsService } from "../../services";
-import { Group } from "../../types/database";
+import { defaultGroupIcon, getIconComponent, IconName } from "@/constants/icons";
+import { theme as appTheme } from "@/constants/theme";
+import { useAuth } from "@/hooks";
+import { groupsService } from "@/services";
+import { Group } from "@/types/database";
 
-import { ConfirmDialog, DialogType } from "../../components/ui/ConfirmDialog";
+import { ConfirmDialog, DialogType } from "@/components/ui/ConfirmDialog";
 
 type JoinState = "loading" | "preview" | "joining" | "success" | "error" | "already_member";
 
