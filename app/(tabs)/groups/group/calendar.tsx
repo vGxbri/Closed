@@ -39,6 +39,7 @@ import {
   getMondayBasedOffset,
 } from "@/lib/calendarMonthLayout";
 import { getEventScheduleCompact } from "@/lib/eventSchedule";
+import { supabase } from "@/lib/supabase";
 import { eventsService } from "@/services/events.service";
 import {
   CalendarEventWithDetails,

@@ -11,6 +11,7 @@ import { awardsService } from "@/services/awards.service";
 import { flashbackService } from "@/services/flashback.service";
 import { FlashbackPartyStatus } from "@/types/database";
 import { formatCents } from "@/lib/sharedExpenses";
+import { supabase } from "@/lib/supabase";
 import { widgetsService } from "@/services/widgets.service";
 import { CalendarEvent, GroupWidgetWithDetails } from "@/types/database";
 import { Ionicons } from "@expo/vector-icons";

@@ -24,6 +24,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { UserAvatar } from "@/components/ui/UserAvatar";
 import { Image } from "expo-image";
 import { useSnackbar } from "@/components/ui/SnackbarContext";
+import { supabase } from "@/lib/supabase";
 import { flashbackService } from "@/services/flashback.service";
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();

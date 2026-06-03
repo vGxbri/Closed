@@ -17,6 +17,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { AwardCard } from "@/components/AwardCard";
 import { CustomHeader } from "@/components/ui/CustomHeader";
 import { useGroup, useGroupAwards } from "@/hooks";
+import { supabase } from "@/lib/supabase";
 import { Award, AwardStatus } from "@/types/database";
 
 type TabKey = "active" | "completed";

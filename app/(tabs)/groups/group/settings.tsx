@@ -767,12 +767,29 @@ export default function GroupSettingsScreen() {
                   cornerSmoothing={1}
                 >
                   <Pressable onPress={handlePickPhoto} style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}>
-                    <UserAvatar
-                      uri={coverImageUri}
-                      name={name.trim() || "Nombre del grupo"}
-                      size={64}
-                      borderRadius={20}
-                    />
+                    <View style={styles.coverAvatarWrapper}>
+                      <UserAvatar
+                        uri={coverImageUri}
+                        name={name.trim() || "Nombre del grupo"}
+                        size={64}
+                        borderRadius={20}
+                      />
+                      <View
+                        style={[
+                          styles.coverEditBadge,
+                          {
+                            backgroundColor: theme.colors.primary,
+                            borderColor: theme.colors.surface,
+                          },
+                        ]}
+                      >
+                        <Ionicons
+                          name="pencil"
+                          size={14}
+                          color={theme.colors.onPrimary}
+                        />
+                      </View>
+                    </View>
                   </Pressable>
                   <Text
                     style={[
@@ -1274,6 +1291,20 @@ const styles = StyleSheet.create({
     padding: 28,
     borderRadius: 24,
     marginBottom: 28,
+  },
+  coverAvatarWrapper: {
+    position: "relative",
+  },
+  coverEditBadge: {
+    position: "absolute",
+    bottom: -2,
+    right: -2,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
   },
   previewIconContainer: {
     width: 64,
