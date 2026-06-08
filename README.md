@@ -1,50 +1,42 @@
-# Welcome to your Expo app 👋
+# Closed
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Closed es una aplicación móvil para grupos cerrados. La idea es tener un espacio privado donde tu grupo de amigos, pareja o familia pueda organizarse sin necesidad de saltar entre mil apps distintas.
 
-## Get started
+Cada grupo tiene acceso a un conjunto de widgets que se pueden activar o desactivar según lo que necesite:
 
-1. Install dependencies
+- **Archivo** — Galería compartida de fotos y vídeos
+- **Mensajes** — Chat en tiempo real
+- **Agenda** — Calendario de eventos compartido
+- **Gastos** — Gestión de gastos compartidos con liquidación automática
+- **Premios** — Sistema de votaciones y trofeos entre miembros
+- **Flashback** — Cámara desechable compartida con revelado diferido
+- **Bloc** — Bloc de notas compartido con editor por bloques
+- **Planes** — Lista de deseos compartida (bucket list)
 
-   ```bash
-   npm install
-   ```
+Desarrollado con **React Native** y **Expo**, con **Supabase** como backend (base de datos, autenticación, almacenamiento y tiempo real).
 
-2. Start the app
+## Requisitos
 
-   ```bash
-   npx expo start
-   ```
+- Node.js
+- Expo CLI
+- Una cuenta de Supabase con el esquema configurado
 
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Instalación
 
 ```bash
-npm run reset-project
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Crea un archivo `.env` en la raíz con tus credenciales de Supabase:
 
-## Learn more
+```
+EXPO_PUBLIC_SUPABASE_URL=tu_url
+EXPO_PUBLIC_SUPABASE_ANON_KEY=tu_anon_key
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+## Arrancar
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+```bash
+npx expo start
+```
 
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
