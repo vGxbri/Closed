@@ -1,9 +1,13 @@
+/**
+ * Tema global de la aplicación
+ * Espaciado, tipografía y radios unificados para la UI de Closed.
+ */
+
 import { Colors } from './Colors';
 
 export const theme = {
   colors: Colors,
-  
-  // Spacing
+
   spacing: {
     xs: 4,
     sm: 8,
@@ -12,8 +16,7 @@ export const theme = {
     xl: 32,
     xxl: 48,
   },
-  
-  // Border Radius
+
   borderRadius: {
     sm: 8,
     md: 12,
@@ -21,8 +24,7 @@ export const theme = {
     xl: 24,
     full: 9999,
   },
-  
-  // Typography
+
   typography: {
     h1: {
       fontSize: 32,
@@ -55,8 +57,7 @@ export const theme = {
       lineHeight: 16,
     },
   },
-  
-  // Shadows
+
   shadows: {
     sm: {
       shadowColor: Colors.shadow,

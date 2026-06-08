@@ -1,19 +1,17 @@
+/**
+ * Cámara Flashback
+ * Captura fotos durante una fiesta flashback con la cámara del dispositivo.
+ */
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import * as Haptics from "expo-haptics";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
-} from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Text, useTheme } from "react-native-paper";
 import Animated, {
   FadeIn,
-  FadeOut,
   useAnimatedStyle,
   useSharedValue,
   withSequence,
@@ -21,11 +19,11 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { UserAvatar } from "@/components/ui/UserAvatar";
-import { Image } from "expo-image";
 import { useSnackbar } from "@/components/ui/SnackbarContext";
+import { UserAvatar } from "@/components/ui/UserAvatar";
 import { supabase } from "@/lib/supabase";
 import { flashbackService } from "@/services/flashback.service";
+import { Image } from "expo-image";
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
@@ -37,7 +35,10 @@ function timeAgo(dateStr: string): string {
 }
 
 export default function FlashbackCameraScreen() {
-  const { id, partyId } = useLocalSearchParams<{ id: string; partyId: string }>();
+  const { id, partyId } = useLocalSearchParams<{
+    id: string;
+    partyId: string;
+  }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const theme = useTheme();
@@ -51,26 +52,31 @@ export default function FlashbackCameraScreen() {
   const cameraReadyRef = useRef(false);
   const [permission, requestPermission] = useCameraPermissions();
   const [flashEnabled, setFlashEnabled] = useState(false);
-  const [facing, setFacing] = useState<'back' | 'front'>('back');
+  const [facing, setFacing] = useState<"back" | "front">("back");
   const [isTaking, setIsTaking] = useState(false);
   const [remaining, setRemaining] = useState(0);
   const [photoLimit, setPhotoLimit] = useState(36);
   const [activityFeed, setActivityFeed] = useState<
-    { user_name: string; avatar_url: string | null; taken_at: string; photo_url?: string }[]
+    {
+      user_name: string;
+      avatar_url: string | null;
+      taken_at: string;
+      photo_url?: string;
+    }[]
   >([]);
 
   useEffect(() => {
     mountedRef.current = true;
-    return () => { mountedRef.current = false; };
+    return () => {
+      mountedRef.current = false;
+    };
   }, []);
 
-  // Flash overlay animation
   const flashOpacity = useSharedValue(0);
   const flashStyle = useAnimatedStyle(() => ({
     opacity: flashOpacity.value,
   }));
 
-  // Counter scale animation
   const counterScale = useSharedValue(1);
   const counterStyle = useAnimatedStyle(() => ({
     transform: [{ scale: counterScale.value }],
@@ -89,7 +95,7 @@ export default function FlashbackCameraScreen() {
       setRemaining(remainingShots);
       remainingRef.current = remainingShots;
       setActivityFeed(feed);
-      
+
       if (partyData) {
         setPhotoLimit(partyData.photo_limit);
         if (partyData.status !== "active") {
@@ -107,18 +113,15 @@ export default function FlashbackCameraScreen() {
           params: { id },
         } as any);
       }
-    } catch (e) {
-      console.error("Error loading camera data:", e);
-    }
+    } catch {}
   }, [partyId, id]);
 
   useFocusEffect(
     useCallback(() => {
       loadData();
-    }, [loadData])
+    }, [loadData]),
   );
 
-  // Realtime subscription for activity feed and party status changes
   useEffect(() => {
     if (!partyId) return;
 
@@ -134,7 +137,7 @@ export default function FlashbackCameraScreen() {
         },
         () => {
           loadData();
-        }
+        },
       )
       .subscribe();
 
@@ -150,7 +153,7 @@ export default function FlashbackCameraScreen() {
         },
         () => {
           loadData();
-        }
+        },
       )
       .subscribe();
 
@@ -161,7 +164,13 @@ export default function FlashbackCameraScreen() {
   }, [partyId, loadData]);
 
   const handleTakePhoto = async () => {
-    if (isTakingRef.current || !cameraRef.current || !cameraReadyRef.current || remainingRef.current <= 0) return;
+    if (
+      isTakingRef.current ||
+      !cameraRef.current ||
+      !cameraReadyRef.current ||
+      remainingRef.current <= 0
+    )
+      return;
 
     isTakingRef.current = true;
     setIsTaking(true);
@@ -170,33 +179,33 @@ export default function FlashbackCameraScreen() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
       flashOpacity.value = withSequence(
         withTiming(1, { duration: 50 }),
-        withTiming(0, { duration: 200 })
+        withTiming(0, { duration: 200 }),
       );
 
       const camera = cameraRef.current;
       let photo;
       try {
         photo = await camera.takePictureAsync({ quality: 0.7 });
-      } catch (cameraError) {
-        console.error("Camera capture failed:", cameraError);
-        if (mountedRef.current) showSnackbar("Error al capturar la foto", "error");
+      } catch {
+        if (mountedRef.current)
+          showSnackbar("Error al capturar la foto", "error");
         return;
       }
 
       if (!photo?.uri) {
-        if (mountedRef.current) showSnackbar("No se pudo capturar la foto", "error");
+        if (mountedRef.current)
+          showSnackbar("No se pudo capturar la foto", "error");
         return;
       }
 
       counterScale.value = withSequence(
         withTiming(1.3, { duration: 100 }),
-        withTiming(1, { duration: 150 })
+        withTiming(1, { duration: 150 }),
       );
 
       try {
         await flashbackService.takePhoto(partyId!, photo.uri);
       } catch (uploadError: any) {
-        console.error("Upload failed:", uploadError);
         if (!mountedRef.current) return;
 
         let msg = "Error al subir la foto";
@@ -237,23 +246,28 @@ export default function FlashbackCameraScreen() {
           params: { id },
         } as any);
       }
-    } catch (e) {
-      console.error("Error taking photo:", e);
+    } catch {
       if (mountedRef.current) showSnackbar("Error inesperado", "error");
     } finally {
       isTakingRef.current = false;
       if (mountedRef.current) setIsTaking(false);
-      setTimeout(() => { if (mountedRef.current) loadData(); }, 500);
+      setTimeout(() => {
+        if (mountedRef.current) loadData();
+      }, 500);
     }
   };
 
-  // ─── Permission denied ──────────────────────────────────────────────
   if (!permission?.granted) {
     return (
       <>
         <Stack.Screen options={{ headerShown: false }} />
         <View style={[styles.container, { backgroundColor: "#0A0A0A" }]}>
-          <View style={[styles.permissionContainer, { paddingTop: insets.top + 60 }]}>
+          <View
+            style={[
+              styles.permissionContainer,
+              { paddingTop: insets.top + 60 },
+            ]}
+          >
             <Ionicons name="camera-outline" size={64} color="#FFFFFF" />
             <Text style={styles.permissionTitle}>Acceso a la cámara</Text>
             <Text style={styles.permissionText}>
@@ -263,7 +277,12 @@ export default function FlashbackCameraScreen() {
               onPress={requestPermission}
               style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
             >
-              <View style={[styles.permissionButton, { backgroundColor: theme.colors.primary }]}>
+              <View
+                style={[
+                  styles.permissionButton,
+                  { backgroundColor: theme.colors.primary },
+                ]}
+              >
                 <Text style={styles.permissionButtonText}>Permitir cámara</Text>
               </View>
             </Pressable>
@@ -282,28 +301,30 @@ export default function FlashbackCameraScreen() {
     <>
       <Stack.Screen options={{ headerShown: false }} />
       <View style={[styles.container, { backgroundColor: "#0A0A0A" }]}>
-        {/* Camera */}
         <CameraView
           ref={cameraRef}
           style={styles.camera}
           facing={facing}
           flash={flashEnabled ? "on" : "off"}
-          onCameraReady={() => { cameraReadyRef.current = true; }}
+          onCameraReady={() => {
+            cameraReadyRef.current = true;
+          }}
         >
-          {/* Flash overlay */}
           <Animated.View
-            style={[StyleSheet.absoluteFillObject, { backgroundColor: "#FFFFFF" }, flashStyle]}
+            style={[
+              StyleSheet.absoluteFillObject,
+              { backgroundColor: "#FFFFFF" },
+              flashStyle,
+            ]}
             pointerEvents="none"
           />
         </CameraView>
 
-        {/* Top bar */}
         <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
           <Pressable onPress={() => router.back()} hitSlop={12}>
             <Ionicons name="chevron-back" size={28} color="#FFFFFF" />
           </Pressable>
 
-          {/* Shot counter (LCD style) */}
           <Animated.View style={counterStyle}>
             <View style={styles.counterContainer}>
               <Text style={styles.counterText}>
@@ -327,9 +348,9 @@ export default function FlashbackCameraScreen() {
           </Pressable>
         </View>
 
-        {/* Bottom section */}
-        <View style={[styles.bottomSection, { paddingBottom: insets.bottom + 16 }]}>
-          {/* Activity feed (blind) */}
+        <View
+          style={[styles.bottomSection, { paddingBottom: insets.bottom + 16 }]}
+        >
           {activityFeed.length > 0 && (
             <ScrollView
               horizontal
@@ -356,7 +377,11 @@ export default function FlashbackCameraScreen() {
                       </>
                     ) : (
                       <View style={styles.feedBlurPlaceholder}>
-                        <Ionicons name="image" size={20} color="rgba(255,255,255,0.15)" />
+                        <Ionicons
+                          name="image"
+                          size={20}
+                          color="rgba(255,255,255,0.15)"
+                        />
                       </View>
                     )}
                     <View style={styles.feedCardInfo}>
@@ -381,9 +406,7 @@ export default function FlashbackCameraScreen() {
             </ScrollView>
           )}
 
-          {/* Shutter button */}
           <View style={styles.shutterRow}>
-            {/* Spacer to center the shutter button */}
             <View style={{ width: 44 }} />
 
             <Pressable
@@ -392,7 +415,8 @@ export default function FlashbackCameraScreen() {
               style={({ pressed }) => [
                 styles.shutterButton,
                 {
-                  opacity: isTaking || remaining <= 0 ? 0.4 : pressed ? 0.85 : 1,
+                  opacity:
+                    isTaking || remaining <= 0 ? 0.4 : pressed ? 0.85 : 1,
                   transform: [{ scale: pressed && !isTaking ? 0.92 : 1 }],
                 },
               ]}
@@ -405,7 +429,6 @@ export default function FlashbackCameraScreen() {
               />
             </Pressable>
 
-            {/* Toggle Camera Facing (Front/Back) */}
             <Pressable
               onPress={() => {
                 setFacing((prev) => (prev === "back" ? "front" : "back"));
@@ -413,11 +436,15 @@ export default function FlashbackCameraScreen() {
               }}
               style={({ pressed }) => [
                 styles.flipButton,
-                { opacity: pressed ? 0.7 : 1 }
+                { opacity: pressed ? 0.7 : 1 },
               ]}
               hitSlop={12}
             >
-              <Ionicons name="camera-reverse-outline" size={26} color="#FFFFFF" />
+              <Ionicons
+                name="camera-reverse-outline"
+                size={26}
+                color="#FFFFFF"
+              />
             </Pressable>
           </View>
         </View>
@@ -426,12 +453,10 @@ export default function FlashbackCameraScreen() {
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: { flex: 1 },
   camera: { flex: 1 },
 
-  // Top bar
   topBar: {
     position: "absolute",
     top: 0,
@@ -460,7 +485,6 @@ const styles = StyleSheet.create({
     letterSpacing: 3,
   },
 
-  // Bottom
   bottomSection: {
     position: "absolute",
     bottom: 0,
@@ -507,7 +531,6 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.6)",
   },
 
-  // Shutter
   shutterRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -538,7 +561,6 @@ const styles = StyleSheet.create({
     borderRadius: 30,
   },
 
-  // Permission
   permissionContainer: {
     flex: 1,
     justifyContent: "center",

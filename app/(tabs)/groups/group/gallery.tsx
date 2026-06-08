@@ -1,3 +1,7 @@
+/**
+ * Galería del grupo
+ * Exploración, subida y reproducción de fotos y vídeos compartidos en el grupo.
+ */
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { BlurTargetView, BlurView } from "expo-blur";
@@ -23,7 +27,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { File, Paths } from 'expo-file-system';
 import RNShare from 'react-native-share';
 
-// Gestos y Animaciones
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   FadeIn,
@@ -66,7 +69,6 @@ const getSimulatedHeight = (id: string) => {
   return 180 + (hash % 120);
 };
 
-// ─── Masonry Grid Component ─────────────────────────────────────────────
 interface MasonryProps {
   images: GalleryImageWithUser[];
   onImagePress: (image: GalleryImageWithUser) => void;
@@ -111,14 +113,14 @@ const MasonryGrid = React.memo<MasonryProps>(({ images, onImagePress, isSelectio
                       transition={200}
                     />
 
-                    {/* Indicador de vídeo */}
+
                     {image.media_type === "video" && !isSelectionMode && (
                       <View style={styles.videoIndicator}>
                         <Ionicons name="play" size={16} color="#FFFFFF" />
                       </View>
                     )}
 
-                    {/* Overlay de Selección */}
+
                     {isSelectionMode && (
                       <Animated.View
                         entering={FadeIn.duration(200)}
@@ -148,7 +150,6 @@ const MasonryGrid = React.memo<MasonryProps>(({ images, onImagePress, isSelectio
 
 MasonryGrid.displayName = "MasonryGrid";
 
-// ─── Skeleton Grid ───────────────────────────────────────────────────
 const SkeletonGrid = React.memo(() => {
   const theme = useTheme();
   const col1Heights = [220, 180, 250];
@@ -183,7 +184,6 @@ const formatTime = (seconds: number): string => {
   return `${mins}:${secs.toString().padStart(2, "0")}`;
 };
 
-// ─── Sub-elemento para Vídeo ──────────────────
 const VideoPlayerItem = React.memo(({ url, isVisible, showUI, onToggleUI }: { url: string; isVisible: boolean; showUI: boolean; onToggleUI: (force?: boolean) => void }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
@@ -333,7 +333,6 @@ const VideoPlayerItem = React.memo(({ url, isVisible, showUI, onToggleUI }: { ur
 
 VideoPlayerItem.displayName = "VideoPlayerItem";
 
-// ─── Elemento Individual del Visor ──────────────────
 const ViewerItem = React.memo(({ item, isVisible, showUI, onToggleUI }: { item: GalleryImageWithUser; isVisible: boolean; showUI: boolean; onToggleUI: (force?: boolean) => void }) => {
   return (
     <View style={styles.viewerItemContainer}>
@@ -359,7 +358,6 @@ const ViewerItem = React.memo(({ item, isVisible, showUI, onToggleUI }: { item: 
 
 ViewerItem.displayName = "ViewerItem";
 
-// ─── Full Screen Viewer ───────────────────────────────────────────────
 interface ViewerProps {
   visible: boolean;
   images: GalleryImageWithUser[];
@@ -380,7 +378,6 @@ const MediaViewer = React.memo<ViewerProps>(({ visible, images, initialIndex, on
   const scale = useSharedValue(1);
   const backgroundOpacity = useSharedValue(1);
 
-  // Reset state when opening
   useEffect(() => {
     if (visible) {
       setShowUI(true);
@@ -545,7 +542,6 @@ const MediaViewer = React.memo<ViewerProps>(({ visible, images, initialIndex, on
 
 MediaViewer.displayName = "MediaViewer";
 
-// ─── Main Screen ───────────────────────────────────────────────────────
 export default function GalleryScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -569,11 +565,9 @@ export default function GalleryScreen() {
   const [viewerVisible, setViewerVisible] = useState(false);
   const [storageUsed, setStorageUsed] = useState(0);
 
-  // Estados del Modo Selección
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedImageIds, setSelectedImageIds] = useState<string[]>([]);
 
-  // Estado del Diálogo de Confirmación
   const [confirmDialog, setConfirmDialog] = useState<{
     visible: boolean;
     title: string;
@@ -619,7 +613,7 @@ export default function GalleryScreen() {
       }
       setStorageUsed(storageData);
       setHasMore(imageData.length >= 20);
-    } catch (error) {
+    } catch {
       showSnackbar("Error al cargar la galería", "error");
     } finally {
       setIsLoading(false);
@@ -685,8 +679,7 @@ export default function GalleryScreen() {
           setImages((prev) => prev.filter((i) => i.id !== image.id));
           setViewerVisible(false);
           showSnackbar("Foto eliminada", "success");
-        } catch (error) {
-          console.error("Error deleting image:", error);
+        } catch {
           showSnackbar("Error al eliminar la foto", "error");
         }
       },
@@ -703,7 +696,6 @@ export default function GalleryScreen() {
     setViewerVisible(true);
   }, [images]);
 
-  // Manejadores del Modo Selección
   const toggleSelectionMode = useCallback(() => {
     setIsSelectionMode((prev) => !prev);
     setSelectedImageIds([]);
@@ -736,16 +728,12 @@ export default function GalleryScreen() {
           const ext = img.media_url.split('.').pop()?.split('?')[0] || (img.media_type === "video" ? "mp4" : "jpg");
           const fileName = `share_${img.id}.${ext}`;
 
-          // 1. Usamos la nueva API de Archivos (Paths.cache es el directorio temporal)
           const localFile = new File(Paths.cache, fileName);
 
-          // 2. Comprobamos si existe usando la propiedad síncrona
           if (!localFile.exists) {
-            // 3. Descargamos directamente a la instancia del archivo
             await File.downloadFileAsync(img.media_url, localFile);
           }
 
-          // 4. Retornamos la URI local para dársela a RNShare
           return localFile.uri;
         })
       );
@@ -760,8 +748,7 @@ export default function GalleryScreen() {
       setIsSelectionMode(false);
       setSelectedImageIds([]);
 
-    } catch (error: any) {
-      console.error("Error al compartir:", error);
+    } catch {
       showSnackbar("Hubo un problema al compartir los archivos", "error");
     }
   };
@@ -797,7 +784,7 @@ export default function GalleryScreen() {
           setSelectedImageIds([]);
           setIsSelectionMode(false);
           showSnackbar(`${toDelete.length} archivo(s) eliminado(s)`, "success");
-        } catch (error) {
+        } catch {
           showSnackbar("Error al eliminar", "error");
         }
       }
@@ -814,14 +801,14 @@ export default function GalleryScreen() {
           showBackButton={true}
           rightAction={
             <View style={styles.headerActionsRow}>
-              {/* Botón de Selección */}
+
               <TouchableOpacity onPress={toggleSelectionMode} disabled={images.length === 0}>
                 <SquircleView
                   style={[
                     styles.uploadButton,
                     {
                       backgroundColor: isSelectionMode ? theme.colors.primary : theme.colors.surfaceVariant,
-                      paddingHorizontal: 10 // Un poco más cuadrado para el icono
+                      paddingHorizontal: 10
                     }
                   ]}
                   cornerSmoothing={1}
@@ -834,7 +821,7 @@ export default function GalleryScreen() {
                 </SquircleView>
               </TouchableOpacity>
 
-              {/* Botón de Subir */}
+
               {canUploadGallery && (
               <TouchableOpacity onPress={handleUpload} disabled={isUploading || isSelectionMode}>
                 {isUploading ? (
@@ -940,7 +927,7 @@ export default function GalleryScreen() {
           )}
         </ScrollView>
 
-        {/* Action Bar Flotante (Solo en modo selección) */}
+
         {isSelectionMode && (
           <Animated.View
             entering={FadeInUp.duration(300)}
@@ -999,7 +986,6 @@ export default function GalleryScreen() {
   );
 }
 
-// ─── Styles ─────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollView: { flex: 1 },
@@ -1016,7 +1002,6 @@ const styles = StyleSheet.create({
   masonryImage: { width: "100%", borderRadius: 16, backgroundColor: "rgba(0,0,0,0.05)" },
   videoIndicator: { position: "absolute", top: 8, right: 8, width: 28, height: 28, borderRadius: 14, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center" },
 
-  // Estilos de Selección
   selectionOverlay: { ...StyleSheet.absoluteFillObject, borderRadius: 16, backgroundColor: "rgba(0,0,0,0.2)", borderWidth: 2, borderColor: "transparent", zIndex: 5 },
   selectionOverlayActive: { backgroundColor: "rgba(0,0,0,0.5)" },
   selectionIcon: { position: "absolute", top: 8, right: 8, zIndex: 10, textShadowColor: 'rgba(0,0,0,0.3)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
@@ -1046,7 +1031,6 @@ const styles = StyleSheet.create({
   storageHeaderBarBg: { height: 4, borderRadius: 2, overflow: "hidden" },
   storageHeaderBarFill: { height: "100%", borderRadius: 2 },
 
-  // Estilos del Visor y Pantalla Completa
   viewerItemContainer: { width: SCREEN_WIDTH, height: "100%", justifyContent: "center", alignItems: "center" },
   viewerTopBar: { flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingBottom: 12, zIndex: 10 },
   viewerCloseBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: "rgba(255,255,255,0.1)", justifyContent: "center", alignItems: "center" },
@@ -1062,21 +1046,18 @@ const styles = StyleSheet.create({
   viewerMetadataItem: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(255,255,255,0.08)", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
   viewerMetadataText: { fontFamily: "Archivo-Medium", fontSize: 12, color: "rgba(255,255,255,0.5)" },
 
-  // Custom Video y Scrubber
   videoWrapper: { width: SCREEN_WIDTH, height: SCREEN_HEIGHT * 0.7, justifyContent: "center", alignItems: "center" },
   videoPressable: { flex: 1, width: "100%", height: "100%", justifyContent: "center", alignItems: "center" },
   imagePressable: { flex: 1, width: "100%", height: "100%", justifyContent: "center", alignItems: "center" },
   customPlayOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: "center", alignItems: "center", zIndex: 20 },
   customPlayButton: { width: 80, height: 80, borderRadius: 40, justifyContent: "center", alignItems: "center", overflow: "hidden", backgroundColor: "rgba(0,0,0,0.3)" },
 
-  // Barra de progreso YouTube
   scrubberContainer: { position: "absolute", bottom: -15, left: 0, right: 0, height: 30, justifyContent: "center", zIndex: 30 },
   scrubberHitbox: { width: "100%", height: "100%", justifyContent: "center" },
   scrubberTrack: { width: "100%", height: 3, backgroundColor: "rgba(255,255,255,0.3)" },
   scrubberFill: { height: "100%", backgroundColor: "#FFFFFF" },
   scrubberThumb: { position: "absolute", width: 12, height: 12, borderRadius: 6, backgroundColor: "#FFFFFF", top: -4.5, marginLeft: -6 },
 
-  // Video Controls
   videoControlsContainer: { position: "absolute", bottom: 20, left: 0, right: 0, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 15, zIndex: 40 },
   muteButton: { width: 32, height: 32, borderRadius: 16, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "center", alignItems: "center" },
   videoTimeText: { fontFamily: "Archivo-Medium", fontSize: 12, color: "#FFFFFF", textShadowColor: "rgba(0,0,0,0.5)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 },

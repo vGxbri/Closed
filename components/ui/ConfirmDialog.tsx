@@ -1,3 +1,8 @@
+/**
+ * Diálogo de confirmación
+ * Modal para avisos, errores y acciones destructivas con blur.
+ */
+
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import React from "react";
@@ -22,7 +27,6 @@ interface ConfirmDialogProps {
   cancelText?: string;
   type?: DialogType;
   showCancel?: boolean;
-  // NUEVO: Referencia al fondo que queremos difuminar (necesario para Android SDK 55)
   blurTargetRef?: React.RefObject<any>;
 }
 
@@ -36,7 +40,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   cancelText = "Cancelar",
   type = "info",
   showCancel = true,
-  blurTargetRef, // Lo recibimos por props
+  blurTargetRef,
 }) => {
   const theme = useTheme();
   const opacityAnim = React.useRef(new Animated.Value(0)).current;
@@ -137,7 +141,6 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   return (
     <Portal>
       <View style={styles.container}>
-        {/* Backdrop */}
         <Pressable style={styles.backdrop} onPress={onCancel}>
           <Animated.View
             style={[
@@ -155,7 +158,6 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           </Animated.View>
         </Pressable>
 
-        {/* Dialog */}
         <Animated.View
           style={[
             styles.dialogContainer,
@@ -166,7 +168,6 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             },
           ]}
         >
-          {/* Icon */}
           <View
             style={[
               styles.iconContainer,
@@ -183,7 +184,6 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             />
           </View>
 
-          {/* Title */}
           <Text
             variant="titleLarge"
             style={[styles.title, { color: theme.colors.onSurface }]}
@@ -191,7 +191,6 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             {title}
           </Text>
 
-          {/* Message */}
           <Text
             variant="bodyMedium"
             style={[styles.message, { color: theme.colors.onSurfaceVariant }]}
@@ -199,7 +198,6 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             {message}
           </Text>
 
-          {/* Actions */}
           <View style={styles.actions}>
             {showCancel && (
               <TouchableOpacity

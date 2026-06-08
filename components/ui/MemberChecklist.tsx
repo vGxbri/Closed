@@ -1,3 +1,8 @@
+/**
+ * Checklist de miembros
+ * Lista multi-selección de miembros con avatar y casilla de marcado.
+ */
+
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
@@ -16,8 +21,6 @@ interface MemberChecklistProps {
 
 export const MemberChecklist = React.memo<MemberChecklistProps>(
   ({ members, selectedIds, onToggle }) => {
-    const theme = useTheme();
-
     return (
       <View style={styles.container}>
         {members.map((member) => {
@@ -55,10 +58,7 @@ const MemberChecklistItem = React.memo<MemberChecklistItemProps>(
     return (
       <Pressable
         onPress={handlePress}
-        style={({ pressed }) => [
-          styles.itemContainer,
-          { opacity: pressed ? 0.85 : 1 },
-        ]}
+        style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1 }]}
       >
         <SquircleView
           style={[
@@ -117,7 +117,6 @@ const styles = StyleSheet.create({
   container: {
     gap: 8,
   },
-  itemContainer: {},
   item: {
     flexDirection: "row",
     alignItems: "center",

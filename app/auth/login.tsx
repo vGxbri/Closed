@@ -1,3 +1,7 @@
+/**
+ * Inicio de sesión
+ * Permite entrar con email/contraseña o Google y redirige al flujo principal tras autenticarse.
+ */
 import { CTAButton } from "@/components/ui/CTAButton";
 import { Ionicons } from "@expo/vector-icons";
 import {
@@ -52,8 +56,7 @@ export default function LoginScreen() {
         webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
         scopes: ["email", "profile"],
       });
-    } catch (e) {
-      console.error("GS Configure Error", e);
+    } catch {
     }
   }, []);
 
@@ -81,11 +84,11 @@ export default function LoginScreen() {
       }
     } catch (error: any) {
       if (error.code === statusCodes.SIGN_IN_CANCELLED) {
-        // cancelled
-      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        return;
+      }
+      if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
         showSnackbar("Google Play Services no disponible", "error");
       } else {
-        console.error(error);
         showSnackbar(error.message || "Error Google Login", "error");
       }
     } finally {
@@ -142,7 +145,6 @@ export default function LoginScreen() {
     <View
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
-      {/* Background decoration */}
       <Animated.View
         entering={FadeInUp.duration(600)}
         style={styles.backgroundContainer}
@@ -171,7 +173,6 @@ export default function LoginScreen() {
             bounces={false}
             overScrollMode="never"
           >
-            {/* Header Section */}
             <Animated.View
               entering={FadeInUp.duration(600)}
               style={styles.header}
@@ -216,7 +217,6 @@ export default function LoginScreen() {
               </Text>
             </Animated.View>
 
-            {/* Form Section */}
             <Animated.View
               entering={FadeInDown.duration(600).delay(200)}
               style={styles.form}
@@ -262,7 +262,6 @@ export default function LoginScreen() {
                 contentStyle={styles.inputContent}
               />
 
-              {/* Login CTA Button */}
               <CTAButton
                 title="Iniciar Sesión"
                 loadingText="Iniciando..."
@@ -272,7 +271,6 @@ export default function LoginScreen() {
                 style={{ marginTop: 14 }}
               />
 
-              {/* Divider "o continúa con" */}
               <View style={styles.socialDivider}>
                 <View
                   style={[
@@ -296,7 +294,6 @@ export default function LoginScreen() {
                 />
               </View>
 
-              {/* Google Social Button */}
               <Pressable
                 onPress={handleGoogleLogin}
                 disabled={loading}
@@ -337,7 +334,6 @@ export default function LoginScreen() {
               </Pressable>
             </Animated.View>
 
-            {/* Footer Section */}
             <Animated.View
               entering={FadeInDown.duration(400).delay(200)}
               style={styles.footer}

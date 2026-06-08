@@ -1,8 +1,12 @@
+/**
+ * Crear item de bucket list
+ * Formulario para añadir un nuevo item a la lista de deseos del grupo.
+ */
 import { Ionicons } from "@expo/vector-icons";
 import { BlurTargetView } from "expo-blur";
 import * as Haptics from "expo-haptics";
-import * as ImagePicker from "expo-image-picker";
 import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
@@ -23,7 +27,11 @@ import { CustomHeader } from "@/components/ui/CustomHeader";
 import { bucketListService } from "@/services/bucketList.service";
 import { BucketListCategory } from "@/types/database";
 
-const CATEGORY_OPTIONS: { key: BucketListCategory; label: string; icon: string }[] = [
+const CATEGORY_OPTIONS: {
+  key: BucketListCategory;
+  label: string;
+  icon: string;
+}[] = [
   { key: "restaurants", label: "Restaurantes", icon: "restaurant-outline" },
   { key: "travel", label: "Viajes", icon: "airplane-outline" },
   { key: "movies", label: "Pelis/Series", icon: "film-outline" },
@@ -40,7 +48,8 @@ export default function CreateBucketItemScreen() {
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<BucketListCategory>("other");
+  const [selectedCategory, setSelectedCategory] =
+    useState<BucketListCategory>("other");
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -50,7 +59,8 @@ export default function CreateBucketItemScreen() {
     message: string;
     type: DialogType;
   }>({ visible: false, title: "", message: "", type: "info" });
-  const hideDialog = () => setDialogConfig((prev) => ({ ...prev, visible: false }));
+  const hideDialog = () =>
+    setDialogConfig((prev) => ({ ...prev, visible: false }));
 
   const handlePickImage = useCallback(async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -83,7 +93,10 @@ export default function CreateBucketItemScreen() {
 
       let uploadedImageUrl: string | undefined;
       if (imageUri) {
-        uploadedImageUrl = await bucketListService.uploadItemImage(id, imageUri);
+        uploadedImageUrl = await bucketListService.uploadItemImage(
+          id,
+          imageUri,
+        );
       }
 
       await bucketListService.createItem({
@@ -96,8 +109,7 @@ export default function CreateBucketItemScreen() {
 
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       router.back();
-    } catch (e) {
-      console.error("Error creating plan:", e);
+    } catch {
       setDialogConfig({
         visible: true,
         title: "Error",
@@ -120,26 +132,48 @@ export default function CreateBucketItemScreen() {
 
         <ScrollView
           style={styles.scrollView}
-          contentContainerStyle={[styles.content, { paddingBottom: 120 + insets.bottom }]}
+          contentContainerStyle={[
+            styles.content,
+            { paddingBottom: 120 + insets.bottom },
+          ]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <Animated.View entering={FadeIn.duration(500)} style={styles.titleBlock}>
+          <Animated.View
+            entering={FadeIn.duration(500)}
+            style={styles.titleBlock}
+          >
             <Text style={[styles.screenTitle, { color: theme.colors.primary }]}>
               Nuevo plan
             </Text>
-            <Text style={[styles.screenSubtitle, { color: theme.colors.onSurfaceVariant }]}>
+            <Text
+              style={[
+                styles.screenSubtitle,
+                { color: theme.colors.onSurfaceVariant },
+              ]}
+            >
               Añade algo que queréis hacer en grupo
             </Text>
           </Animated.View>
 
           <Animated.View
             entering={FadeIn.duration(400).delay(50)}
-            style={[styles.divider, { backgroundColor: theme.colors.outlineVariant }]}
+            style={[
+              styles.divider,
+              { backgroundColor: theme.colors.outlineVariant },
+            ]}
           />
 
-          <Animated.View entering={FadeInDown.duration(300).delay(80)} style={styles.section}>
-            <Text style={[styles.sectionLabel, { color: theme.colors.onSurfaceVariant }]}>
+          <Animated.View
+            entering={FadeInDown.duration(300).delay(80)}
+            style={styles.section}
+          >
+            <Text
+              style={[
+                styles.sectionLabel,
+                { color: theme.colors.onSurfaceVariant },
+              ]}
+            >
               Imagen (opcional)
             </Text>
             <Pressable
@@ -166,8 +200,14 @@ export default function CreateBucketItemScreen() {
                       transition={200}
                     />
                     <View style={styles.imageOverlay}>
-                      <Ionicons name="camera-outline" size={24} color="rgba(255,255,255,0.9)" />
-                      <Text style={styles.imagePickerTextLight}>Cambiar imagen</Text>
+                      <Ionicons
+                        name="camera-outline"
+                        size={24}
+                        color="rgba(255,255,255,0.9)"
+                      />
+                      <Text style={styles.imagePickerTextLight}>
+                        Cambiar imagen
+                      </Text>
                     </View>
                   </>
                 ) : (
@@ -191,8 +231,16 @@ export default function CreateBucketItemScreen() {
             </Pressable>
           </Animated.View>
 
-          <Animated.View entering={FadeInDown.duration(300).delay(120)} style={styles.section}>
-            <Text style={[styles.sectionLabel, { color: theme.colors.onSurfaceVariant }]}>
+          <Animated.View
+            entering={FadeInDown.duration(300).delay(120)}
+            style={styles.section}
+          >
+            <Text
+              style={[
+                styles.sectionLabel,
+                { color: theme.colors.onSurfaceVariant },
+              ]}
+            >
               Título *
             </Text>
             <SquircleView
@@ -218,8 +266,16 @@ export default function CreateBucketItemScreen() {
             </SquircleView>
           </Animated.View>
 
-          <Animated.View entering={FadeInDown.duration(300).delay(160)} style={styles.section}>
-            <Text style={[styles.sectionLabel, { color: theme.colors.onSurfaceVariant }]}>
+          <Animated.View
+            entering={FadeInDown.duration(300).delay(160)}
+            style={styles.section}
+          >
+            <Text
+              style={[
+                styles.sectionLabel,
+                { color: theme.colors.onSurfaceVariant },
+              ]}
+            >
               Notas (opcional)
             </Text>
             <SquircleView
@@ -234,7 +290,11 @@ export default function CreateBucketItemScreen() {
               cornerSmoothing={1}
             >
               <TextInput
-                style={[styles.input, styles.inputMultiline, { color: theme.colors.onSurface }]}
+                style={[
+                  styles.input,
+                  styles.inputMultiline,
+                  { color: theme.colors.onSurface },
+                ]}
                 placeholder="Detalles, enlaces, ideas..."
                 placeholderTextColor={theme.colors.onSurfaceVariant}
                 value={description}
@@ -245,8 +305,16 @@ export default function CreateBucketItemScreen() {
             </SquircleView>
           </Animated.View>
 
-          <Animated.View entering={FadeInDown.duration(300).delay(200)} style={styles.section}>
-            <Text style={[styles.sectionLabel, { color: theme.colors.onSurfaceVariant }]}>
+          <Animated.View
+            entering={FadeInDown.duration(300).delay(200)}
+            style={styles.section}
+          >
+            <Text
+              style={[
+                styles.sectionLabel,
+                { color: theme.colors.onSurfaceVariant },
+              ]}
+            >
               Categoría
             </Text>
             <View style={styles.categoryGrid}>
@@ -323,17 +391,34 @@ export default function CreateBucketItemScreen() {
             ]}
           >
             <SquircleView
-              style={[styles.createButton, { backgroundColor: theme.colors.primary }]}
+              style={[
+                styles.createButton,
+                { backgroundColor: theme.colors.primary },
+              ]}
               cornerSmoothing={1}
             >
               {isSaving ? (
-                <Text style={[styles.createButtonText, { color: theme.colors.onPrimary }]}>
+                <Text
+                  style={[
+                    styles.createButtonText,
+                    { color: theme.colors.onPrimary },
+                  ]}
+                >
                   Guardando...
                 </Text>
               ) : (
                 <>
-                  <Ionicons name="add-circle" size={20} color={theme.colors.onPrimary} />
-                  <Text style={[styles.createButtonText, { color: theme.colors.onPrimary }]}>
+                  <Ionicons
+                    name="add-circle"
+                    size={20}
+                    color={theme.colors.onPrimary}
+                  />
+                  <Text
+                    style={[
+                      styles.createButtonText,
+                      { color: theme.colors.onPrimary },
+                    ]}
+                  >
                     Añadir plan
                   </Text>
                 </>

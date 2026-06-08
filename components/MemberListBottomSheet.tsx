@@ -1,3 +1,8 @@
+/**
+ * Lista de miembros
+ * Bottom sheet con el roster del grupo, roles y avatares.
+ */
+
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useRef } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
@@ -8,7 +13,6 @@ import { MemberAvatar } from "./MemberAvatar";
 import { GroupMemberView } from "../types/database";
 import { BottomSheetModal } from "./ui/BottomSheetModal";
 
-// ─── Role badge helper ──────────────────────────────────────────────────
 const getRoleConfig = (role: string) => {
   switch (role) {
     case "owner":
@@ -20,14 +24,12 @@ const getRoleConfig = (role: string) => {
   }
 };
 
-// ─── Member Row ─────────────────────────────────────────────────────────
 interface MemberRowProps {
   member: GroupMemberView;
   isLast: boolean;
-  index: number;
 }
 
-const MemberRow = React.memo<MemberRowProps>(({ member, isLast, index }) => {
+const MemberRow = React.memo<MemberRowProps>(({ member, isLast }) => {
   const theme = useTheme();
   const roleConfig = getRoleConfig(member.role);
   const isSpecialRole = member.role === "owner" || member.role === "admin";
@@ -83,7 +85,6 @@ const MemberRow = React.memo<MemberRowProps>(({ member, isLast, index }) => {
 
 MemberRow.displayName = "MemberRow";
 
-// ─── Main Component ─────────────────────────────────────────────────────
 interface MemberListBottomSheetProps {
   visible: boolean;
   onDismiss: () => void;
@@ -101,7 +102,7 @@ export const MemberListBottomSheet: React.FC<MemberListBottomSheetProps> = ({
   const scrollRef = useRef<ScrollView>(null);
   const isScrolledToTop = useSharedValue(true);
 
-  // Sort members: owners first, then admins, then members
+  // Orden: propietario → admin → miembro
   const sortedMembers = React.useMemo(() => {
     const roleOrder = { owner: 0, admin: 1, member: 2 };
     return [...members].sort(
@@ -122,7 +123,6 @@ export const MemberListBottomSheet: React.FC<MemberListBottomSheetProps> = ({
       onDismiss={onDismiss}
       isScrolledToTop={isScrolledToTop}
     >
-      {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <SquircleView
@@ -166,7 +166,6 @@ export const MemberListBottomSheet: React.FC<MemberListBottomSheetProps> = ({
         </View>
       </View>
 
-      {/* Divider */}
       <View
         style={[
           styles.divider,
@@ -174,7 +173,6 @@ export const MemberListBottomSheet: React.FC<MemberListBottomSheetProps> = ({
         ]}
       />
 
-      {/* Members List */}
       <ScrollView
         ref={scrollRef}
         style={styles.listContainer}
@@ -189,7 +187,6 @@ export const MemberListBottomSheet: React.FC<MemberListBottomSheetProps> = ({
             key={member.user_id}
             member={member}
             isLast={index === sortedMembers.length - 1}
-            index={index}
           />
         ))}
       </ScrollView>
@@ -197,9 +194,7 @@ export const MemberListBottomSheet: React.FC<MemberListBottomSheetProps> = ({
   );
 };
 
-// ─── Styles ─────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  // Header
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -230,13 +225,11 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
 
-  // Divider
   divider: {
     height: StyleSheet.hairlineWidth,
     marginHorizontal: 20,
   },
 
-  // List
   listContainer: {
     flexShrink: 1,
   },
@@ -246,7 +239,6 @@ const styles = StyleSheet.create({
     paddingBottom: 34,
   },
 
-  // Member Row
   memberRow: {
     flexDirection: "row",
     alignItems: "center",

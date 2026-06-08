@@ -1,9 +1,9 @@
-// Auth
-export { AuthProvider, useAuth, useRequireAuth } from "./useAuth";
+/**
+ * Hooks de la aplicación
+ * Reexporta hooks de estado y datos para pantallas de Closed.
+ */
 
-// Groups
+export { AuthProvider, useAuth } from "./useAuth";
+export { useAward, useGroupAwards } from "./useAwards";
 export { useGroup, useGroups, useJoinGroup } from "./useGroups";
-
-// Awards
-export { useAward, useAwardCategories, useGroupAwards } from "./useAwards";
 

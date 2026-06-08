@@ -1,27 +1,29 @@
 /**
- * Database types generated from Supabase schema
- * These types match the database/schema.sql structure
+ * Tipos del modelo de datos
  */
 
-// Enum types matching PostgreSQL ENUMs
-export type MemberRole = 'owner' | 'admin' | 'member';
-export type GroupStatus = 'active' | 'archived' | 'deleted';
-export type AwardStatus = 'draft' | 'nominations' | 'voting' | 'completed' | 'archived';
-export type VoteType = 'person' | 'photo' | 'video' | 'audio' | 'text';
-export type InvitationStatus = 'pending' | 'accepted' | 'declined' | 'expired';
-export type NotificationType = 
-  | 'group_invite'
-  | 'award_created'
-  | 'nomination_received'
-  | 'voting_started'
-  | 'award_won'
-  | 'new_member'
-  | 'role_changed';
+export type MemberRole = "owner" | "admin" | "member";
+export type GroupStatus = "active" | "archived" | "deleted";
+export type AwardStatus =
+  | "draft"
+  | "nominations"
+  | "voting"
+  | "completed"
+  | "archived";
+export type VoteType = "person" | "photo" | "video" | "audio" | "text";
+export type InvitationStatus = "pending" | "accepted" | "declined" | "expired";
+export type NotificationType =
+  | "group_invite"
+  | "award_created"
+  | "nomination_received"
+  | "voting_started"
+  | "award_won"
+  | "new_member"
+  | "role_changed";
 
-// JSON types for settings
 export interface ProfileSettings {
   notifications: boolean;
-  theme: 'auto' | 'light' | 'dark';
+  theme: "auto" | "light" | "dark";
 }
 
 export interface GroupSettings {
@@ -29,9 +31,7 @@ export interface GroupSettings {
   allow_member_voting: boolean;
   max_members: number;
   require_approval: boolean;
-  // Per-widget member permissions (optional for backwards compatibility).
-  // When undefined, the app and RLS fall back to WIDGET_PERMISSION_DEFAULTS:
-  // "open" actions stay allowed for members and privileged ones stay admin-only.
+  // Permisos por widget (opcional). Si faltan, app y RLS usan WIDGET_PERMISSION_DEFAULTS.
   allow_member_manage_widgets?: boolean;
   allow_member_create_events?: boolean;
   allow_member_edit_events?: boolean;
@@ -44,43 +44,39 @@ export interface GroupSettings {
 }
 
 export type WidgetPermissionKey =
-  | 'allow_member_manage_widgets'
-  | 'allow_member_create_events'
-  | 'allow_member_edit_events'
-  | 'allow_member_upload_gallery'
-  | 'allow_member_delete_others_gallery'
-  | 'allow_member_create_notes'
-  | 'allow_member_create_expenses'
-  | 'allow_member_settle_expenses'
-  | 'allow_member_create_flashback_party';
+  | "allow_member_manage_widgets"
+  | "allow_member_create_events"
+  | "allow_member_edit_events"
+  | "allow_member_upload_gallery"
+  | "allow_member_delete_others_gallery"
+  | "allow_member_create_notes"
+  | "allow_member_create_expenses"
+  | "allow_member_settle_expenses"
+  | "allow_member_create_flashback_party";
 
-/**
- * Default value for each widget permission when it is missing from group
- * settings. "Open" actions default to true to preserve the previous behaviour
- * where any member could act; privileged actions default to false.
- */
-export const WIDGET_PERMISSION_DEFAULTS: Record<WidgetPermissionKey, boolean> = {
-  allow_member_manage_widgets: false,
-  allow_member_create_events: true,
-  allow_member_edit_events: false,
-  allow_member_upload_gallery: true,
-  allow_member_delete_others_gallery: false,
-  allow_member_create_notes: true,
-  allow_member_create_expenses: true,
-  allow_member_settle_expenses: true,
-  allow_member_create_flashback_party: true,
-};
+/** Valores por defecto de permisos de widget cuando no están en la configuración del grupo. */
+export const WIDGET_PERMISSION_DEFAULTS: Record<WidgetPermissionKey, boolean> =
+  {
+    allow_member_manage_widgets: false,
+    allow_member_create_events: true,
+    allow_member_edit_events: false,
+    allow_member_upload_gallery: true,
+    allow_member_delete_others_gallery: false,
+    allow_member_create_notes: true,
+    allow_member_create_expenses: true,
+    allow_member_settle_expenses: true,
+    allow_member_create_flashback_party: true,
+  };
 
 export interface VotingSettings {
-  nominees_can_vote: boolean;  // Can nominees vote in this award? (default: false)
-  allow_self_vote: boolean;    // Can a nominee vote for themselves? (only if nominees_can_vote is true)
-  allow_vote_change: boolean;  // Can users change their vote after casting? (default: false)
+  nominees_can_vote: boolean;
+  allow_self_vote: boolean;
+  allow_vote_change: boolean;
   max_votes_per_user: number;
   anonymous_voting: boolean;
   show_results_before_end: boolean;
 }
 
-// Table row types
 export interface Profile {
   id: string;
   username: string | null;
@@ -160,17 +156,6 @@ export interface GroupInvitation {
   responded_at: string | null;
 }
 
-export interface AwardCategory {
-  id: string;
-  name: string;
-  description: string | null;
-  icon: string;
-  is_global: boolean;
-  group_id: string | null;
-  created_by: string | null;
-  created_at: string;
-}
-
 export interface Award {
   id: string;
   group_id: string;
@@ -213,20 +198,6 @@ export interface Vote {
   created_at: string;
 }
 
-export interface Ceremony {
-  id: string;
-  group_id: string;
-  name: string;
-  description: string | null;
-  cover_image_url: string | null;
-  scheduled_at: string | null;
-  is_live: boolean;
-  is_completed: boolean;
-  created_by: string;
-  created_at: string;
-  updated_at: string;
-}
-
 export interface Notification {
   id: string;
   user_id: string;
@@ -246,7 +217,7 @@ export interface GalleryImage {
   group_id: string;
   uploaded_by: string;
   media_url: string;
-  media_type: 'image' | 'video';
+  media_type: "image" | "video";
   thumbnail_url: string | null;
   caption: string | null;
   file_size: number | null;
@@ -260,7 +231,7 @@ export interface Message {
   group_id: string;
   sender_id: string;
   content: string;
-  type: 'text' | 'image' | 'video' | 'system';
+  type: "text" | "image" | "video" | "system";
   metadata: any;
   is_edited: boolean;
   is_deleted: boolean;
@@ -275,7 +246,7 @@ export interface MessageView extends Message {
   reply_to_sender_name: string | null;
 }
 
-// ─── Notes (Bloc widget) ──────────────────────────────────────────────
+// Notas (widget Bloc)
 export interface ChecklistItem {
   id: string;
   text: string;
@@ -284,7 +255,7 @@ export interface ChecklistItem {
 
 export interface NoteBlock {
   id: string;
-  type: 'text' | 'heading' | 'checklist';
+  type: "text" | "heading" | "checklist";
   value: string;
   items?: ChecklistItem[];
 }
@@ -300,8 +271,8 @@ export interface Note {
   updated_at: string;
 }
 
-// ─── Events (Agenda widget) ───────────────────────────────────────────
-export type RsvpStatus = 'pending' | 'accepted' | 'declined' | 'maybe';
+// Eventos (widget Agenda)
+export type RsvpStatus = "pending" | "accepted" | "declined" | "maybe";
 
 export interface CalendarEvent {
   id: string;
@@ -372,7 +343,6 @@ export interface GalleryImageWithUser extends GalleryImage {
   };
 }
 
-// View types
 export interface GroupMemberView extends GroupMember {
   display_name: string;
   username: string | null;
@@ -387,7 +357,6 @@ export interface AwardWithStats extends Award {
   total_votes: number;
 }
 
-// Extended types with relations (for frontend use)
 export interface GroupWithMembers extends Group {
   members: GroupMemberView[];
   member_count: number;
@@ -407,7 +376,6 @@ export interface NomineeWithProfile extends Nominee {
   user: Profile;
 }
 
-// Input types for creating/updating
 export interface CreateGroupInput {
   name: string;
   description?: string;
@@ -442,8 +410,13 @@ export interface UpdateAwardInput {
   voting_settings?: Partial<VotingSettings>;
 }
 
-// ─── Planes (widget; tabla bucket_list_items) ─────────────────────────
-export type BucketListCategory = 'restaurants' | 'travel' | 'movies' | 'gifts' | 'other';
+// Planes (widget; tabla bucket_list_items)
+export type BucketListCategory =
+  | "restaurants"
+  | "travel"
+  | "movies"
+  | "gifts"
+  | "other";
 
 export interface BucketListItem {
   id: string;
@@ -481,7 +454,7 @@ export interface CreateBucketListItemInput {
   image_url?: string;
 }
 
-// ─── Gastos compartidos (widget; tablas shared_expenses/*) ──────────────
+// Gastos compartidos (widget; tablas shared_expenses/*)
 
 export interface SharedExpense {
   id: string;
@@ -527,8 +500,13 @@ export interface CreateSharedExpenseInput {
   split_user_ids: string[];
 }
 
-// ─── Flashback (widget; cámara desechable compartida) ─────────────────
-export type FlashbackPartyStatus = 'scheduled' | 'active' | 'film_used' | 'revealing' | 'archived';
+// Flashback (widget; cámara desechable compartida)
+export type FlashbackPartyStatus =
+  | "scheduled"
+  | "active"
+  | "film_used"
+  | "revealing"
+  | "archived";
 
 export interface FlashbackParty {
   id: string;
@@ -577,84 +555,75 @@ export interface CreateFlashbackPartyInput {
   photo_limit?: number;
 }
 
-// Database schema type for Supabase client
 export interface Database {
   public: {
     Tables: {
       profiles: {
         Row: Profile;
-        Insert: Omit<Profile, 'created_at' | 'updated_at'>;
-        Update: Partial<Omit<Profile, 'id' | 'created_at'>>;
+        Insert: Omit<Profile, "created_at" | "updated_at">;
+        Update: Partial<Omit<Profile, "id" | "created_at">>;
       };
       groups: {
         Row: Group;
-        Insert: Omit<Group, 'id' | 'invite_code' | 'created_at' | 'updated_at'>;
-        Update: Partial<Omit<Group, 'id' | 'created_at'>>;
+        Insert: Omit<Group, "id" | "invite_code" | "created_at" | "updated_at">;
+        Update: Partial<Omit<Group, "id" | "created_at">>;
       };
       group_members: {
         Row: GroupMember;
-        Insert: Omit<GroupMember, 'id' | 'joined_at' | 'updated_at'>;
-        Update: Partial<Omit<GroupMember, 'id' | 'joined_at'>>;
+        Insert: Omit<GroupMember, "id" | "joined_at" | "updated_at">;
+        Update: Partial<Omit<GroupMember, "id" | "joined_at">>;
       };
       group_invitations: {
         Row: GroupInvitation;
-        Insert: Omit<GroupInvitation, 'id' | 'invite_code' | 'created_at'>;
-        Update: Partial<Omit<GroupInvitation, 'id' | 'invite_code' | 'created_at'>>;
-      };
-      award_categories: {
-        Row: AwardCategory;
-        Insert: Omit<AwardCategory, 'id' | 'created_at'>;
-        Update: Partial<Omit<AwardCategory, 'id' | 'created_at'>>;
+        Insert: Omit<GroupInvitation, "id" | "invite_code" | "created_at">;
+        Update: Partial<
+          Omit<GroupInvitation, "id" | "invite_code" | "created_at">
+        >;
       };
       awards: {
         Row: Award;
-        Insert: Omit<Award, 'id' | 'created_at' | 'updated_at'>;
-        Update: Partial<Omit<Award, 'id' | 'created_at'>>;
+        Insert: Omit<Award, "id" | "created_at" | "updated_at">;
+        Update: Partial<Omit<Award, "id" | "created_at">>;
       };
       nominees: {
         Row: Nominee;
-        Insert: Omit<Nominee, 'id' | 'vote_count' | 'is_winner' | 'created_at'>;
-        Update: Partial<Omit<Nominee, 'id' | 'created_at'>>;
+        Insert: Omit<Nominee, "id" | "vote_count" | "is_winner" | "created_at">;
+        Update: Partial<Omit<Nominee, "id" | "created_at">>;
       };
       votes: {
         Row: Vote;
-        Insert: Omit<Vote, 'id' | 'created_at'>;
-        Update: never; // Votes shouldn't be updated
-      };
-      ceremonies: {
-        Row: Ceremony;
-        Insert: Omit<Ceremony, 'id' | 'created_at' | 'updated_at'>;
-        Update: Partial<Omit<Ceremony, 'id' | 'created_at'>>;
+        Insert: Omit<Vote, "id" | "created_at">;
+        Update: never; // Los votos no se actualizan, solo insert/delete
       };
       notifications: {
         Row: Notification;
-        Insert: Omit<Notification, 'id' | 'created_at'>;
-        Update: Partial<Omit<Notification, 'id' | 'created_at'>>;
+        Insert: Omit<Notification, "id" | "created_at">;
+        Update: Partial<Omit<Notification, "id" | "created_at">>;
       };
       messages: {
         Row: Message;
-        Insert: Omit<Message, 'id' | 'created_at'>;
-        Update: Partial<Omit<Message, 'id' | 'created_at'>>;
+        Insert: Omit<Message, "id" | "created_at">;
+        Update: Partial<Omit<Message, "id" | "created_at">>;
       };
       events: {
         Row: CalendarEvent;
-        Insert: Omit<CalendarEvent, 'id' | 'created_at' | 'updated_at'>;
-        Update: Partial<Omit<CalendarEvent, 'id' | 'created_at'>>;
+        Insert: Omit<CalendarEvent, "id" | "created_at" | "updated_at">;
+        Update: Partial<Omit<CalendarEvent, "id" | "created_at">>;
       };
       event_participants: {
         Row: EventParticipant;
-        Insert: Omit<EventParticipant, 'id' | 'created_at'>;
-        Update: Partial<Omit<EventParticipant, 'id' | 'created_at'>>;
+        Insert: Omit<EventParticipant, "id" | "created_at">;
+        Update: Partial<Omit<EventParticipant, "id" | "created_at">>;
       };
       event_gallery_links: {
         Row: EventGalleryLink;
-        Insert: Omit<EventGalleryLink, 'id' | 'created_at'>;
+        Insert: Omit<EventGalleryLink, "id" | "created_at">;
         Update: never;
       };
       shared_expenses: {
         Row: SharedExpense;
-        Insert: Omit<SharedExpense, 'id' | 'created_at' | 'updated_at'>;
-        Update: Partial<Omit<SharedExpense, 'id' | 'created_at'>>;
+        Insert: Omit<SharedExpense, "id" | "created_at" | "updated_at">;
+        Update: Partial<Omit<SharedExpense, "id" | "created_at">>;
       };
       shared_expense_splits: {
         Row: SharedExpenseSplit;
@@ -663,17 +632,17 @@ export interface Database {
       };
       shared_expense_settlements: {
         Row: SharedExpenseSettlement;
-        Insert: Omit<SharedExpenseSettlement, 'id' | 'created_at'>;
-        Update: Partial<Omit<SharedExpenseSettlement, 'id' | 'created_at'>>;
+        Insert: Omit<SharedExpenseSettlement, "id" | "created_at">;
+        Update: Partial<Omit<SharedExpenseSettlement, "id" | "created_at">>;
       };
       flashback_parties: {
         Row: FlashbackParty;
-        Insert: Omit<FlashbackParty, 'id' | 'created_at' | 'updated_at'>;
-        Update: Partial<Omit<FlashbackParty, 'id' | 'created_at'>>;
+        Insert: Omit<FlashbackParty, "id" | "created_at" | "updated_at">;
+        Update: Partial<Omit<FlashbackParty, "id" | "created_at">>;
       };
       flashback_photos: {
         Row: FlashbackPhoto;
-        Insert: Omit<FlashbackPhoto, 'id' | 'created_at'>;
+        Insert: Omit<FlashbackPhoto, "id" | "created_at">;
         Update: never;
       };
     };

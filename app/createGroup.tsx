@@ -1,3 +1,7 @@
+/**
+ * Creación de grupo privado
+ * Flujo guiado por pasos para definir tipo, nombre, foto y crear un nuevo grupo en Closed.
+ */
 import { CTAButton } from "@/components/ui/CTAButton";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
@@ -81,16 +85,12 @@ export default function CreateGroupScreen() {
 
       setIsAnimating(true);
 
-      // 1. Cambiamos SOLO la dirección primero
       setDirection(dir);
 
-      // 2. Le damos a React un "tick" (15ms) para que aplique la nueva dirección
-      // a la propiedad 'exiting' de la pantalla actual ANTES de matarla.
       setTimeout(() => {
         setStep(newStep);
       }, 15);
 
-      // 3. Desbloqueamos el candado cuando acabe la animación (400ms)
       setTimeout(() => setIsAnimating(false), 400);
     },
     [isAnimating, step],
@@ -155,8 +155,7 @@ export default function CreateGroupScreen() {
           params: { id: newGroup.id },
         });
       }
-    } catch (error) {
-      console.error("Error creating group:", error);
+    } catch {
     } finally {
       setLoading(false);
     }
@@ -165,9 +164,7 @@ export default function CreateGroupScreen() {
   const renderStepOne = () => (
     <Animated.View
       key="step-1"
-      // MAGIA AQUÍ: Si venimos del Paso 2 (backward), deslizamos. Si es la carga inicial, Fade.
       entering={direction === "backward" ? SlideInLeft : FadeIn}
-      // El Paso 1 solo puede salir hacia la izquierda (hacia el Paso 2)
       exiting={SlideOutLeft}
       style={StyleSheet.absoluteFill}
     >
@@ -491,7 +488,6 @@ export default function CreateGroupScreen() {
         style={styles.safeArea}
         edges={["top", "left", "right", "bottom"]}
       >
-        {/* Stepper Indicator */}
         <View style={styles.stepperContainer}>
           {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
             <View
@@ -509,7 +505,6 @@ export default function CreateGroupScreen() {
           ))}
         </View>
 
-        {/* Navigation Controls */}
         <View style={styles.navigationContainer}>
           <Pressable
             onPress={handleBack}
@@ -600,7 +595,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  // Shared title block
   stepTitleBlock: {
     marginBottom: 10,
     paddingHorizontal: 24,
@@ -622,7 +616,6 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
 
-  // Premium Header
   header: {
     alignItems: "center",
     marginBottom: 24,
@@ -656,7 +649,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
 
-  // Step 1 — Carousel
   carouselContainer: {
     justifyContent: "center",
     paddingBottom: 0,
@@ -711,7 +703,6 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
 
-  // Premium Form
   formContainer: {
     flex: 1,
   },
@@ -761,7 +752,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  // Photo Step
   photoContainer: {
     alignItems: "center",
     width: "100%",

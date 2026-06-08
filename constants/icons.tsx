@@ -1,7 +1,11 @@
+/**
+ * Iconografía de la aplicación
+ * Mapeo de iconos Expo Vector para categorías y navegación de Closed.
+ */
+
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { View } from "react-native";
 
-// Tipos de iconos disponibles
 export type IconName = 
   | "trophy" 
   | "people" 
@@ -22,7 +26,6 @@ export type IconName =
   | "crown"
   | "ribbon";
 
-// Mapeo de iconos para grupos
 export const groupIconOptions: IconName[] = [
   "trophy",
   "people", 
@@ -36,7 +39,6 @@ export const groupIconOptions: IconName[] = [
   "heart",
 ];
 
-// Mapeo de iconos para premios
 export const awardIconOptions: IconName[] = [
   "trophy",
   "star",
@@ -48,7 +50,6 @@ export const awardIconOptions: IconName[] = [
   "target",
 ];
 
-// Función para obtener el componente de icono
 export const getIconComponent = (iconName: IconName, size: number = 24, color: string = "#000") => {
   const iconMap: Record<IconName, { library: "ionicons" | "material"; name: string }> = {
     trophy: { library: "ionicons", name: "trophy" },
@@ -88,7 +89,6 @@ export const getOutlinedIconComponent = (
 ) => {
   return (
     <View style={{ position: 'relative', width: size, height: size }}>
-      {/* Stroke layer - slightly larger icons in 4 directions */}
       <View style={{ position: 'absolute', top: -strokeWidth/2, left: 0 }}>
         {getIconComponent(iconName, size, strokeColor)}
       </View>
@@ -101,7 +101,6 @@ export const getOutlinedIconComponent = (
       <View style={{ position: 'absolute', top: 0, left: strokeWidth/2 }}>
         {getIconComponent(iconName, size, strokeColor)}
       </View>
-      {/* Fill layer on top */}
       <View style={{ position: 'absolute', top: 0, left: 0 }}>
         {getIconComponent(iconName, size, fillColor)}
       </View>
@@ -109,6 +108,5 @@ export const getOutlinedIconComponent = (
   );
 };
 
-// Valor por defecto
 export const defaultGroupIcon: IconName = "trophy";
 export const defaultAwardIcon: IconName = "trophy";

@@ -1,3 +1,8 @@
+/**
+ * Servicio de mensajería grupal
+ * Chat del grupo con vistas en Supabase y respuestas en hilo.
+ */
+
 import { enrichMessagesWithReplies } from '@/lib/messageReplies';
 import { groupsService } from '@/services/groups.service';
 import { supabase } from '@/lib/supabase';
@@ -6,8 +11,7 @@ import { Message, MessageView } from '@/types/database';
 const MESSAGE_VIEW_COLUMNS =
   'id, group_id, sender_id, content, type, metadata, is_edited, is_deleted, created_at, reply_to_id, sender_name, sender_avatar, reply_to_content, reply_to_sender_name';
 
-// Time window (ms) in which a message can be edited
-const EDIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+const EDIT_WINDOW_MS = 15 * 60 * 1000;
 
 type MemberDisplay = { display_name: string; avatar_url: string | null };
 
@@ -39,9 +43,6 @@ class MessagesService {
     };
   }
 
-  /**
-   * Fetches messages for a group with sender details, replies, and reactions.
-   */
   async getMessages(groupId: string, limit = 50, offset = 0): Promise<MessageView[]> {
     const [messagesResult, membersByUserId] = await Promise.all([
       supabase
@@ -55,10 +56,7 @@ class MessagesService {
 
     const { data, error } = messagesResult;
 
-    if (error) {
-      console.error('Error fetching messages:', error);
-      throw error;
-    }
+    if (error) throw error;
 
     const parsed = (data || [])
       .map((row) => this.parseMessageView(row))
@@ -67,9 +65,6 @@ class MessagesService {
     return enrichMessagesWithReplies(parsed);
   }
 
-  /**
-   * Sends a new message to a group, optionally as a reply.
-   */
   async sendMessage(
     groupId: string,
     content: string,
@@ -96,22 +91,15 @@ class MessagesService {
       .select()
       .single();
 
-    if (error) {
-      console.error('Error sending message:', error);
-      throw error;
-    }
+    if (error) throw error;
 
     return data;
   }
 
-  /**
-   * Edits a message's content (only within 15-minute window).
-   */
   async editMessage(messageId: string, newContent: string): Promise<void> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
-    // Fetch current message to check ownership and timing
     const { data: msg, error: fetchErr } = await supabase
       .from('messages')
       .select('sender_id, created_at')
@@ -130,15 +118,9 @@ class MessagesService {
       .eq('id', messageId)
       .eq('sender_id', user.id);
 
-    if (error) {
-      console.error('Error editing message:', error);
-      throw error;
-    }
+    if (error) throw error;
   }
 
-  /**
-   * Checks if a message is still editable (own message + within 15 min).
-   */
   canEdit(message: MessageView, currentUserId: string): boolean {
     if (message.sender_id !== currentUserId) return false;
     if (message.is_deleted) return false;
@@ -146,15 +128,11 @@ class MessagesService {
     return elapsed <= EDIT_WINDOW_MS;
   }
 
-  /**
-   * Soft-deletes a message (sets is_deleted = true, clears content).
-   * Owner can delete own messages; admins/owners can delete any message in the group.
-   */
+  /** Borrado lógico: el autor borra los suyos; admin/propietario puede borrar cualquiera. */
   async deleteMessage(messageId: string, isGroupAdmin: boolean): Promise<void> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
-    // If admin, we allow deleting any message; otherwise only own
     const query = supabase
       .from('messages')
       .update({
@@ -170,18 +148,9 @@ class MessagesService {
 
     const { error } = await query;
 
-    if (error) {
-      console.error('Error deleting message:', error);
-      throw error;
-    }
+    if (error) throw error;
   }
 
-
-
-  /**
-   * Subscribes to real-time message updates for a specific group.
-   * Handles INSERT, UPDATE, and DELETE events.
-   */
   subscribeToMessages(
     groupId: string,
     callbacks: {
@@ -215,8 +184,7 @@ class MessagesService {
         },
         async (payload) => {
           if (payload.new.is_deleted) {
-            // Treat as a delete visually — fetch the updated view row so
-            // the UI can render the "message deleted" placeholder.
+            // Recargar la vista para mostrar el mensaje eliminado
             const fullMsg = await this.fetchMessageViewById(payload.new.id, groupId);
             if (fullMsg) callbacks.onMessageUpdated(fullMsg);
           } else {
@@ -228,12 +196,7 @@ class MessagesService {
       .subscribe();
   }
 
-
-
-  /**
-   * Fetches a single message from the view by ID.
-   * Includes retries for view replication lag.
-   */
+  /** Reintentos por lag de replicación de messages_view tras INSERT/UPDATE. */
   private async fetchMessageViewById(
     messageId: string,
     groupId: string,
@@ -259,9 +222,6 @@ class MessagesService {
     return null;
   }
 
-  /**
-   * Re-fetches a single message to get updated reactions.
-   */
   async refreshMessage(
     messageId: string,
     groupId: string,
@@ -269,9 +229,6 @@ class MessagesService {
     return this.fetchMessageViewById(messageId, groupId);
   }
 
-  /**
-   * When the view row has reply_to_id but empty preview fields, load the parent message.
-   */
   private async hydrateReplyFromParent(message: MessageView): Promise<MessageView[]> {
     const needsParent =
       message.reply_to_id &&
@@ -305,9 +262,6 @@ class MessagesService {
     ]);
   }
 
-  /**
-   * Parses raw DB row to view type.
-   */
   private parseMessageView(raw: Record<string, unknown>): MessageView {
     return {
       id: String(raw.id),

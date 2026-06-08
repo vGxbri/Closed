@@ -1,3 +1,8 @@
+/**
+ * Avatar de miembro
+ * Muestra foto o iniciales y nombre de un perfil o miembro del grupo.
+ */
+
 import React from 'react';
 import { StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { getMemberAvatarUrl, getMemberDisplayName } from '../lib/memberProfile';
@@ -5,7 +10,7 @@ import { GroupMemberView, Profile } from '../types/database';
 import { Colors } from '../constants/Colors';
 import { UserAvatar } from './ui/UserAvatar';
 
-// Accept either a Profile or a GroupMemberView (which has display_name instead of name)
+// Acepta perfil, miembro de grupo o filas con user_id (p. ej. SelectableMember)
 type UserLike =
   | Profile
   | GroupMemberView
@@ -15,7 +20,17 @@ type UserLike =
       avatar_url?: string | null;
       group_avatar_url?: string | null;
       group_display_name?: string | null;
+    }
+  | {
+      user_id: string;
+      display_name: string;
+      avatar_url?: string | null;
+      group_avatar_url?: string | null;
+      group_display_name?: string | null;
     };
+
+const getUserId = (user: UserLike): string =>
+  'user_id' in user ? user.user_id : user.id;
 
 interface MemberAvatarProps {
   user: UserLike;
@@ -65,7 +80,6 @@ export const MemberAvatar: React.FC<MemberAvatarProps> = ({
   );
 };
 
-// Row of avatars with overlap
 interface MemberAvatarsRowProps {
   users: UserLike[];
   max?: number;
@@ -85,11 +99,11 @@ export const MemberAvatarsRow: React.FC<MemberAvatarsRowProps> = ({
     <View style={styles.row}>
       {displayedUsers.map((user, index) => (
         <View
-          key={user.id}
-          style={[
-            styles.avatarWrapper,
-            { marginLeft: index > 0 ? -10 : 0, zIndex: displayedUsers.length - index },
-          ]}
+          key={getUserId(user)}
+          style={{
+            marginLeft: index > 0 ? -10 : 0,
+            zIndex: displayedUsers.length - index,
+          }}
         >
           <MemberAvatar user={user} size={size} />
         </View>
@@ -117,16 +131,6 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
   },
-  avatar: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: Colors.surface,
-  },
-  initials: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
   name: {
     marginTop: 4,
     fontSize: 12,
@@ -137,9 +141,6 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  avatarWrapper: {
-    // Individual wrapper for z-index
   },
   remainingBadge: {
     backgroundColor: Colors.primary,

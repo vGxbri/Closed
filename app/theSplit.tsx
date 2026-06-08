@@ -1,3 +1,7 @@
+/**
+ * Onboarding sin grupos
+ * Pantalla de bienvenida que ofrece crear un grupo, unirse con código o cerrar sesión.
+ */
 import { CTAButton } from "@/components/ui/CTAButton";
 import { Ionicons } from "@expo/vector-icons";
 import { BlurTargetView } from "expo-blur";
@@ -31,7 +35,6 @@ export default function TheSplit() {
     <View
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
-      {/* Background decoration */}
       <Animated.View
         entering={FadeInUp.duration(600)}
         style={styles.backgroundContainer}
@@ -53,7 +56,6 @@ export default function TheSplit() {
       >
         <BlurTargetView ref={backgroundRef} style={styles.safeArea}>
           <View style={styles.content}>
-            {/* Header Section */}
             <Animated.View
               entering={FadeInUp.duration(150)}
               style={styles.header}
@@ -88,12 +90,10 @@ export default function TheSplit() {
               </Text>
             </Animated.View>
 
-            {/* CTA Section */}
             <Animated.View
               entering={FadeInDown.duration(150)}
               style={styles.actions}
             >
-              {/* BOTÓN 1: Crear grupo */}
               <CTAButton
                 title="Crear grupo"
                 description="Empieza algo nuevo con tu gente"
@@ -101,7 +101,6 @@ export default function TheSplit() {
                 onPress={() => router.push("/createGroup")}
               />
 
-              {/* BOTÓN 2: Unirme a un grupo */}
               <CTAButton
                 title="Unirme a un grupo"
                 description="Tengo un código de invitación"
@@ -112,7 +111,6 @@ export default function TheSplit() {
                 onPress={() => router.push("/join/joinGroup")}
               />
 
-              {/* BOTÓN 3: Cerrar Sesión (SIN SQUIRCLE, VIEW NORMAL) */}
               <Pressable
                 onPress={() => setShowLogoutModal(true)}
                 style={({ pressed }) => [

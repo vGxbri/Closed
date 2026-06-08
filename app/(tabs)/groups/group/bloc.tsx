@@ -1,8 +1,12 @@
+/**
+ * Widget Bloc de notas
+ * Lista y vista previa de notas compartidas del widget Bloc en el grupo.
+ */
 import { Ionicons } from "@expo/vector-icons";
 import { BlurTargetView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import { Stack, useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import React, { useCallback, useMemo, useState, useRef } from "react";
 import {
   Pressable,
   ScrollView,
@@ -27,7 +31,6 @@ import { useAuth, useGroup } from "@/hooks";
 import { notesService } from "@/services/notes.service";
 import { Note, NoteBlock } from "@/types/database";
 
-// ─── Helpers ────────────────────────────────────────────────────────────
 const formatRelativeDate = (dateStr: string): string => {
   const date = new Date(dateStr);
   const now = new Date();
@@ -72,7 +75,6 @@ const getChecklistProgress = (
   return total > 0 ? { total, checked } : null;
 };
 
-// ─── Skeleton ───────────────────────────────────────────────────────────
 const SkeletonCard = React.memo<{ index: number }>(({ index }) => {
   const theme = useTheme();
   return (
@@ -94,7 +96,6 @@ const SkeletonCard = React.memo<{ index: number }>(({ index }) => {
 });
 SkeletonCard.displayName = "SkeletonCard";
 
-// ─── Note Card ──────────────────────────────────────────────────────────
 interface NoteCardProps {
   note: Note;
   index: number;
@@ -139,7 +140,7 @@ const NoteCard = React.memo<NoteCardProps>(
             ]}
             cornerSmoothing={1}
           >
-            {/* Pin indicator */}
+
             {note.is_pinned && (
               <View style={styles.pinBadge}>
                 <Ionicons
@@ -150,7 +151,7 @@ const NoteCard = React.memo<NoteCardProps>(
               </View>
             )}
 
-            {/* Title */}
+
             <Text
               style={[styles.noteTitle, { color: theme.colors.onSurface }]}
               numberOfLines={1}
@@ -158,7 +159,7 @@ const NoteCard = React.memo<NoteCardProps>(
               {note.title || "Sin título"}
             </Text>
 
-            {/* Preview */}
+
             <Text
               style={[
                 styles.notePreview,
@@ -169,7 +170,7 @@ const NoteCard = React.memo<NoteCardProps>(
               {preview}
             </Text>
 
-            {/* Footer: date + checklist progress */}
+
             <View style={styles.noteFooter}>
               <Text
                 style={[
@@ -217,7 +218,6 @@ const NoteCard = React.memo<NoteCardProps>(
 );
 NoteCard.displayName = "NoteCard";
 
-// ─── Main Screen ────────────────────────────────────────────────────────
 export default function BlocScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -240,7 +240,6 @@ export default function BlocScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [longPressedNote, setLongPressedNote] = useState<Note | null>(null);
 
-  // ─── Fetch notes ──────────────────────────────
   const fetchNotes = useCallback(async () => {
     if (!id) return;
     try {
@@ -250,8 +249,7 @@ export default function BlocScreen() {
       const data = await notesService.getNotes(id);
       setNotes(data);
       isFirstLoadRef.current = false;
-    } catch (e) {
-      console.error("Error loading notes:", e);
+    } catch {
       showSnackbar("Error al cargar las notas", "error");
     } finally {
       setIsLoading(false);
@@ -264,7 +262,6 @@ export default function BlocScreen() {
     }, [fetchNotes])
   );
 
-  // ─── Create note ──────────────────────────────
   const handleCreateNote = useCallback(async () => {
     if (!id) return;
     if (!canCreateNotes) {
@@ -281,13 +278,11 @@ export default function BlocScreen() {
         pathname: "/groups/group/noteEditor",
         params: { id, noteId: note.id, isNew: "true" },
       } as any);
-    } catch (e) {
-      console.error("Error creating note:", e);
+    } catch {
       showSnackbar("Error al crear la nota", "error");
     }
   }, [id, router, showSnackbar, canCreateNotes]);
 
-  // ─── Open note ────────────────────────────────
   const handleOpenNote = useCallback(
     (note: Note) => {
       router.push({
@@ -298,7 +293,6 @@ export default function BlocScreen() {
     [router, id]
   );
 
-  // ─── Long press actions ───────────────────────
   const handleLongPress = useCallback(
     (note: Note) => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -308,21 +302,18 @@ export default function BlocScreen() {
     []
   );
 
-  // ─── Delete note ──────────────────────────────
   const handleDeleteConfirm = useCallback(async () => {
     if (!deleteTarget) return;
     try {
       await notesService.deleteNote(deleteTarget.id);
       setNotes((prev) => prev.filter((n) => n.id !== deleteTarget.id));
       showSnackbar("Nota eliminada", "success");
-    } catch (e) {
-      console.error("Error deleting note:", e);
+    } catch {
       showSnackbar("Error al eliminar la nota", "error");
     }
     setDeleteTarget(null);
   }, [deleteTarget, showSnackbar]);
 
-  // ─── Filtered notes ───────────────────────────
   const filteredNotes = useMemo(() => {
     if (!searchQuery.trim()) return notes;
     const q = searchQuery.toLowerCase();
@@ -351,7 +342,7 @@ export default function BlocScreen() {
           ]}
           showsVerticalScrollIndicator={false}
         >
-          {/* ─── Title ─── */}
+
           <Animated.View
             entering={FadeInUp.duration(500)}
             style={styles.titleBlock}
@@ -373,7 +364,7 @@ export default function BlocScreen() {
             </Text>
           </Animated.View>
 
-          {/* ─── Divider ─── */}
+
           <Animated.View
             entering={FadeIn.duration(400).delay(50)}
             style={[
@@ -382,7 +373,7 @@ export default function BlocScreen() {
             ]}
           />
 
-          {/* ─── Search ─── */}
+
           {!isLoading && notes.length > 0 && (
             <Animated.View
               entering={FadeInDown.duration(300).delay(60)}
@@ -424,7 +415,7 @@ export default function BlocScreen() {
             </Animated.View>
           )}
 
-          {/* ─── Content ─── */}
+
           {isLoading ? (
             <View style={styles.noteList}>
               {[0, 1, 2, 3].map((i) => (
@@ -535,7 +526,7 @@ export default function BlocScreen() {
           )}
         </ScrollView>
 
-        {/* ─── FAB ─── */}
+
         {!isLoading && filteredNotes.length > 0 && canCreateNotes && (
           <Animated.View
             entering={FadeIn.duration(400).delay(300)}
@@ -574,7 +565,7 @@ export default function BlocScreen() {
         )}
       </BlurTargetView>
 
-      {/* Options Modal */}
+
       <BottomSheetModal
         visible={modalVisible}
         onDismiss={() => {
@@ -680,7 +671,7 @@ export default function BlocScreen() {
         )}
       </BottomSheetModal>
 
-      {/* Delete Confirmation */}
+
       <ConfirmDialog
         visible={!!deleteTarget}
         title="Eliminar nota"
@@ -696,13 +687,11 @@ export default function BlocScreen() {
   );
 }
 
-// ─── Styles ─────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollView: { flex: 1 },
   content: { paddingHorizontal: 24, paddingTop: 0 },
 
-  // Title
   titleBlock: { marginTop: 4, marginBottom: 4 },
   screenTitle: {
     fontFamily: "InstrumentSerif-Italic",
@@ -717,10 +706,8 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  // Divider
   divider: { height: 1, marginTop: 16, marginBottom: 20 },
 
-  // Search
   searchContainer: { marginBottom: 18 },
   searchBox: {
     flexDirection: "row",
@@ -737,10 +724,8 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
   },
 
-  // Note List
   noteList: { gap: 12 },
 
-  // Note Card
   noteCard: {
     borderRadius: 20,
     padding: 18,
@@ -792,7 +777,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
 
-  // Empty State
   emptyContainer: { marginTop: 20 },
   emptyCard: {
     borderRadius: 24,
@@ -834,7 +818,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
 
-  // FAB
   fabContainer: {
     position: "absolute",
     right: 24,
@@ -853,7 +836,6 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
 
-  // Modal
   modalContent: {
     paddingHorizontal: 24,
     paddingTop: 12,

@@ -1,3 +1,8 @@
+/**
+ * Servicio de grupos
+ * Creación, miembros, roles e invitaciones de grupos cerrados en Supabase.
+ */
+
 import { mapGroupMemberWithProfile } from '../lib/memberProfile';
 import { supabase } from '../lib/supabase';
 import {
@@ -21,9 +26,7 @@ const GROUP_MEMBERS_WITH_PROFILE_SELECT = `
 `;
 
 export const groupsService = {
-  /**
-   * Active members with group-specific display name and avatar resolved.
-   */
+  /** Miembros activos con nombre y avatar resueltos para el grupo. */
   async fetchMembersForGroup(groupId: string): Promise<GroupMemberView[]> {
     const { data, error } = await supabase
       .from('group_members')
@@ -38,14 +41,10 @@ export const groupsService = {
     ) as GroupMemberView[];
   },
 
-  /**
-   * Get all groups the current user belongs to
-   */
   async getMyGroups(): Promise<GroupWithDetails[]> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
-    // Get groups with member info
     const { data: memberships, error: memberError } = await supabase
       .from('group_members')
       .select(`
@@ -59,7 +58,6 @@ export const groupsService = {
 
     if (memberError) throw memberError;
 
-    // Get member counts and details for each group
     const groupsWithDetails = await Promise.all(
       (memberships || [])
         .filter(m => m.group && (m.group as unknown as Group).status !== 'deleted')
@@ -68,7 +66,6 @@ export const groupsService = {
 
           const members = await this.fetchMembersForGroup(group.id);
 
-          // Get awards
           const { data: awards, error: awardsError } = await supabase
             .from('awards_with_stats')
             .select('*')
@@ -90,14 +87,10 @@ export const groupsService = {
     return groupsWithDetails;
   },
 
-  /**
-   * Get a group by ID with full details
-   */
   async getGroupById(groupId: string): Promise<GroupWithDetails | null> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
-    // Get the group
     const { data: group, error: groupError } = await supabase
       .from('groups')
       .select('*')
@@ -106,11 +99,10 @@ export const groupsService = {
       .single();
 
     if (groupError) {
-      if (groupError.code === 'PGRST116') return null; // Not found
+      if (groupError.code === 'PGRST116') return null;
       throw groupError;
     }
 
-    // Get membership info
     const { data: membership } = await supabase
       .from('group_members')
       .select('role')
@@ -121,7 +113,6 @@ export const groupsService = {
 
     const members = await this.fetchMembersForGroup(groupId);
 
-    // Get awards
     const { data: awards, error: awardsError } = await supabase
       .from('awards_with_stats')
       .select('*')
@@ -140,9 +131,6 @@ export const groupsService = {
     };
   },
 
-  /**
-   * Create a new group
-   */
   async createGroup(input: CreateGroupInput): Promise<Group> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
@@ -173,9 +161,6 @@ export const groupsService = {
     return data;
   },
 
-  /**
-   * Update a group
-   */
   async updateGroup(groupId: string, input: UpdateGroupInput): Promise<Group> {
     const { data, error } = await supabase
       .from('groups')
@@ -188,9 +173,6 @@ export const groupsService = {
     return data;
   },
 
-  /**
-   * Upload group cover image and return public URL
-   */
   async uploadGroupCover(groupId: string, uri: string): Promise<string> {
     const { decode } = await import('base64-arraybuffer');
     const FileSystem = await import('expo-file-system/legacy');
@@ -216,9 +198,6 @@ export const groupsService = {
     return data.publicUrl;
   },
 
-  /**
-   * Delete a group (soft delete by changing status)
-   */
   async deleteGroup(groupId: string): Promise<void> {
     const { data, error } = await supabase
       .from('groups')
@@ -233,9 +212,6 @@ export const groupsService = {
     }
   },
 
-  /**
-   * Get a group by invite code
-   */
   async getGroupByInviteCode(inviteCode: string): Promise<Group | null> {
     const { data, error } = await supabase
       .from('groups')
@@ -245,24 +221,19 @@ export const groupsService = {
       .single();
 
     if (error) {
-      if (error.code === 'PGRST116') return null; // Not found
+      if (error.code === 'PGRST116') return null;
       throw error;
     }
     return data;
   },
 
-  /**
-   * Join a group using invite code
-   */
   async joinGroup(inviteCode: string): Promise<Group> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
-    // Get the group
     const group = await this.getGroupByInviteCode(inviteCode);
     if (!group) throw new Error('Invalid invite code');
 
-    // Check if already a member
     const { data: existing } = await supabase
       .from('group_members')
       .select('id, is_active')
@@ -274,13 +245,11 @@ export const groupsService = {
       if (existing.is_active) {
         throw new Error('You are already a member of this group');
       }
-      // Reactivate membership
       await supabase
         .from('group_members')
         .update({ is_active: true })
         .eq('id', existing.id);
     } else {
-      // Create new membership
       const { error } = await supabase
         .from('group_members')
         .insert({
@@ -296,14 +265,10 @@ export const groupsService = {
     return group;
   },
 
-  /**
-   * Leave a group
-   */
   async leaveGroup(groupId: string): Promise<void> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
-    // Check if owner
     const { data: membership } = await supabase
       .from('group_members')
       .select('role')
@@ -324,9 +289,6 @@ export const groupsService = {
     if (error) throw error;
   },
 
-  /**
-   * Update a member's role
-   */
   async updateMemberRole(groupId: string, userId: string, role: MemberRole): Promise<void> {
     const { error } = await supabase
       .from('group_members')
@@ -337,14 +299,10 @@ export const groupsService = {
     if (error) throw error;
   },
 
-  /**
-   * Transfer ownership to another member
-   */
   async transferOwnership(groupId: string, newOwnerId: string): Promise<void> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
-    // 1. Make the other user the new owner
     const { error: newOwnerError } = await supabase
       .from('group_members')
       .update({ role: 'owner' })
@@ -353,7 +311,6 @@ export const groupsService = {
 
     if (newOwnerError) throw newOwnerError;
 
-    // 2. Demote current owner to admin
     const { error: demoteError } = await supabase
       .from('group_members')
       .update({ role: 'admin' })
@@ -363,9 +320,6 @@ export const groupsService = {
     if (demoteError) throw demoteError;
   },
 
-  /**
-   * Remove a member from a group
-   */
   async removeMember(groupId: string, userId: string): Promise<void> {
     const { error } = await supabase
       .from('group_members')
@@ -376,11 +330,7 @@ export const groupsService = {
     if (error) throw error;
   },
 
-  /**
-   * Regenerate the invite code for a group
-   */
   async regenerateInviteCode(groupId: string): Promise<string> {
-    // Generate new code
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let newCode = '';
     for (let i = 0; i < 6; i++) {
@@ -398,22 +348,6 @@ export const groupsService = {
     return data.invite_code;
   },
 
-  /**
-   * Get group members
-   */
-  async getGroupMembers(groupId: string): Promise<GroupMemberView[]> {
-    const { data, error } = await supabase
-      .from('group_members_view')
-      .select('*')
-      .eq('group_id', groupId);
-
-    if (error) throw error;
-    return data || [];
-  },
-
-  /**
-   * Update the current user's membership (e.g. group_display_name, group_avatar_url)
-   */
   async updateMyMembership(groupId: string, updates: { group_display_name?: string | null; group_avatar_url?: string | null; group_bio?: string | null; }): Promise<void> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
@@ -427,9 +361,6 @@ export const groupsService = {
     if (error) throw error;
   },
 
-  /**
-   * Upload member avatar image and return public URL
-   */
   async uploadMemberAvatar(groupId: string, uri: string): Promise<string> {
     const { decode } = await import('base64-arraybuffer');
     const FileSystem = await import('expo-file-system/legacy');

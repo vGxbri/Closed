@@ -1,3 +1,8 @@
+/**
+ * Formulario de premios
+ * Campos, secciones e inputs reutilizables para crear y editar awards.
+ */
+
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { Pressable, StyleSheet, TextInput, View } from "react-native";
@@ -10,7 +15,6 @@ import {
   IconName,
 } from "../../constants/icons";
 
-// ─── Section Label ──────────────────────────────────────────────────────
 export const SectionLabel: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
@@ -24,7 +28,6 @@ export const SectionLabel: React.FC<{ children: React.ReactNode }> = ({
   );
 };
 
-// ─── Text Input (Squircle) ──────────────────────────────────────────────
 interface AwardTextInputProps {
   value: string;
   onChangeText: (text: string) => void;
@@ -73,7 +76,6 @@ export const AwardTextInput: React.FC<AwardTextInputProps> = ({
   );
 };
 
-// ─── Icon Grid ──────────────────────────────────────────────────────────
 interface IconGridProps {
   selectedIcon: IconName;
   onSelect: (icon: IconName) => void;
@@ -129,7 +131,6 @@ export const IconGrid: React.FC<IconGridProps> = ({
   );
 };
 
-// ─── Option Row (radio / toggle) ────────────────────────────────────────
 interface OptionRowProps {
   icon: keyof typeof Ionicons.glyphMap;
   title: string;
@@ -264,7 +265,6 @@ export const OptionRow: React.FC<OptionRowProps> = ({
   );
 };
 
-// ─── Grouped Card (rows with dividers) ──────────────────────────────────
 interface GroupedCardProps {
   children: React.ReactNode;
 }
@@ -288,7 +288,6 @@ export const GroupedCard: React.FC<GroupedCardProps> = ({ children }) => {
   );
 };
 
-// ─── Row Divider ────────────────────────────────────────────────────────
 export const RowDivider: React.FC = () => {
   const theme = useTheme();
   return (
@@ -301,7 +300,6 @@ export const RowDivider: React.FC = () => {
   );
 };
 
-// ─── Submit Button (footer CTA) ─────────────────────────────────────────
 interface SubmitButtonProps {
   label: string;
   loadingLabel?: string;

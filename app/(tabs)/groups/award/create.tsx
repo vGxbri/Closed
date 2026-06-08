@@ -1,3 +1,7 @@
+/**
+ * Crear premio
+ * Flujo para registrar un nuevo premio o reconocimiento en el grupo.
+ */
 import { Ionicons } from "@expo/vector-icons";
 import { BlurTargetView } from "expo-blur";
 import * as Haptics from "expo-haptics";
@@ -294,7 +298,7 @@ export default function CreateAwardScreen() {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
-            {/* ─── Title ─── */}
+            
             <Animated.View
               entering={FadeIn.duration(500)}
               style={styles.titleBlock}
@@ -322,7 +326,6 @@ export default function CreateAwardScreen() {
               ]}
             />
 
-            {/* ─── Preview Card ─── */}
             <Animated.View
               entering={FadeInDown.duration(300).delay(80)}
               style={styles.section}
@@ -376,7 +379,6 @@ export default function CreateAwardScreen() {
               </SquircleView>
             </Animated.View>
 
-            {/* ─── Name ─── */}
             <Animated.View
               entering={FadeInDown.duration(300).delay(120)}
               style={styles.section}
@@ -391,7 +393,6 @@ export default function CreateAwardScreen() {
               />
             </Animated.View>
 
-            {/* ─── Description ─── */}
             <Animated.View
               entering={FadeInDown.duration(300).delay(160)}
               style={styles.section}
@@ -406,7 +407,6 @@ export default function CreateAwardScreen() {
               />
             </Animated.View>
 
-            {/* ─── Icon ─── */}
             <Animated.View
               entering={FadeInDown.duration(300).delay(200)}
               style={styles.section}
@@ -421,7 +421,6 @@ export default function CreateAwardScreen() {
               />
             </Animated.View>
 
-            {/* ─── Vote Type ─── */}
             <Animated.View
               entering={FadeInDown.duration(300).delay(240)}
               style={styles.section}
@@ -446,7 +445,6 @@ export default function CreateAwardScreen() {
               </GroupedCard>
             </Animated.View>
 
-            {/* ─── Nominees (only for person) ─── */}
             {needsNominees && (
               <Animated.View
                 entering={FadeInDown.duration(300).delay(280)}
@@ -556,7 +554,6 @@ export default function CreateAwardScreen() {
               </Animated.View>
             )}
 
-            {/* ─── Info card for media votes ─── */}
             {!needsNominees && (
               <Animated.View
                 entering={FadeInDown.duration(300).delay(280)}
@@ -598,7 +595,6 @@ export default function CreateAwardScreen() {
               </Animated.View>
             )}
 
-            {/* ─── Voting settings ─── */}
             <Animated.View
               entering={FadeInDown.duration(300).delay(320)}
               style={styles.section}
@@ -661,7 +657,6 @@ export default function CreateAwardScreen() {
             </Animated.View>
           </ScrollView>
 
-          {/* ─── Footer CTA ─── */}
           <Animated.View
             entering={FadeIn.duration(400).delay(280)}
             style={[

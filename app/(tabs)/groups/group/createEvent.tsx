@@ -1,3 +1,7 @@
+/**
+ * Crear evento de calendario
+ * Formulario para añadir un evento al calendario compartido del grupo.
+ */
 import { Ionicons } from "@expo/vector-icons";
 import { BlurTargetView } from "expo-blur";
 import DateTimePicker, { DateTimePickerAndroid, DateTimePickerEvent } from "@react-native-community/datetimepicker";
@@ -27,7 +31,6 @@ import { useGroup } from "@/hooks";
 import { eventsService } from "@/services/events.service";
 import { GroupMemberView } from "@/types/database";
 
-// ─── Constants ──────────────────────────────────────────────────────────
 const COLORS = [
   "#6366F1", "#EC4899", "#F59E0B", "#10B981",
   "#3B82F6", "#EF4444", "#8B5CF6", "#F97316",
@@ -69,7 +72,6 @@ function buildEndsAtIso(
   return endDate.toISOString();
 }
 
-// ─── Member Row ─────────────────────────────────────────────────────────
 interface MemberRowProps {
   member: GroupMemberView;
   selected: boolean;
@@ -109,7 +111,6 @@ const MemberRow = React.memo<MemberRowProps>(({ member, selected, onToggle }) =>
 });
 MemberRow.displayName = "MemberRow";
 
-// ─── Main Screen ────────────────────────────────────────────────────────
 export default function CreateEventScreen() {
   const { id, date: initialDateStr } = useLocalSearchParams<{ id: string; date?: string }>();
   const router = useRouter();
@@ -189,7 +190,6 @@ export default function CreateEventScreen() {
       showSnackbar("Evento creado", "success");
       router.back();
     } catch (error) {
-      console.error("Error creating event:", error);
       setDialogConfig({ visible: true, title: "Error", message: error instanceof Error ? error.message : "No se pudo crear el evento.", type: "error" });
     } finally { setIsCreating(false); }
   }, [id, title, description, location, startDate, endDate, isAllDay, color, selectedMembers, showSnackbar, router]);
@@ -201,15 +201,12 @@ export default function CreateEventScreen() {
         <CustomHeader title="" showBackButton={true} />
         <ScrollView style={styles.scrollView} contentContainerStyle={[styles.content, { paddingBottom: 120 + insets.bottom }]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
-          {/* Title */}
           <Animated.View entering={FadeIn.duration(500)} style={styles.titleBlock}>
             <Text style={[styles.screenTitle, { color: theme.colors.primary }]}>Nuevo Evento</Text>
           </Animated.View>
           <Animated.View entering={FadeIn.duration(400).delay(50)} style={[styles.divider, { backgroundColor: theme.colors.outlineVariant }]} />
 
 
-
-          {/* Title Input */}
           <Animated.View entering={FadeInDown.duration(300).delay(120)} style={styles.section}>
             <Text style={[styles.sectionLabel, { color: theme.colors.onSurfaceVariant }]}>Nombre del evento *</Text>
             <SquircleView style={[styles.inputContainer, { backgroundColor: theme.colors.surface, borderColor: theme.colors.outlineVariant, borderWidth: 1 }]} cornerSmoothing={1}>
@@ -217,7 +214,6 @@ export default function CreateEventScreen() {
             </SquircleView>
           </Animated.View>
 
-          {/* Date/Time */}
           <Animated.View entering={FadeInDown.duration(300).delay(160)} style={styles.section}>
             <Text style={[styles.sectionLabel, { color: theme.colors.onSurfaceVariant }]}>Fecha y hora</Text>
             <View style={styles.toggleRow}>
@@ -225,7 +221,6 @@ export default function CreateEventScreen() {
               <Switch value={isAllDay} onValueChange={setIsAllDay} trackColor={{ false: theme.colors.surfaceVariant, true: theme.colors.primaryContainer }} thumbColor={isAllDay ? theme.colors.primary : theme.colors.onSurfaceVariant} />
             </View>
 
-            {/* Start */}
             <SquircleView style={[styles.dateCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.outlineVariant, borderWidth: 1 }]} cornerSmoothing={1}>
               <Ionicons name="calendar-outline" size={18} color={theme.colors.primary} />
               <View style={styles.dateInfo}>
@@ -243,7 +238,6 @@ export default function CreateEventScreen() {
               </View>
             </SquircleView>
 
-            {/* End */}
             <SquircleView
               style={[
                 styles.dateCard,
@@ -294,7 +288,6 @@ export default function CreateEventScreen() {
             {Platform.OS === "ios" && showEndTime && <DateTimePicker value={endDate} mode="time" is24Hour display="spinner" onChange={handleEndTimeChange} />}
           </Animated.View>
 
-          {/* Location */}
           <Animated.View entering={FadeInDown.duration(300).delay(200)} style={styles.section}>
             <Text style={[styles.sectionLabel, { color: theme.colors.onSurfaceVariant }]}>Ubicación</Text>
             <SquircleView style={[styles.inputContainer, { backgroundColor: theme.colors.surface, borderColor: theme.colors.outlineVariant, borderWidth: 1 }]} cornerSmoothing={1}>
@@ -303,7 +296,6 @@ export default function CreateEventScreen() {
             </SquircleView>
           </Animated.View>
 
-          {/* Description */}
           <Animated.View entering={FadeInDown.duration(300).delay(240)} style={styles.section}>
             <Text style={[styles.sectionLabel, { color: theme.colors.onSurfaceVariant }]}>Descripción</Text>
             <SquircleView style={[styles.inputContainer, { backgroundColor: theme.colors.surface, borderColor: theme.colors.outlineVariant, borderWidth: 1, minHeight: 80 }]} cornerSmoothing={1}>
@@ -311,7 +303,6 @@ export default function CreateEventScreen() {
             </SquircleView>
           </Animated.View>
 
-          {/* Color */}
           <Animated.View entering={FadeInDown.duration(300).delay(280)} style={styles.section}>
             <Text style={[styles.sectionLabel, { color: theme.colors.onSurfaceVariant }]}>Color</Text>
             <View style={styles.colorRow}>
@@ -325,7 +316,6 @@ export default function CreateEventScreen() {
             </View>
           </Animated.View>
 
-          {/* Participants */}
           <Animated.View entering={FadeInDown.duration(300).delay(320)} style={styles.section}>
             <View style={styles.participantsHeader}>
               <Text style={[styles.sectionLabel, { color: theme.colors.onSurfaceVariant }]}>Participantes ({selectedMembers.size}/{members.length})</Text>
@@ -342,7 +332,6 @@ export default function CreateEventScreen() {
 
         </ScrollView>
 
-        {/* Footer */}
         <Animated.View entering={FadeIn.duration(400).delay(400)} style={[styles.footer, { paddingBottom: insets.bottom + 16, borderTopColor: theme.colors.outlineVariant }]}>
           <Pressable onPress={handleCreate} disabled={isCreating || !title.trim()} style={({ pressed }) => [{ opacity: pressed ? 0.9 : (isCreating || !title.trim()) ? 0.5 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] }]}>
             <SquircleView style={[styles.createButton, { backgroundColor: theme.colors.primary }]} cornerSmoothing={1}>
@@ -364,7 +353,6 @@ export default function CreateEventScreen() {
   );
 }
 
-// ─── Styles ─────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollView: { flex: 1 },

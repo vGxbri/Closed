@@ -1,3 +1,8 @@
+/**
+ * Carrusel parallax
+ * Carrusel horizontal con profundidad, haptics y scroll animado.
+ */
+
 import { impactAsync, ImpactFeedbackStyle } from "expo-haptics";
 import { Image as ExpoImage } from "expo-image";
 import React, { memo, useCallback } from "react";
@@ -22,7 +27,6 @@ const triggerHaptic = () => {
   impactAsync(ImpactFeedbackStyle.Rigid);
 };
 
-// Animated wrapper for ExpoImage
 const AnimatedExpoImage = Animated.createAnimatedComponent(ExpoImage);
 
 const ParallaxCarouselItemComponent = <ItemT extends ParallaxCarouselItem>({
@@ -35,14 +39,13 @@ const ParallaxCarouselItemComponent = <ItemT extends ParallaxCarouselItem>({
   spacing,
   parallaxIntensity,
 }: ParallaxCarouselItemProps<ItemT>) => {
-  // Use a wider input range for smoother interpolation (2:1 ratio to reduce jitter)
+  // Rango de entrada amplio para reducir saltos del parallax
   const inputRange = [
     (index - 1) * itemWidth,
     index * itemWidth,
     (index + 1) * itemWidth,
   ];
 
-  // Reduced output values to create better ratio and smoother movement
   const parallaxOffset = itemWidth * parallaxIntensity * 0.5;
 
   const imageAnimatedStyle = useAnimatedStyle(() => {
@@ -164,7 +167,6 @@ const ParallaxCarousel = <ItemT extends ParallaxCarouselItem>({
 
 const styles = StyleSheet.create({
   carouselWrapper: {
-    // Removed flex: 1 and justifyContent: "center" to allow parent positioning
     alignItems: "center",
     width: "100%",
   },

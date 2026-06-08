@@ -1,3 +1,8 @@
+/**
+ * Tarjeta de liquidación
+ * Propone saldar una deuda entre dos miembros del grupo.
+ */
+
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback } from "react";
 import { Pressable, StyleSheet, View } from "react-native";

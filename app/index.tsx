@@ -1,4 +1,8 @@
-import { Redirect, Stack } from "expo-router"; // <-- Añadido Stack aquí
+/**
+ * Punto de entrada y enrutamiento inicial
+ * Evalúa sesión, perfil y grupos del usuario para redirigir a login, perfil, onboarding o la lista de grupos.
+ */
+import { Redirect, Stack } from "expo-router";
 import { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { useTheme } from "react-native-paper";
@@ -6,34 +10,28 @@ import { CircleLoadingIndicator } from "@/components/premade/molecules/circle-lo
 import { useAuth } from "@/hooks";
 import { groupsService } from "@/services";
 
-// Root index - Invisible Router that handles initial redirection
 export default function Index() {
   const { isAuthenticated, isLoading, isProfileLoading, profile } = useAuth();
   const theme = useTheme();
   const [isCheckingGroups, setIsCheckingGroups] = useState(true);
   const [hasGroups, setHasGroups] = useState(false);
-
-  // 1. ESTADO: Controla si ya ha pasado nuestro tiempo mínimo de gracia (1 seg)
   const [minTimeElapsed, setMinTimeElapsed] = useState(false);
 
-  // 2. EFFECT: Arranca el cronómetro nada más abrir la app
   useEffect(() => {
     const timer = setTimeout(() => {
       setMinTimeElapsed(true);
-    }, 1000); // 1000ms garantizados para evitar parpadeos
+    }, 1000);
 
-    return () => clearTimeout(timer); // Limpieza de seguridad
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
     const checkGroups = async () => {
-      // Only check groups if we are authenticated and have a profile
       if (isAuthenticated && profile) {
         try {
           const groups = await groupsService.getMyGroups();
           setHasGroups(groups.length > 0);
-        } catch (error) {
-          console.error("Error checking groups in index:", error);
+        } catch {
           setHasGroups(false);
         } finally {
           setIsCheckingGroups(false);
@@ -52,12 +50,11 @@ export default function Index() {
     }
   }, [isAuthenticated, profile, isLoading, isProfileLoading]);
 
-  // 3. Renderizamos el nuevo CircleLoadingIndicator
   if (
     isLoading ||
     isProfileLoading ||
     (isAuthenticated && profile && isCheckingGroups) ||
-    !minTimeElapsed // <-- El guardián del tiempo
+    !minTimeElapsed
   ) {
     return (
       <View
@@ -74,23 +71,18 @@ export default function Index() {
     );
   }
 
-  // Navigation Logic
-  // 1. Not Authenticated -> Send to Login
   if (!isAuthenticated) {
     return <Redirect href="/auth/login" />;
   }
 
-  // 2. Authenticated but No Profile -> Send to Profile Setup
   if (!profile) {
     return <Redirect href="/profileSetup" />;
   }
 
-  // 3. Authenticated, Profile, but No Groups -> Send to The Split (Group Selection)
   if (!hasGroups) {
     return <Redirect href="/theSplit" />;
   }
 
-  // 4. Authenticated, Profile, Groups -> Send to Groups List
   return <Redirect href="/(tabs)/groups" />;
 }
 

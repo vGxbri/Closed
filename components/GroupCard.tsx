@@ -1,3 +1,8 @@
+/**
+ * Tarjeta de grupo
+ * Entrada en la lista principal con icono, nombre y conteo de premios.
+ */
+
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";

@@ -1,19 +1,26 @@
+/**
+ * Inicio del grupo con widgets
+ * Dashboard principal del grupo
+ */
 import { InviteModal } from "@/components/InviteModal";
 import { MemberAvatarsRow } from "@/components/MemberAvatar";
 import { MemberListBottomSheet } from "@/components/MemberListBottomSheet";
 import { UserAvatar } from "@/components/ui/UserAvatar";
-import { useAuth, useGroup } from "@/hooks";
-import { galleryService } from "@/services/gallery.service";
-import { eventsService } from "@/services/events.service";
-import { bucketListService } from "@/services/bucketList.service";
-import { sharedExpensesService } from "@/services/sharedExpenses.service";
-import { awardsService } from "@/services/awards.service";
-import { flashbackService } from "@/services/flashback.service";
-import { FlashbackPartyStatus } from "@/types/database";
+import { useGroup } from "@/hooks";
 import { formatCents } from "@/lib/sharedExpenses";
 import { supabase } from "@/lib/supabase";
+import { awardsService } from "@/services/awards.service";
+import { bucketListService } from "@/services/bucketList.service";
+import { eventsService } from "@/services/events.service";
+import { flashbackService } from "@/services/flashback.service";
+import { galleryService } from "@/services/gallery.service";
+import { sharedExpensesService } from "@/services/sharedExpenses.service";
 import { widgetsService } from "@/services/widgets.service";
-import { CalendarEvent, GroupWidgetWithDetails } from "@/types/database";
+import {
+  CalendarEvent,
+  FlashbackPartyStatus,
+  GroupWidgetWithDetails,
+} from "@/types/database";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { Image } from "expo-image";
@@ -38,17 +45,13 @@ import { MenuOption, OptionsMenu } from "@/components/ui/OptionsMenu";
 import { useSnackbar } from "@/components/ui/SnackbarContext";
 import { BlurTargetView } from "expo-blur";
 
-// ─── Constants ─────────────────────────────────────────────────────────
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CARD_GAP = 14;
 const CARD_WIDTH = (SCREEN_WIDTH - 24 * 2 - CARD_GAP) / 2;
 
-// ─── Widget Card ───────────────────────────────────────────────────────
-// Widget names that have special renderings
 const WIDGET_ARCHIVO = "Archivo";
 const WIDGET_AGENDA = "Agenda";
 const WIDGET_PLANES = "Planes";
-const WIDGET_PLANES_LEGACY = "Bucket List";
 const WIDGET_GASTOS = "Gastos";
 const WIDGET_PREMIOS = "Premios";
 const WIDGET_FLASHBACK = "Flashback";
@@ -60,13 +63,13 @@ interface WidgetCardProps {
   groupId: string;
 }
 
-// Archive/Gallery Widget — 2x1 card with photo background + storage bar
 const STORAGE_LIMIT_BYTES = 1 * 1024 * 1024 * 1024; // 1 GB
 
 const formatBytes = (bytes: number): string => {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  if (bytes < 1024 * 1024 * 1024)
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 };
 
@@ -92,13 +95,13 @@ const ArchivoWidgetCard = React.memo<WidgetCardProps>(
               setImageCount(count);
               setStorageUsed(used);
             }
-          } catch (e) {
-            console.error("Error loading gallery preview:", e);
-          }
+          } catch {}
         };
         load();
-        return () => { cancelled = true; };
-      }, [groupId])
+        return () => {
+          cancelled = true;
+        };
+      }, [groupId]),
     );
 
     const storageRatio = Math.min(storageUsed / STORAGE_LIMIT_BYTES, 1);
@@ -130,7 +133,6 @@ const ArchivoWidgetCard = React.memo<WidgetCardProps>(
             ]}
             cornerSmoothing={1}
           >
-            {/* Background image */}
             {previewUrl && (
               <>
                 <Image
@@ -139,7 +141,6 @@ const ArchivoWidgetCard = React.memo<WidgetCardProps>(
                   contentFit="cover"
                   transition={300}
                 />
-                {/* Dark overlay for text readability */}
                 <View
                   style={[
                     StyleSheet.absoluteFillObject,
@@ -152,9 +153,7 @@ const ArchivoWidgetCard = React.memo<WidgetCardProps>(
               </>
             )}
 
-            {/* Content overlay */}
             <View style={styles.archivoContent}>
-              {/* Top row: icon + storage bar */}
               <View style={styles.archivoTopRow}>
                 <SquircleView
                   style={[
@@ -174,11 +173,12 @@ const ArchivoWidgetCard = React.memo<WidgetCardProps>(
                   <Ionicons
                     name="images-outline"
                     size={18}
-                    color={previewUrl ? "#FFFFFF" : theme.colors.onSurfaceVariant}
+                    color={
+                      previewUrl ? "#FFFFFF" : theme.colors.onSurfaceVariant
+                    }
                   />
                 </SquircleView>
 
-                {/* Storage bar */}
                 <View style={styles.archivoStorageBlock}>
                   <View
                     style={[
@@ -195,13 +195,14 @@ const ArchivoWidgetCard = React.memo<WidgetCardProps>(
                         styles.archivoStorageBarFill,
                         {
                           width: `${Math.max(storageRatio * 100, 2)}%`,
-                          backgroundColor: storageRatio > 0.9
-                            ? "#FF6B6B"
-                            : storageRatio > 0.7
-                              ? "#FFA726"
-                              : previewUrl
-                                ? "rgba(255,255,255,0.85)"
-                                : theme.colors.primary,
+                          backgroundColor:
+                            storageRatio > 0.9
+                              ? "#FF6B6B"
+                              : storageRatio > 0.7
+                                ? "#FFA726"
+                                : previewUrl
+                                  ? "rgba(255,255,255,0.85)"
+                                  : theme.colors.primary,
                         },
                       ]}
                     />
@@ -222,7 +223,6 @@ const ArchivoWidgetCard = React.memo<WidgetCardProps>(
                 </View>
               </View>
 
-              {/* Bottom: text */}
               <View style={styles.archivoTextBlock}>
                 <Text
                   style={[
@@ -256,12 +256,11 @@ const ArchivoWidgetCard = React.memo<WidgetCardProps>(
         </Pressable>
       </Animated.View>
     );
-  }
+  },
 );
 
 ArchivoWidgetCard.displayName = "ArchivoWidgetCard";
 
-// Generic Widget Card — standard 1x1 card
 const GenericWidgetCard = React.memo<WidgetCardProps>(
   ({ widget, index, onPress }) => {
     const theme = useTheme();
@@ -291,7 +290,6 @@ const GenericWidgetCard = React.memo<WidgetCardProps>(
             ]}
             cornerSmoothing={1}
           >
-            {/* Icon */}
             <SquircleView
               style={[
                 styles.widgetIconContainer,
@@ -313,7 +311,6 @@ const GenericWidgetCard = React.memo<WidgetCardProps>(
               />
             </SquircleView>
 
-            {/* Info */}
             <View style={styles.widgetInfo}>
               <Text
                 style={[styles.widgetName, { color: theme.colors.onSurface }]}
@@ -335,12 +332,11 @@ const GenericWidgetCard = React.memo<WidgetCardProps>(
         </Pressable>
       </Animated.View>
     );
-  }
+  },
 );
 
 GenericWidgetCard.displayName = "GenericWidgetCard";
 
-// Agenda Widget Card — shows next upcoming event
 const AgendaWidgetCard = React.memo<WidgetCardProps>(
   ({ widget, index, onPress, groupId }) => {
     const theme = useTheme();
@@ -360,25 +356,23 @@ const AgendaWidgetCard = React.memo<WidgetCardProps>(
               setNextEvent(upcoming[0] || null);
               setMonthCount(count);
             }
-          } catch (e) {
-            console.error("Error loading agenda preview:", e);
-          }
+          } catch {}
         };
         load();
 
         const subscription = supabase
           .channel(`group-agenda-realtime:${groupId}`)
           .on(
-            'postgres_changes',
+            "postgres_changes",
             {
-              event: '*',
-              schema: 'public',
-              table: 'events',
+              event: "*",
+              schema: "public",
+              table: "events",
               filter: `group_id=eq.${groupId}`,
             },
             () => {
               load();
-            }
+            },
           )
           .subscribe();
 
@@ -386,17 +380,30 @@ const AgendaWidgetCard = React.memo<WidgetCardProps>(
           cancelled = true;
           subscription.unsubscribe();
         };
-      }, [groupId])
+      }, [groupId]),
     );
 
     const formatEventDate = (dateStr: string, isAllDay: boolean): string => {
       const d = new Date(dateStr);
       const day = d.getDate();
-      const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+      const months = [
+        "Ene",
+        "Feb",
+        "Mar",
+        "Abr",
+        "May",
+        "Jun",
+        "Jul",
+        "Ago",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dic",
+      ];
       const month = months[d.getMonth()];
       if (isAllDay) return `${day} ${month} · Todo el día`;
-      const h = d.getHours().toString().padStart(2, '0');
-      const m = d.getMinutes().toString().padStart(2, '0');
+      const h = d.getHours().toString().padStart(2, "0");
+      const m = d.getMinutes().toString().padStart(2, "0");
       return `${day} ${month} · ${h}:${m}`;
     };
 
@@ -425,7 +432,6 @@ const AgendaWidgetCard = React.memo<WidgetCardProps>(
             ]}
             cornerSmoothing={1}
           >
-            {/* Icon */}
             <SquircleView
               style={[
                 styles.widgetIconContainer,
@@ -437,14 +443,9 @@ const AgendaWidgetCard = React.memo<WidgetCardProps>(
               ]}
               cornerSmoothing={1}
             >
-              <Ionicons
-                name="calendar-outline"
-                size={24}
-                color="#FFFFFF"
-              />
+              <Ionicons name="calendar-outline" size={24} color="#FFFFFF" />
             </SquircleView>
 
-            {/* Info */}
             <View style={styles.widgetInfo}>
               <Text
                 style={[styles.widgetName, { color: theme.colors.onSurface }]}
@@ -464,10 +465,7 @@ const AgendaWidgetCard = React.memo<WidgetCardProps>(
                     {nextEvent.title}
                   </Text>
                   <Text
-                    style={[
-                      styles.agendaDate,
-                      { color: theme.colors.primary },
-                    ]}
+                    style={[styles.agendaDate, { color: theme.colors.primary }]}
                     numberOfLines={1}
                   >
                     {formatEventDate(nextEvent.starts_at, nextEvent.is_all_day)}
@@ -482,7 +480,7 @@ const AgendaWidgetCard = React.memo<WidgetCardProps>(
                   numberOfLines={1}
                 >
                   {monthCount > 0
-                    ? `${monthCount} evento${monthCount !== 1 ? 's' : ''} este mes`
+                    ? `${monthCount} evento${monthCount !== 1 ? "s" : ""} este mes`
                     : "Sin eventos próximos"}
                 </Text>
               )}
@@ -491,12 +489,11 @@ const AgendaWidgetCard = React.memo<WidgetCardProps>(
         </Pressable>
       </Animated.View>
     );
-  }
+  },
 );
 
 AgendaWidgetCard.displayName = "AgendaWidgetCard";
 
-// Planes widget card — shows pending/completed counts
 const PlanesWidgetCard = React.memo<WidgetCardProps>(
   ({ widget, index, onPress, groupId }) => {
     const theme = useTheme();
@@ -513,25 +510,23 @@ const PlanesWidgetCard = React.memo<WidgetCardProps>(
               setPendingCount(counts.pending);
               setCompletedCount(counts.completed);
             }
-          } catch (e) {
-            console.error("Error loading bucket list preview:", e);
-          }
+          } catch {}
         };
         load();
 
         const subscription = supabase
           .channel(`group-bucketlist-realtime:${groupId}`)
           .on(
-            'postgres_changes',
+            "postgres_changes",
             {
-              event: '*',
-              schema: 'public',
-              table: 'bucket_list_items',
+              event: "*",
+              schema: "public",
+              table: "bucket_list_items",
               filter: `group_id=eq.${groupId}`,
             },
             () => {
               load();
-            }
+            },
           )
           .subscribe();
 
@@ -539,7 +534,7 @@ const PlanesWidgetCard = React.memo<WidgetCardProps>(
           cancelled = true;
           subscription.unsubscribe();
         };
-      }, [groupId])
+      }, [groupId]),
     );
 
     return (
@@ -567,7 +562,6 @@ const PlanesWidgetCard = React.memo<WidgetCardProps>(
             ]}
             cornerSmoothing={1}
           >
-            {/* Icon */}
             <SquircleView
               style={[
                 styles.widgetIconContainer,
@@ -589,7 +583,6 @@ const PlanesWidgetCard = React.memo<WidgetCardProps>(
               />
             </SquircleView>
 
-            {/* Info */}
             <View style={styles.widgetInfo}>
               <Text
                 style={[styles.widgetName, { color: theme.colors.onSurface }]}
@@ -605,7 +598,7 @@ const PlanesWidgetCard = React.memo<WidgetCardProps>(
                 numberOfLines={1}
               >
                 {pendingCount + completedCount > 0
-                  ? `${pendingCount} pendiente${pendingCount !== 1 ? 's' : ''} · ${completedCount} hecho${completedCount !== 1 ? 's' : ''}`
+                  ? `${pendingCount} pendiente${pendingCount !== 1 ? "s" : ""} · ${completedCount} hecho${completedCount !== 1 ? "s" : ""}`
                   : widget.widget.subtitle || "Cosas que queréis hacer juntos"}
               </Text>
             </View>
@@ -613,12 +606,11 @@ const PlanesWidgetCard = React.memo<WidgetCardProps>(
         </Pressable>
       </Animated.View>
     );
-  }
+  },
 );
 
 PlanesWidgetCard.displayName = "PlanesWidgetCard";
 
-// Gastos widget card — shows total spent + expense count
 const GastosWidgetCard = React.memo<WidgetCardProps>(
   ({ widget, index, onPress, groupId }) => {
     const theme = useTheme();
@@ -638,23 +630,23 @@ const GastosWidgetCard = React.memo<WidgetCardProps>(
               setExpenseCount(count);
               setTotalSpent(total);
             }
-          } catch (e) {
-            console.error("Error loading expenses preview:", e);
-          }
+          } catch {}
         };
         load();
 
         const subscription = supabase
           .channel(`group-expenses-realtime:${groupId}`)
           .on(
-            'postgres_changes',
+            "postgres_changes",
             {
-              event: '*',
-              schema: 'public',
-              table: 'shared_expenses',
+              event: "*",
+              schema: "public",
+              table: "shared_expenses",
               filter: `group_id=eq.${groupId}`,
             },
-            () => { load(); }
+            () => {
+              load();
+            },
           )
           .subscribe();
 
@@ -662,7 +654,7 @@ const GastosWidgetCard = React.memo<WidgetCardProps>(
           cancelled = true;
           subscription.unsubscribe();
         };
-      }, [groupId])
+      }, [groupId]),
     );
 
     return (
@@ -701,11 +693,7 @@ const GastosWidgetCard = React.memo<WidgetCardProps>(
               ]}
               cornerSmoothing={1}
             >
-              <Ionicons
-                name="wallet-outline"
-                size={24}
-                color="#FFFFFF"
-              />
+              <Ionicons name="wallet-outline" size={24} color="#FFFFFF" />
             </SquircleView>
 
             <View style={styles.widgetInfo}>
@@ -723,7 +711,7 @@ const GastosWidgetCard = React.memo<WidgetCardProps>(
                 numberOfLines={1}
               >
                 {expenseCount > 0
-                  ? `${expenseCount} gasto${expenseCount !== 1 ? 's' : ''} · ${formatCents(totalSpent)}`
+                  ? `${expenseCount} gasto${expenseCount !== 1 ? "s" : ""} · ${formatCents(totalSpent)}`
                   : widget.widget.subtitle || "Gastos compartidos del viaje"}
               </Text>
             </View>
@@ -731,12 +719,11 @@ const GastosWidgetCard = React.memo<WidgetCardProps>(
         </Pressable>
       </Animated.View>
     );
-  }
+  },
 );
 
 GastosWidgetCard.displayName = "GastosWidgetCard";
 
-// Premios widget card — shows active award counts
 const PremiosWidgetCard = React.memo<WidgetCardProps>(
   ({ widget, index, onPress, groupId }) => {
     const theme = useTheme();
@@ -753,23 +740,23 @@ const PremiosWidgetCard = React.memo<WidgetCardProps>(
               setTotal(counts.total);
               setVoting(counts.voting);
             }
-          } catch (e) {
-            console.error("Error loading awards preview:", e);
-          }
+          } catch {}
         };
         load();
 
         const subscription = supabase
           .channel(`group-awards-realtime:${groupId}`)
           .on(
-            'postgres_changes',
+            "postgres_changes",
             {
-              event: '*',
-              schema: 'public',
-              table: 'awards',
+              event: "*",
+              schema: "public",
+              table: "awards",
               filter: `group_id=eq.${groupId}`,
             },
-            () => { load(); }
+            () => {
+              load();
+            },
           )
           .subscribe();
 
@@ -777,7 +764,7 @@ const PremiosWidgetCard = React.memo<WidgetCardProps>(
           cancelled = true;
           subscription.unsubscribe();
         };
-      }, [groupId])
+      }, [groupId]),
     );
 
     return (
@@ -842,8 +829,8 @@ const PremiosWidgetCard = React.memo<WidgetCardProps>(
               >
                 {total > 0
                   ? voting > 0
-                    ? `${voting} votando · ${total} premio${total !== 1 ? 's' : ''}`
-                    : `${total} premio${total !== 1 ? 's' : ''}`
+                    ? `${voting} votando · ${total} premio${total !== 1 ? "s" : ""}`
+                    : `${total} premio${total !== 1 ? "s" : ""}`
                   : widget.widget.subtitle || "Premios del grupo"}
               </Text>
             </View>
@@ -851,17 +838,15 @@ const PremiosWidgetCard = React.memo<WidgetCardProps>(
         </Pressable>
       </Animated.View>
     );
-  }
+  },
 );
 
 PremiosWidgetCard.displayName = "PremiosWidgetCard";
 
-// Flashback widget card — shows party status with rich design
 const FlashbackWidgetCard = React.memo<WidgetCardProps>(
   ({ widget, index, onPress, groupId }) => {
     const theme = useTheme();
     const [status, setStatus] = useState<FlashbackPartyStatus | null>(null);
-    const [remaining, setRemaining] = useState(0);
     const [partyName, setPartyName] = useState<string | null>(null);
     const [startsAt, setStartsAt] = useState<string | null>(null);
     const [photoLimit, setPhotoLimit] = useState(36);
@@ -875,19 +860,18 @@ const FlashbackWidgetCard = React.memo<WidgetCardProps>(
             const preview = await flashbackService.getWidgetPreview(groupId);
             if (!cancelled) {
               setStatus(preview.status);
-              setRemaining(preview.remaining);
               setPartyName(preview.partyName);
               setStartsAt(preview.startsAt);
               setPhotoLimit(preview.photoLimit);
               setPhotosTaken(preview.photosTaken);
             }
-          } catch (e) {
-            console.error("Error loading flashback preview:", e);
-          }
+          } catch {}
         };
         load();
-        return () => { cancelled = true; };
-      }, [groupId])
+        return () => {
+          cancelled = true;
+        };
+      }, [groupId]),
     );
 
     const getSubtitleText = () => {
@@ -897,9 +881,22 @@ const FlashbackWidgetCard = React.memo<WidgetCardProps>(
           if (startsAt) {
             const d = new Date(startsAt);
             const day = d.getDate();
-            const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-            const h = d.getHours().toString().padStart(2, '0');
-            const m = d.getMinutes().toString().padStart(2, '0');
+            const months = [
+              "Ene",
+              "Feb",
+              "Mar",
+              "Abr",
+              "May",
+              "Jun",
+              "Jul",
+              "Ago",
+              "Sep",
+              "Oct",
+              "Nov",
+              "Dic",
+            ];
+            const h = d.getHours().toString().padStart(2, "0");
+            const m = d.getMinutes().toString().padStart(2, "0");
             return `${day} ${months[d.getMonth()]} · ${h}:${m}`;
           }
           return partyName || "Empieza pronto...";
@@ -916,7 +913,8 @@ const FlashbackWidgetCard = React.memo<WidgetCardProps>(
     };
 
     const isLive = status === "active";
-    const filmRatio = photoLimit > 0 ? Math.min(photosTaken / photoLimit, 1) : 0;
+    const filmRatio =
+      photoLimit > 0 ? Math.min(photosTaken / photoLimit, 1) : 0;
 
     const getIconBadgeBg = () => {
       if (isLive || status === "revealing") return theme.colors.primary;
@@ -946,23 +944,31 @@ const FlashbackWidgetCard = React.memo<WidgetCardProps>(
               styles.widgetCard,
               {
                 backgroundColor: theme.colors.surface,
-                borderColor: isLive ? theme.colors.primary : theme.colors.outlineVariant,
+                borderColor: isLive
+                  ? theme.colors.primary
+                  : theme.colors.outlineVariant,
                 borderWidth: isLive ? 2 : 1,
               },
             ]}
             cornerSmoothing={1}
           >
-            {/* Top section: icon + progress */}
             <View>
-              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
                 <SquircleView
                   style={[
                     styles.widgetIconContainer,
                     {
                       backgroundColor: getIconBadgeBg(),
-                      borderColor: isLive || status === "revealing"
-                        ? "transparent"
-                        : theme.colors.outlineVariant,
+                      borderColor:
+                        isLive || status === "revealing"
+                          ? "transparent"
+                          : theme.colors.outlineVariant,
                       borderWidth: isLive || status === "revealing" ? 0 : 1,
                     },
                   ]}
@@ -979,9 +985,14 @@ const FlashbackWidgetCard = React.memo<WidgetCardProps>(
                   />
                 </SquircleView>
 
-                {/* Live pulsing dot */}
                 {isLive && (
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 5,
+                    }}
+                  >
                     <View
                       style={{
                         width: 8,
@@ -1004,7 +1015,6 @@ const FlashbackWidgetCard = React.memo<WidgetCardProps>(
                 )}
               </View>
 
-              {/* Film roll progress bar */}
               {status === "active" && (
                 <View style={{ gap: 4, marginTop: 10 }}>
                   <View
@@ -1044,9 +1054,10 @@ const FlashbackWidgetCard = React.memo<WidgetCardProps>(
               )}
             </View>
 
-            {/* Info */}
             <View style={styles.widgetInfo}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+              >
                 <Text
                   style={[styles.widgetName, { color: theme.colors.onSurface }]}
                   numberOfLines={1}
@@ -1075,12 +1086,11 @@ const FlashbackWidgetCard = React.memo<WidgetCardProps>(
         </Pressable>
       </Animated.View>
     );
-  }
+  },
 );
 
 FlashbackWidgetCard.displayName = "FlashbackWidgetCard";
 
-// Widget Card dispatcher — chooses the right card type
 const WidgetCard = React.memo<WidgetCardProps>((props) => {
   if (props.widget.widget.name === WIDGET_ARCHIVO) {
     return <ArchivoWidgetCard {...props} />;
@@ -1088,10 +1098,7 @@ const WidgetCard = React.memo<WidgetCardProps>((props) => {
   if (props.widget.widget.name === WIDGET_AGENDA) {
     return <AgendaWidgetCard {...props} />;
   }
-  if (
-    props.widget.widget.name === WIDGET_PLANES ||
-    props.widget.widget.name === WIDGET_PLANES_LEGACY
-  ) {
+  if (props.widget.widget.name === WIDGET_PLANES) {
     return <PlanesWidgetCard {...props} />;
   }
   if (props.widget.widget.name === WIDGET_GASTOS) {
@@ -1108,64 +1115,52 @@ const WidgetCard = React.memo<WidgetCardProps>((props) => {
 
 WidgetCard.displayName = "WidgetCard";
 
-// ─── Skeleton Card ─────────────────────────────────────────────────────
-interface SkeletonProps {
-  index: number;
-}
-
-const SkeletonCard = React.memo<SkeletonProps>(({ index }) => {
+const WidgetSkeletonSquare = React.memo<{ index: number }>(({ index }) => {
   const theme = useTheme();
+  const blockLight = theme.dark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)";
+  const blockMid = theme.dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)";
+  const blockSoft = theme.dark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)";
+
   return (
     <Animated.View
-      entering={FadeIn.duration(400).delay(index * 80)}
-      style={{ width: "100%" }}
+      entering={FadeIn.duration(400).delay(280 + index * 80)}
+      style={styles.bentoItem}
     >
       <SquircleView
         style={[
-          styles.skeletonBlock,
+          styles.widgetCard,
           {
             backgroundColor: theme.colors.surfaceVariant,
             borderColor: theme.colors.outlineVariant,
             borderWidth: 1,
-            flexDirection: "row",
-            alignItems: "center",
-            paddingHorizontal: 16,
-            gap: 16,
           },
         ]}
         cornerSmoothing={1}
       >
-        {/* Icon placeholder */}
         <View
           style={{
             width: 48,
             height: 48,
             borderRadius: 16,
-            backgroundColor: theme.dark
-              ? "rgba(255,255,255,0.06)"
-              : "rgba(0,0,0,0.06)",
+            backgroundColor: blockLight,
           }}
         />
-        {/* Text placeholders */}
-        <View style={{ flex: 1, gap: 8 }}>
+        <View style={styles.widgetInfo}>
           <View
             style={{
+              width: "72%",
               height: 14,
               borderRadius: 7,
-              width: "60%",
-              backgroundColor: theme.dark
-                ? "rgba(255,255,255,0.08)"
-                : "rgba(0,0,0,0.06)",
+              backgroundColor: blockMid,
             }}
           />
           <View
             style={{
-              height: 12,
+              width: "48%",
+              height: 11,
               borderRadius: 6,
-              width: "40%",
-              backgroundColor: theme.dark
-                ? "rgba(255,255,255,0.05)"
-                : "rgba(0,0,0,0.04)",
+              marginTop: 6,
+              backgroundColor: blockSoft,
             }}
           />
         </View>
@@ -1174,16 +1169,213 @@ const SkeletonCard = React.memo<SkeletonProps>(({ index }) => {
   );
 });
 
-SkeletonCard.displayName = "SkeletonCard";
+WidgetSkeletonSquare.displayName = "WidgetSkeletonSquare";
 
-// ─── Main Screen ───────────────────────────────────────────────────────
+const WidgetSkeletonWide = React.memo(() => {
+  const theme = useTheme();
+  const blockLight = theme.dark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)";
+  const blockMid = theme.dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)";
+  const blockSoft = theme.dark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)";
+
+  return (
+    <Animated.View
+      entering={FadeIn.duration(400).delay(240)}
+      style={styles.bentoItemWide}
+    >
+      <SquircleView
+        style={[
+          styles.archivoCard,
+          {
+            backgroundColor: theme.colors.surfaceVariant,
+            borderColor: theme.colors.outlineVariant,
+            borderWidth: 1,
+          },
+        ]}
+        cornerSmoothing={1}
+      >
+        <View style={styles.archivoContent}>
+          <View style={styles.archivoTopRow}>
+            <View
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 12,
+                backgroundColor: blockLight,
+              }}
+            />
+            <View style={styles.archivoStorageBlock}>
+              <View
+                style={{
+                  height: 5,
+                  borderRadius: 3,
+                  backgroundColor: blockSoft,
+                }}
+              />
+              <View
+                style={{
+                  width: "55%",
+                  height: 10,
+                  borderRadius: 5,
+                  marginTop: 4,
+                  backgroundColor: blockSoft,
+                }}
+              />
+            </View>
+          </View>
+          <View style={styles.archivoTextBlock}>
+            <View
+              style={{
+                width: "38%",
+                height: 17,
+                borderRadius: 8,
+                backgroundColor: blockMid,
+              }}
+            />
+            <View
+              style={{
+                width: "52%",
+                height: 13,
+                borderRadius: 6,
+                marginTop: 4,
+                backgroundColor: blockLight,
+              }}
+            />
+          </View>
+        </View>
+      </SquircleView>
+    </Animated.View>
+  );
+});
+
+WidgetSkeletonWide.displayName = "WidgetSkeletonWide";
+
+const GroupDetailSkeleton = React.memo(() => {
+  const theme = useTheme();
+  const blockLight = theme.dark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)";
+  const blockMid = theme.dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)";
+  const blockSoft = theme.dark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)";
+
+  return (
+    <>
+      <Animated.View entering={FadeIn.duration(400)} style={styles.header}>
+        <View
+          style={{
+            width: 64,
+            height: 64,
+            borderRadius: 20,
+            backgroundColor: blockLight,
+          }}
+        />
+        <View
+          style={{
+            width: "68%",
+            height: 34,
+            borderRadius: 10,
+            marginTop: 12,
+            backgroundColor: blockMid,
+          }}
+        />
+        <View
+          style={[
+            styles.headerDivider,
+            { backgroundColor: theme.colors.outlineVariant },
+          ]}
+        />
+        <View
+          style={{
+            width: "92%",
+            height: 14,
+            borderRadius: 7,
+            backgroundColor: blockLight,
+          }}
+        />
+        <View
+          style={{
+            width: "64%",
+            height: 14,
+            borderRadius: 7,
+            marginTop: 8,
+            backgroundColor: blockSoft,
+          }}
+        />
+      </Animated.View>
+
+      <Animated.View
+        entering={FadeIn.duration(400).delay(80)}
+        style={styles.membersRow}
+      >
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          {[0, 1, 2, 3, 4].map((i) => (
+            <View
+              key={i}
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 16,
+                borderWidth: 2,
+                borderColor: theme.colors.background,
+                backgroundColor: blockLight,
+                marginLeft: i > 0 ? -10 : 0,
+                zIndex: 5 - i,
+              }}
+            />
+          ))}
+        </View>
+        <View style={[styles.membersTextBlock, { gap: 8 }]}>
+          <View
+            style={{
+              width: "75%",
+              height: 14,
+              borderRadius: 7,
+              backgroundColor: blockMid,
+            }}
+          />
+          <View
+            style={{
+              width: "45%",
+              height: 11,
+              borderRadius: 6,
+              backgroundColor: blockSoft,
+            }}
+          />
+        </View>
+        <View
+          style={{
+            width: 18,
+            height: 18,
+            borderRadius: 9,
+            backgroundColor: blockSoft,
+          }}
+        />
+      </Animated.View>
+
+      <Animated.View
+        entering={FadeIn.duration(400).delay(120)}
+        style={[
+          styles.sectionDivider,
+          { backgroundColor: theme.colors.outlineVariant },
+        ]}
+      />
+
+      <View style={styles.bentoGrid}>
+        <WidgetSkeletonWide />
+        <WidgetSkeletonSquare index={0} />
+        <WidgetSkeletonSquare index={1} />
+        <WidgetSkeletonSquare index={2} />
+        <WidgetSkeletonSquare index={3} />
+      </View>
+    </>
+  );
+});
+
+GroupDetailSkeleton.displayName = "GroupDetailSkeleton";
+
 export default function GroupDetailScreen() {
   const { id } = useGlobalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const theme = useTheme();
   const { showSnackbar } = useSnackbar();
-  const { user } = useAuth();
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showMembersBottomSheet, setShowMembersBottomSheet] = useState(false);
 
@@ -1200,7 +1392,7 @@ export default function GroupDetailScreen() {
     title: "",
     message: "",
     type: "info",
-    onConfirm: () => { },
+    onConfirm: () => {},
   });
 
   const [optionsMenu, setOptionsMenu] = useState<{
@@ -1220,96 +1412,83 @@ export default function GroupDetailScreen() {
 
   const backgroundRef = React.useRef(null);
 
-  const {
-    group,
-    isLoading,
-    error,
-    refetch,
-    isAdmin,
-    isOwner,
-  } = useGroup(id);
+  const { group, isLoading, error, refetch, isAdmin } = useGroup(id);
 
   const canManageWidgets =
     isAdmin || (group?.settings?.allow_member_manage_widgets ?? false);
 
   const [widgets, setWidgets] = useState<GroupWidgetWithDetails[]>([]);
-  const [isLoadingWidgets, setIsLoadingWidgets] = useState(true);
 
   const fetchWidgets = useCallback(async () => {
     if (!id) return;
     try {
-      setIsLoadingWidgets(true);
       const data = await widgetsService.getGroupWidgets(id as string);
       setWidgets(data);
-    } catch (e) {
-      console.error("Error loading widgets", e);
-    } finally {
-      setIsLoadingWidgets(false);
-    }
+    } catch {}
   }, [id]);
 
   useFocusEffect(
     React.useCallback(() => {
       refetch();
       fetchWidgets();
-    }, [refetch, fetchWidgets])
+    }, [refetch, fetchWidgets]),
   );
 
-  const handleWidgetPress = useCallback((widget: GroupWidgetWithDetails) => {
-    if (widget.widget.name === "Archivo") {
-      router.push({
-        pathname: "/groups/group/gallery",
-        params: { id },
-      } as any);
-      return;
-    }
-    if (widget.widget.name === "Bloc") {
-      router.push({
-        pathname: "/groups/group/bloc",
-        params: { id },
-      } as any);
-      return;
-    }
-    if (widget.widget.name === "Agenda") {
-      router.push({
-        pathname: "/groups/group/calendar",
-        params: { id },
-      } as any);
-      return;
-    }
-    if (
-      widget.widget.name === WIDGET_PLANES ||
-      widget.widget.name === WIDGET_PLANES_LEGACY
-    ) {
-      router.push({
-        pathname: "/groups/group/bucketList",
-        params: { id },
-      } as any);
-      return;
-    }
-    if (widget.widget.name === WIDGET_GASTOS) {
-      router.push({
-        pathname: "/groups/group/sharedExpenses",
-        params: { id },
-      } as any);
-      return;
-    }
-    if (widget.widget.name === WIDGET_PREMIOS) {
-      router.push({
-        pathname: "/groups/group/awards",
-        params: { id },
-      } as any);
-      return;
-    }
-    if (widget.widget.name === WIDGET_FLASHBACK) {
-      router.push({
-        pathname: "/groups/group/flashback",
-        params: { id },
-      } as any);
-      return;
-    }
-    showSnackbar("Próximamente", "info");
-  }, [router, id, showSnackbar]);
+  const handleWidgetPress = useCallback(
+    (widget: GroupWidgetWithDetails) => {
+      if (widget.widget.name === "Archivo") {
+        router.push({
+          pathname: "/groups/group/gallery",
+          params: { id },
+        } as any);
+        return;
+      }
+      if (widget.widget.name === "Bloc") {
+        router.push({
+          pathname: "/groups/group/bloc",
+          params: { id },
+        } as any);
+        return;
+      }
+      if (widget.widget.name === "Agenda") {
+        router.push({
+          pathname: "/groups/group/calendar",
+          params: { id },
+        } as any);
+        return;
+      }
+      if (widget.widget.name === WIDGET_PLANES) {
+        router.push({
+          pathname: "/groups/group/bucketList",
+          params: { id },
+        } as any);
+        return;
+      }
+      if (widget.widget.name === WIDGET_GASTOS) {
+        router.push({
+          pathname: "/groups/group/sharedExpenses",
+          params: { id },
+        } as any);
+        return;
+      }
+      if (widget.widget.name === WIDGET_PREMIOS) {
+        router.push({
+          pathname: "/groups/group/awards",
+          params: { id },
+        } as any);
+        return;
+      }
+      if (widget.widget.name === WIDGET_FLASHBACK) {
+        router.push({
+          pathname: "/groups/group/flashback",
+          params: { id },
+        } as any);
+        return;
+      }
+      showSnackbar("Próximamente", "info");
+    },
+    [router, id, showSnackbar],
+  );
 
   const handleAddWidget = useCallback(() => {
     if (!canManageWidgets) {
@@ -1324,40 +1503,44 @@ export default function GroupDetailScreen() {
 
   const handleMembersPress = useCallback(() => {
     if (!group) return;
-    // If there's a members screen, navigate to it; otherwise open invite modal
     setShowInviteModal(true);
   }, [group]);
 
-  const handleInvite = useCallback(() => {
-    setShowInviteModal(true);
-  }, []);
-
-  // Loading state
   if (isLoading && !group) {
     return (
       <>
         <Stack.Screen options={{ headerShown: false }} />
         <View
-          style={[styles.container, { backgroundColor: theme.colors.background }]}
+          style={[
+            styles.container,
+            { backgroundColor: theme.colors.background },
+          ]}
         >
           <CustomHeader title="" showBackButton={true} />
-          <View style={styles.loadingContent}>
-            {[0, 1, 2].map((i) => (
-              <SkeletonCard key={i} index={i} />
-            ))}
-          </View>
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={[
+              styles.content,
+              { paddingBottom: 120 + insets.bottom },
+            ]}
+            showsVerticalScrollIndicator={false}
+          >
+            <GroupDetailSkeleton />
+          </ScrollView>
         </View>
       </>
     );
   }
 
-  // Error state
   if (error || !group) {
     return (
       <>
         <Stack.Screen options={{ headerShown: false }} />
         <View
-          style={[styles.container, { backgroundColor: theme.colors.background }]}
+          style={[
+            styles.container,
+            { backgroundColor: theme.colors.background },
+          ]}
         >
           <CustomHeader title="" showBackButton={true} />
           <View style={styles.errorContent}>
@@ -1377,10 +1560,7 @@ export default function GroupDetailScreen() {
               />
             </SquircleView>
             <Text
-              style={[
-                styles.errorTitle,
-                { color: theme.colors.onSurface },
-              ]}
+              style={[styles.errorTitle, { color: theme.colors.onSurface }]}
             >
               {error ? "Error al cargar" : "Grupo no encontrado"}
             </Text>
@@ -1397,7 +1577,10 @@ export default function GroupDetailScreen() {
             <Pressable
               onPress={() => router.back()}
               style={({ pressed }) => [
-                { opacity: pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.97 : 1 }] },
+                {
+                  opacity: pressed ? 0.9 : 1,
+                  transform: [{ scale: pressed ? 0.97 : 1 }],
+                },
               ]}
             >
               <SquircleView
@@ -1448,9 +1631,7 @@ export default function GroupDetailScreen() {
                 />
               </TouchableOpacity>
             ) : (
-              <TouchableOpacity
-                onPress={() => setShowMembersBottomSheet(true)}
-              >
+              <TouchableOpacity onPress={() => setShowMembersBottomSheet(true)}>
                 <Ionicons
                   name="people-outline"
                   size={24}
@@ -1462,7 +1643,10 @@ export default function GroupDetailScreen() {
         />
 
         <View
-          style={[styles.container, { backgroundColor: theme.colors.background }]}
+          style={[
+            styles.container,
+            { backgroundColor: theme.colors.background },
+          ]}
         >
           <ScrollView
             style={styles.scrollView}
@@ -1472,12 +1656,10 @@ export default function GroupDetailScreen() {
             ]}
             showsVerticalScrollIndicator={false}
           >
-            {/* ─── Group Header ─── */}
             <Animated.View
               entering={FadeIn.duration(500)}
               style={styles.header}
             >
-              {/* Icon + Name */}
               <View style={styles.headerTitleRow}>
                 <UserAvatar
                   uri={group.cover_image_url}
@@ -1496,7 +1678,6 @@ export default function GroupDetailScreen() {
                 {group.name}
               </Text>
 
-              {/* Divider */}
               <View
                 style={[
                   styles.headerDivider,
@@ -1504,7 +1685,6 @@ export default function GroupDetailScreen() {
                 ]}
               />
 
-              {/* Description */}
               <Text
                 style={[
                   styles.groupDescription,
@@ -1512,11 +1692,11 @@ export default function GroupDetailScreen() {
                 ]}
                 numberOfLines={2}
               >
-                {group.description || "Tu espacio privado para organizaros juntos."}
+                {group.description ||
+                  "Tu espacio privado para organizaros juntos."}
               </Text>
             </Animated.View>
 
-            {/* ─── Members Row ─── */}
             <Animated.View entering={FadeIn.duration(400).delay(100)}>
               <Pressable
                 onPress={handleMembersPress}
@@ -1528,11 +1708,7 @@ export default function GroupDetailScreen() {
                   },
                 ]}
               >
-                <MemberAvatarsRow
-                  users={group.members}
-                  max={5}
-                  size="sm"
-                />
+                <MemberAvatarsRow users={group.members} max={5} size="sm" />
                 <View style={styles.membersTextBlock}>
                   <Text
                     style={[
@@ -1560,7 +1736,6 @@ export default function GroupDetailScreen() {
               </Pressable>
             </Animated.View>
 
-            {/* ─── Section Divider ─── */}
             <Animated.View
               entering={FadeIn.duration(400).delay(150)}
               style={[
@@ -1569,7 +1744,6 @@ export default function GroupDetailScreen() {
               ]}
             />
 
-            {/* ─── Widgets Grid ─── */}
             {widgets.length > 0 ? (
               <View style={styles.bentoGrid}>
                 {widgets.map((widget, index) => (
@@ -1582,11 +1756,10 @@ export default function GroupDetailScreen() {
                   />
                 ))}
 
-                {/* Add Widget Card — managers only */}
                 {canManageWidgets && (
                   <Animated.View
                     entering={FadeIn.duration(400).delay(
-                      200 + widgets.length * 80
+                      200 + widgets.length * 80,
                     )}
                     style={{ width: "100%" }}
                   >
@@ -1620,11 +1793,7 @@ export default function GroupDetailScreen() {
                           ]}
                           cornerSmoothing={1}
                         >
-                          <Ionicons
-                            name="add"
-                            size={24}
-                            color="#FFFFFF"
-                          />
+                          <Ionicons name="add" size={24} color="#FFFFFF" />
                         </SquircleView>
                         <View>
                           <Text
@@ -1650,7 +1819,6 @@ export default function GroupDetailScreen() {
                 )}
               </View>
             ) : (
-              /* ─── Empty Widget State ─── */
               <Animated.View
                 entering={FadeIn.duration(500).delay(200)}
                 style={styles.emptyContainer}
@@ -1677,11 +1845,7 @@ export default function GroupDetailScreen() {
                     ]}
                     cornerSmoothing={1}
                   >
-                    <Ionicons
-                      name="grid-outline"
-                      size={36}
-                      color="#FFFFFF"
-                    />
+                    <Ionicons name="grid-outline" size={36} color="#FFFFFF" />
                   </SquircleView>
 
                   <Text
@@ -1742,7 +1906,6 @@ export default function GroupDetailScreen() {
             )}
           </ScrollView>
 
-          {/* Invite Modal */}
           <InviteModal
             visible={showInviteModal}
             onClose={() => setShowInviteModal(false)}
@@ -1750,7 +1913,6 @@ export default function GroupDetailScreen() {
             groupName={group.name}
           />
 
-          {/* Members List Bottom Sheet */}
           <MemberListBottomSheet
             visible={showMembersBottomSheet}
             onDismiss={() => setShowMembersBottomSheet(false)}
@@ -1781,7 +1943,6 @@ export default function GroupDetailScreen() {
   );
 }
 
-// ─── Styles ────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -1794,19 +1955,6 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
 
-  // Loading
-  loadingContent: {
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 40,
-    gap: 16,
-  },
-  skeletonBlock: {
-    height: 80,
-    borderRadius: 22,
-  },
-
-  // Error
   errorContent: {
     flex: 1,
     justifyContent: "center",
@@ -1844,7 +1992,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 
-  // Header
   header: {
     marginBottom: 20,
     marginTop: 4,
@@ -1878,7 +2025,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
 
-  // Members Row
   membersRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1902,13 +2048,11 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
 
-  // Section Divider
   sectionDivider: {
     height: 1,
     marginBottom: 20,
   },
 
-  // Bento Grid
   bentoGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -1922,7 +2066,6 @@ const styles = StyleSheet.create({
     width: "100%",
   },
 
-  // Archivo (Gallery) Card — 2x1
   archivoCard: {
     borderRadius: 22,
     height: 140,
@@ -1978,7 +2121,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.1,
   },
 
-  // Widget Card
   widgetCard: {
     borderRadius: 22,
     padding: 16,
@@ -2017,7 +2159,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  // Add Widget Card
   addWidgetCard: {
     borderRadius: 22,
     borderStyle: "dashed",
@@ -2045,7 +2186,6 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
 
-  // Empty State
   emptyContainer: {
     marginTop: 8,
   },

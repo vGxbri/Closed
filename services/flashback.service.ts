@@ -1,3 +1,8 @@
+/**
+ * Servicio de flashback
+ * Fiestas retrospectivas y fotos colaborativas del grupo en Supabase.
+ */
+
 import { supabase } from '../lib/supabase';
 import { uploadMediaToStorage } from '../lib/storage';
 import { groupsService } from './groups.service';
@@ -13,12 +18,12 @@ import {
 const BUCKET = 'gallery';
 
 class FlashbackService {
-  // ─── Status sync ────────────────────────────────────────────────────
   computeStatus(party: FlashbackParty): FlashbackPartyStatus {
     const now = new Date();
     const starts = new Date(party.starts_at);
     const ends = new Date(party.ends_at);
     const reveals = new Date(party.reveals_at);
+    // Archivar 12 h después de que termina la ventana de revelado
     const archiveAt = new Date(reveals.getTime() + 12 * 60 * 60 * 1000);
 
     if (now < starts) return 'scheduled';
@@ -37,9 +42,7 @@ class FlashbackService {
         .eq('id', party.id);
 
       if (computed === 'revealing') {
-        this.copyPhotosToGallery(party.id, party.group_id).catch((e) =>
-          console.error('Error copying flashback photos to gallery:', e)
-        );
+        this.copyPhotosToGallery(party.id, party.group_id).catch(() => {});
       }
     }
     return computed;
@@ -73,7 +76,6 @@ class FlashbackService {
     await supabase.from('gallery_images').insert(rows);
   }
 
-  // ─── Parties ────────────────────────────────────────────────────────
   async getActiveParty(groupId: string): Promise<FlashbackPartyWithDetails | null> {
     const { data, error } = await supabase
       .from('flashback_parties')
@@ -163,7 +165,6 @@ class FlashbackService {
     if (error) throw error;
   }
 
-  // ─── Photos ─────────────────────────────────────────────────────────
   async getPartyPhotos(partyId: string): Promise<FlashbackPhotoWithUser[]> {
     const { data, error } = await supabase
       .from('flashback_photos')
@@ -288,7 +289,6 @@ class FlashbackService {
     return photo as FlashbackPhoto;
   }
 
-  // ─── Helpers ────────────────────────────────────────────────────────
   async getRemainingShots(partyId: string): Promise<number> {
     const [count, party] = await Promise.all([
       this.getPhotoCount(partyId),
@@ -316,7 +316,6 @@ class FlashbackService {
     return data?.status === 'active';
   }
 
-  // ─── Widget card preview ────────────────────────────────────────────
   async getWidgetPreview(groupId: string): Promise<{
     hasParty: boolean;
     status: FlashbackPartyStatus | null;
@@ -346,7 +345,6 @@ class FlashbackService {
     };
   }
 
-  // ─── Delete ─────────────────────────────────────────────────────────
   async deleteParty(partyId: string): Promise<void> {
     const photos = await this.getPartyPhotos(partyId);
 
@@ -377,7 +375,6 @@ class FlashbackService {
     if (partyError) throw partyError;
   }
 
-  // ─── Private ────────────────────────────────────────────────────────
   private async enrichParty(party: FlashbackParty, groupId: string): Promise<FlashbackPartyWithDetails> {
     const [count, members] = await Promise.all([
       this.getPhotoCount(party.id),

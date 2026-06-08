@@ -1,3 +1,8 @@
+/**
+ * Tipos del gradiente
+ * Props y paleta de colores del componente GrainyGradient.
+ */
+
 import type { StyleProp, ViewStyle } from "react-native";
 
 type GrainyGradientColors = [string, string?, string?, string?];

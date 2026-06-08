@@ -1,4 +1,8 @@
-// Services barrel export
+/**
+ * Punto de entrada de servicios
+ * Reexporta la capa de acceso a datos de Closed (TFG) contra Supabase por dominio.
+ */
+
 export { authService } from './auth.service';
 export { awardsService } from './awards.service';
 export { bucketListService } from './bucketList.service';

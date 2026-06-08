@@ -1,3 +1,7 @@
+/**
+ * Gastos compartidos del grupo
+ * Resumen de balances, historial de gastos y liquidación entre miembros.
+ */
 import { Ionicons } from "@expo/vector-icons";
 import { BlurTargetView } from "expo-blur";
 import * as Haptics from "expo-haptics";
@@ -15,10 +19,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useSnackbar } from "@/components/ui/SnackbarContext";
 import { BottomSheetModal } from "@/components/ui/BottomSheetModal";
-import {
-  ConfirmDialog,
-  DialogType,
-} from "@/components/ui/ConfirmDialog";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { CustomHeader } from "@/components/ui/CustomHeader";
 import { ExpenseCard } from "@/components/ui/ExpenseCard";
 import { MemberBalanceCard } from "@/components/ui/MemberBalanceCard";
@@ -30,7 +31,6 @@ import { formatCents, DebtTransfer } from "@/lib/sharedExpenses";
 
 type TabKey = "expenses" | "balances" | "settle";
 
-// ─── Skeleton ───────────────────────────────────────────────────────────
 const SkeletonCard = React.memo<{ index: number }>(({ index }) => {
   const theme = useTheme();
   return (
@@ -86,7 +86,6 @@ const SkeletonCard = React.memo<{ index: number }>(({ index }) => {
 });
 SkeletonCard.displayName = "SkeletonCard";
 
-// ─── Tab Pill ───────────────────────────────────────────────────────────
 interface TabPillProps {
   label: string;
   isActive: boolean;
@@ -149,7 +148,6 @@ const TabPill = React.memo<TabPillProps>(
 );
 TabPill.displayName = "TabPill";
 
-// ─── Main Screen ────────────────────────────────────────────────────────
 export default function SharedExpensesScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -200,8 +198,7 @@ export default function SharedExpensesScreen() {
       await deleteExpense(deleteTarget.id);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       showSnackbar("Gasto eliminado", "success");
-    } catch (e) {
-      console.error("Error deleting expense:", e);
+    } catch {
       showSnackbar("Error al eliminar", "error");
     }
     setDeleteTarget(null);
@@ -230,8 +227,7 @@ export default function SharedExpensesScreen() {
         await settleDebt(debt.fromUserId, debt.toUserId, debt.amountCents);
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         showSnackbar("Pago marcado como hecho", "success");
-      } catch (e) {
-        console.error("Error settling debt:", e);
+      } catch {
         showSnackbar("Error al marcar el pago", "error");
       } finally {
         setSettlingDebt(null);
@@ -240,7 +236,6 @@ export default function SharedExpensesScreen() {
     [settleDebt, showSnackbar]
   );
 
-  // ─── Tab content renderers ──────────────
   const renderExpensesTab = () => {
     if (isLoading) {
       return (
@@ -420,7 +415,6 @@ export default function SharedExpensesScreen() {
 
     return (
       <View style={styles.itemList}>
-        {/* Total summary */}
         <Animated.View entering={FadeInDown.duration(350).delay(60)}>
           <SquircleView
             style={[
@@ -571,7 +565,6 @@ export default function SharedExpensesScreen() {
           ]}
           showsVerticalScrollIndicator={false}
         >
-          {/* ─── Title ─── */}
           <Animated.View
             entering={FadeInUp.duration(500)}
             style={styles.titleBlock}
@@ -595,7 +588,6 @@ export default function SharedExpensesScreen() {
             </Text>
           </Animated.View>
 
-          {/* ─── Divider ─── */}
           <Animated.View
             entering={FadeIn.duration(400).delay(50)}
             style={[
@@ -604,7 +596,6 @@ export default function SharedExpensesScreen() {
             ]}
           />
 
-          {/* ─── Tabs ─── */}
           <Animated.View
             entering={FadeInDown.duration(300).delay(80)}
             style={styles.tabRow}
@@ -629,13 +620,11 @@ export default function SharedExpensesScreen() {
             />
           </Animated.View>
 
-          {/* ─── Content ─── */}
           {activeTab === "expenses" && renderExpensesTab()}
           {activeTab === "balances" && renderBalancesTab()}
           {activeTab === "settle" && renderSettleTab()}
         </ScrollView>
 
-        {/* ─── FAB ─── */}
         {!isLoading && activeTab === "expenses" && expenses.length > 0 && canCreateExpenses && (
           <Animated.View
             entering={FadeIn.duration(400).delay(300)}
@@ -674,7 +663,6 @@ export default function SharedExpensesScreen() {
         )}
       </BlurTargetView>
 
-      {/* ─── Action Bottom Sheet (long press on expense) ─── */}
       <BottomSheetModal
         visible={actionSheetVisible}
         onDismiss={() => {
@@ -711,7 +699,6 @@ export default function SharedExpensesScreen() {
               ]}
               cornerSmoothing={1}
             >
-              {/* Delete */}
               <Pressable
                 style={({ pressed }) => [
                   styles.actionOption,
@@ -753,7 +740,6 @@ export default function SharedExpensesScreen() {
         )}
       </BottomSheetModal>
 
-      {/* ─── Delete Confirm Dialog ─── */}
       <ConfirmDialog
         visible={!!deleteTarget}
         title="Eliminar gasto"
@@ -769,7 +755,6 @@ export default function SharedExpensesScreen() {
   );
 }
 
-// ─── Styles ─────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollView: { flex: 1 },

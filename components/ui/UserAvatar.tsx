@@ -1,10 +1,14 @@
+/**
+ * Avatar de usuario
+ * Imagen optimizada o iniciales con color determinístico por nombre.
+ */
+
 import React, { useCallback, useMemo, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import { Image } from 'expo-image';
 import SquircleView from 'react-native-fast-squircle';
 import { getOptimizedMediaUrl } from '../../lib/storage';
 
-// ─── Palette for initials-based avatars ──────────────────────────────────
 const AVATAR_COLORS = [
   '#E57373', '#F06292', '#BA68C8', '#9575CD',
   '#7986CB', '#64B5F6', '#4FC3F7', '#4DD0E1',
@@ -27,19 +31,13 @@ function getInitials(name: string): string {
   return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
 }
 
-// ─── Props ──────────────────────────────────────────────────────────────
 interface UserAvatarProps {
-  /** Image URI (avatar_url). If falsy, renders initials. */
   uri: string | null | undefined;
-  /** User's display name — used for initials and color. */
   name: string;
-  /** Diameter in dp or a named size. Defaults to 48 (md). */
   size?: number | 'sm' | 'md' | 'lg' | 'xl';
-  /** Corner radius. Defaults to size/2 (circle). */
   borderRadius?: number;
 }
 
-// ─── Component ──────────────────────────────────────────────────────────
 const UserAvatar = React.memo<UserAvatarProps>(({
   uri,
   name,
@@ -70,8 +68,7 @@ const UserAvatar = React.memo<UserAvatarProps>(({
 
   const hasValidImage = uri && uri.trim() !== '' && !imageError;
 
-  // Always render initials as base layer; image overlays on top when available.
-  // This ensures the avatar is NEVER empty, even if the image fails to load.
+  // Iniciales siempre visibles; la imagen se superpone y si falla queda el respaldo
   return (
     <SquircleView
       style={[
@@ -85,7 +82,6 @@ const UserAvatar = React.memo<UserAvatarProps>(({
       ]}
       cornerSmoothing={1}
     >
-      {/* Initials — always rendered as fallback */}
       <Text
         style={[
           styles.initials,
@@ -95,7 +91,6 @@ const UserAvatar = React.memo<UserAvatarProps>(({
         {initials}
       </Text>
 
-      {/* Image — overlays on top when a valid URI exists */}
       {hasValidImage && (
         <Image
           source={getOptimizedMediaUrl(uri, { width: Math.max(100, sizeValue * 2) }) || uri}
@@ -115,7 +110,6 @@ const UserAvatar = React.memo<UserAvatarProps>(({
 UserAvatar.displayName = 'UserAvatar';
 export { UserAvatar };
 
-// ─── Styles ─────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: {
     overflow: 'hidden',

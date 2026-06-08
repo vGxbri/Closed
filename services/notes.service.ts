@@ -1,10 +1,12 @@
+/**
+ * Servicio de notas colaborativas
+ * Notas con bloques editables por grupo, persistidas en Supabase.
+ */
+
 import { supabase } from '../lib/supabase';
 import { Note, NoteBlock } from '../types/database';
 
 class NotesService {
-  /**
-   * Fetches all notes for a group, ordered by pinned first then most recent.
-   */
   async getNotes(groupId: string): Promise<Note[]> {
     const { data, error } = await supabase
       .from('notes')
@@ -13,17 +15,11 @@ class NotesService {
       .order('is_pinned', { ascending: false })
       .order('updated_at', { ascending: false });
 
-    if (error) {
-      console.error('Error fetching notes:', error);
-      throw error;
-    }
+    if (error) throw error;
 
     return (data || []).map(this.parseNote);
   }
 
-  /**
-   * Fetches a single note by ID.
-   */
   async getNote(noteId: string): Promise<Note | null> {
     const { data, error } = await supabase
       .from('notes')
@@ -31,17 +27,11 @@ class NotesService {
       .eq('id', noteId)
       .single();
 
-    if (error) {
-      console.error('Error fetching note:', error);
-      return null;
-    }
+    if (error) return null;
 
     return this.parseNote(data);
   }
 
-  /**
-   * Creates a new empty note in a group.
-   */
   async createNote(groupId: string, title: string = ''): Promise<Note> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
@@ -57,17 +47,11 @@ class NotesService {
       .select()
       .single();
 
-    if (error) {
-      console.error('Error creating note:', error);
-      throw error;
-    }
+    if (error) throw error;
 
     return this.parseNote(data);
   }
 
-  /**
-   * Updates a note's title and/or content.
-   */
   async updateNote(
     noteId: string,
     updates: { title?: string; content?: NoteBlock[] }
@@ -84,45 +68,28 @@ class NotesService {
       .update(payload)
       .eq('id', noteId);
 
-    if (error) {
-      console.error('Error updating note:', error);
-      throw error;
-    }
+    if (error) throw error;
   }
 
-  /**
-   * Toggles the pinned state of a note.
-   */
   async togglePin(noteId: string, currentlyPinned: boolean): Promise<void> {
     const { error } = await supabase
       .from('notes')
       .update({ is_pinned: !currentlyPinned, updated_at: new Date().toISOString() })
       .eq('id', noteId);
 
-    if (error) {
-      console.error('Error toggling pin:', error);
-      throw error;
-    }
+    if (error) throw error;
   }
 
-  /**
-   * Deletes a note permanently.
-   */
   async deleteNote(noteId: string): Promise<void> {
     const { error } = await supabase
       .from('notes')
       .delete()
       .eq('id', noteId);
 
-    if (error) {
-      console.error('Error deleting note:', error);
-      throw error;
-    }
+    if (error) throw error;
   }
 
-  /**
-   * Parses raw DB row to ensure content is always an array.
-   */
+  /** Normaliza content a array al parsear desde la BD. */
   private parseNote(raw: Record<string, unknown>): Note {
     return {
       ...raw,

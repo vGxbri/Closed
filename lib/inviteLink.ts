@@ -1,3 +1,8 @@
+/**
+ * Enlaces de invitación
+ * Generación y normalización de URLs y códigos para unirse a grupos cerrados.
+ */
+
 import * as Linking from "expo-linking";
 
 export function normalizeInviteCode(code: string | string[] | undefined): string | null {
@@ -6,7 +11,6 @@ export function normalizeInviteCode(code: string | string[] | undefined): string
   return normalized || null;
 }
 
-/** Deep link that opens the join screen when the app is installed. */
 export function getGroupInviteUrl(inviteCode: string): string {
   const code = normalizeInviteCode(inviteCode);
   if (!code) {

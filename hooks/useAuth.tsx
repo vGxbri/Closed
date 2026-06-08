@@ -1,3 +1,8 @@
+/**
+ * Contexto de autenticación
+ * Sesión global, Google Sign-In y perfil del usuario con Supabase.
+ */
+
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { Session, User } from "@supabase/supabase-js";
 import React, {
@@ -12,7 +17,6 @@ import { authService } from "../services/auth.service";
 import { Profile } from "../types/database";
 
 interface AuthContextType {
-  // State
   session: Session | null;
   user: User | null;
   profile: Profile | null;
@@ -20,7 +24,6 @@ interface AuthContextType {
   isProfileLoading: boolean;
   isAuthenticated: boolean;
 
-  // Actions
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (
     email: string,
@@ -45,9 +48,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isProfileLoading, setIsProfileLoading] = useState(false);
 
-  // Initialize auth state via onAuthStateChange (single source of truth)
   useEffect(() => {
-    // Subscribe to auth changes - this handles INITIAL_SESSION automatically
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, newSession) => {
@@ -55,13 +56,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setUser(newSession?.user ?? null);
 
       if (newSession?.user) {
-        // Load profile in background, don't block auth state
         loadProfile(newSession.user);
       } else {
         setProfile(null);
       }
 
-      // Mark loading as complete after first event (INITIAL_SESSION or SIGNED_OUT)
       setIsLoading(false);
     });
 
@@ -77,7 +76,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       const targetUser = fallbackUser ?? user;
 
-      // Retry mechanism for new registrations (race condition with trigger)
+      // Reintentos tras registro: el trigger de BD puede tardar en crear el perfil
       if (!currentProfile && targetUser) {
         for (let i = 0; i < 3; i++) {
           await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -87,8 +86,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
 
       setProfile(currentProfile);
-    } catch (error) {
-      console.error("Error loading profile:", error);
+    } catch {
     } finally {
       setIsProfileLoading(false);
     }
@@ -118,9 +116,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     });
     setSession(newSession);
     setUser(newSession?.user ?? null);
-    // Profile is created automatically by database trigger
     if (newSession?.user) {
-      // Small delay for trigger to complete
       setTimeout(() => loadProfile(newSession.user), 1000);
     }
   };
@@ -129,7 +125,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       await GoogleSignin.signOut();
     } catch {
-      // Ignore error if not logged in with Google
     }
     await authService.signOut();
     setSession(null);
@@ -174,16 +169,4 @@ export function useAuth() {
     throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
-}
-
-// Utility hook for requiring authentication
-export function useRequireAuth() {
-  const auth = useAuth();
-
-  if (!auth.isLoading && !auth.isAuthenticated) {
-    // Could redirect to login here
-    // router.replace('/auth/login');
-  }
-
-  return auth;
 }

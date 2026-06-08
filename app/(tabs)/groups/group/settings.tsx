@@ -1,3 +1,7 @@
+/**
+ * Ajustes del grupo
+ * Configuración del grupo: widgets, miembros, permisos y opciones de administración.
+ */
 import { Ionicons } from "@expo/vector-icons";
 import { BlurTargetView } from "expo-blur";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
@@ -19,11 +23,7 @@ import Animated, {
   FadeInUp,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
-import {
-  IconName,
-} from "@/constants/icons";
 import { useAuth, useGroup } from "@/hooks";
 import { MemberAvatar } from "@/components/MemberAvatar";
 import { MenuOption, OptionsMenu } from "@/components/ui/OptionsMenu";
@@ -37,7 +37,6 @@ import { useSnackbar } from "@/components/ui/SnackbarContext";
 import { UserAvatar } from "@/components/ui/UserAvatar";
 import { groupsService, widgetsService } from "@/services";
 
-// ─── Toggle Row Component ───────────────────────────────────────────────
 interface ToggleRowProps {
   icon: string;
   title: string;
@@ -106,7 +105,7 @@ const ToggleRow = React.memo<ToggleRowProps>(
           </Text>
         </View>
 
-        {/* Custom Toggle */}
+
         <View
           style={[
             styles.toggleTrack,
@@ -138,7 +137,6 @@ const ToggleRow = React.memo<ToggleRowProps>(
 
 ToggleRow.displayName = "ToggleRow";
 
-// ─── Main Screen ────────────────────────────────────────────────────────
 export default function GroupSettingsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -196,22 +194,17 @@ export default function GroupSettingsScreen() {
 
   const backgroundRef = React.useRef(null);
 
-  // Settings
   const [allowMemberNominations, setAllowMemberNominations] = useState(false);
-  const [allowMemberVoting, setAllowMemberVoting] = useState(true);
   const [allowMemberManageWidgets, setAllowMemberManageWidgets] = useState(false);
   const [allowMemberCreateEvents, setAllowMemberCreateEvents] = useState(true);
   const [allowMemberEditEvents, setAllowMemberEditEvents] = useState(false);
   const [allowMemberUploadGallery, setAllowMemberUploadGallery] = useState(true);
-  const [allowMemberDeleteOthersGallery, setAllowMemberDeleteOthersGallery] =
-    useState(false);
   const [allowMemberCreateNotes, setAllowMemberCreateNotes] = useState(true);
   const [allowMemberCreateExpenses, setAllowMemberCreateExpenses] = useState(true);
   const [allowMemberSettleExpenses, setAllowMemberSettleExpenses] = useState(true);
   const [allowMemberCreateFlashbackParty, setAllowMemberCreateFlashbackParty] =
     useState(true);
 
-  // Active widget names for the group (used to only show relevant permissions)
   const [activeWidgetNames, setActiveWidgetNames] = useState<Set<string>>(
     new Set()
   );
@@ -224,7 +217,6 @@ export default function GroupSettingsScreen() {
       setDescription(group.description || "");
       setCoverImageUri(group.cover_image_url || null);
       setAllowMemberNominations(group.settings.allow_member_nominations);
-      setAllowMemberVoting(group.settings.allow_member_voting);
       setAllowMemberManageWidgets(
         group.settings.allow_member_manage_widgets ?? false
       );
@@ -236,9 +228,6 @@ export default function GroupSettingsScreen() {
       );
       setAllowMemberUploadGallery(
         group.settings.allow_member_upload_gallery ?? true
-      );
-      setAllowMemberDeleteOthersGallery(
-        group.settings.allow_member_delete_others_gallery ?? false
       );
       setAllowMemberCreateNotes(
         group.settings.allow_member_create_notes ?? true
@@ -265,7 +254,6 @@ export default function GroupSettingsScreen() {
         setActiveWidgetNames(new Set(widgets.map((w) => w.widget.name)));
       })
       .catch((error) => {
-        console.error("Error loading group widgets for settings:", error);
       });
     return () => {
       cancelled = true;
@@ -278,12 +266,10 @@ export default function GroupSettingsScreen() {
       description.trim() !== (group.description || "") ||
       coverImageUri !== (group.cover_image_url || null) ||
       allowMemberNominations !== group.settings.allow_member_nominations ||
-      allowMemberVoting !== group.settings.allow_member_voting ||
       allowMemberManageWidgets !== (group.settings.allow_member_manage_widgets ?? false) ||
       allowMemberCreateEvents !== (group.settings.allow_member_create_events ?? true) ||
       allowMemberEditEvents !== (group.settings.allow_member_edit_events ?? false) ||
       allowMemberUploadGallery !== (group.settings.allow_member_upload_gallery ?? true) ||
-      allowMemberDeleteOthersGallery !== (group.settings.allow_member_delete_others_gallery ?? false) ||
       allowMemberCreateNotes !== (group.settings.allow_member_create_notes ?? true) ||
       allowMemberCreateExpenses !== (group.settings.allow_member_create_expenses ?? true) ||
       allowMemberSettleExpenses !== (group.settings.allow_member_settle_expenses ?? true) ||
@@ -333,7 +319,6 @@ export default function GroupSettingsScreen() {
       let finalCoverUrl = group?.cover_image_url;
 
       if (coverImageUri && coverImageUri !== group?.cover_image_url) {
-        // Only upload if it's a local uri (starts with file:// or similar)
         if (!coverImageUri.startsWith('http')) {
            finalCoverUrl = await groupsService.uploadGroupCover(group!.id, coverImageUri);
         }
@@ -346,12 +331,10 @@ export default function GroupSettingsScreen() {
         settings: {
           ...group!.settings,
           allow_member_nominations: allowMemberNominations,
-          allow_member_voting: allowMemberVoting,
           allow_member_manage_widgets: allowMemberManageWidgets,
           allow_member_create_events: allowMemberCreateEvents,
           allow_member_edit_events: allowMemberEditEvents,
           allow_member_upload_gallery: allowMemberUploadGallery,
-          allow_member_delete_others_gallery: allowMemberDeleteOthersGallery,
           allow_member_create_notes: allowMemberCreateNotes,
           allow_member_create_expenses: allowMemberCreateExpenses,
           allow_member_settle_expenses: allowMemberSettleExpenses,
@@ -374,12 +357,10 @@ export default function GroupSettingsScreen() {
     coverImageUri,
     group,
     allowMemberNominations,
-    allowMemberVoting,
     allowMemberManageWidgets,
     allowMemberCreateEvents,
     allowMemberEditEvents,
     allowMemberUploadGallery,
-    allowMemberDeleteOthersGallery,
     allowMemberCreateNotes,
     allowMemberCreateExpenses,
     allowMemberSettleExpenses,
@@ -411,7 +392,6 @@ export default function GroupSettingsScreen() {
     });
   }, [deleteGroup, router, showSnackbar]);
 
-  // ─── Loading state ─────────────────────────────────────────────
   if (isLoading) {
     return (
       <>
@@ -427,7 +407,7 @@ export default function GroupSettingsScreen() {
             ]}
             showsVerticalScrollIndicator={false}
           >
-            {/* Title Skeleton */}
+
             <Animated.View entering={FadeIn.duration(400)} style={styles.titleBlock}>
               <View style={{ width: 160, height: 44, borderRadius: 8, backgroundColor: theme.colors.surfaceVariant, marginBottom: 8 }} />
               <View style={{ width: 200, height: 16, borderRadius: 4, backgroundColor: theme.colors.surfaceVariant }} />
@@ -435,7 +415,7 @@ export default function GroupSettingsScreen() {
 
             <View style={[styles.divider, { backgroundColor: theme.colors.outlineVariant }]} />
 
-            {/* Preview Card Skeleton */}
+
             <Animated.View entering={FadeIn.duration(400).delay(50)}>
               <SquircleView
                 style={[
@@ -460,7 +440,7 @@ export default function GroupSettingsScreen() {
               </SquircleView>
             </Animated.View>
 
-            {/* Icon Selector Skeleton */}
+
             <Animated.View entering={FadeIn.duration(400).delay(100)} style={styles.section}>
               <View style={{ width: 100, height: 18, borderRadius: 9, backgroundColor: theme.colors.surfaceVariant, marginBottom: 12 }} />
               <SquircleView
@@ -470,14 +450,14 @@ export default function GroupSettingsScreen() {
                     backgroundColor: theme.colors.surface,
                     borderColor: theme.colors.outlineVariant,
                     borderWidth: 1,
-                    height: 156, // Approximate height of the icon grid
+                    height: 156,
                   },
                 ]}
                 cornerSmoothing={1}
               />
             </Animated.View>
 
-            {/* Details Skeleton */}
+
             <Animated.View entering={FadeIn.duration(400).delay(150)} style={styles.section}>
               <View style={{ width: 100, height: 18, borderRadius: 9, backgroundColor: theme.colors.surfaceVariant, marginBottom: 12 }} />
               <View style={{ width: "100%", height: 56, borderRadius: 16, backgroundColor: theme.colors.surfaceVariant, marginBottom: 14 }} />
@@ -489,7 +469,6 @@ export default function GroupSettingsScreen() {
     );
   }
 
-  // ─── Access denied state ───────────────────────────────────────
   if (!group || !isAdmin) {
     return (
       <View
@@ -551,8 +530,6 @@ export default function GroupSettingsScreen() {
     );
   }
 
-  // Build the list of permission toggles to show. Widget-specific permissions
-  // only appear when the related widget is active in the group.
   const permissionRows: {
     key: string;
     icon: string;
@@ -578,14 +555,6 @@ export default function GroupSettingsScreen() {
             description: "Los miembros pueden crear premios",
             value: allowMemberNominations,
             onToggle: setAllowMemberNominations,
-          },
-          {
-            key: "voting",
-            icon: "checkmark-circle-outline",
-            title: "Votar en premios",
-            description: "Los miembros pueden votar",
-            value: allowMemberVoting,
-            onToggle: setAllowMemberVoting,
           },
         ]
       : []),
@@ -618,14 +587,6 @@ export default function GroupSettingsScreen() {
             description: "Los miembros pueden subir fotos y vídeos",
             value: allowMemberUploadGallery,
             onToggle: setAllowMemberUploadGallery,
-          },
-          {
-            key: "delete_others_gallery",
-            icon: "trash-outline",
-            title: "Borrar contenido de otros",
-            description: "Los miembros pueden borrar fotos y vídeos ajenos",
-            value: allowMemberDeleteOthersGallery,
-            onToggle: setAllowMemberDeleteOthersGallery,
           },
         ]
       : []),
@@ -691,7 +652,7 @@ export default function GroupSettingsScreen() {
                 width: 40,
                 height: 40,
                 justifyContent: "center",
-                alignItems: "flex-end", // Align right to match standard header icons
+                alignItems: "flex-end",
                 opacity: !name.trim() || saving ? 0.5 : 1,
               }}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -724,7 +685,7 @@ export default function GroupSettingsScreen() {
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
             >
-              {/* ─── Title ─── */}
+
               <Animated.View
                 entering={FadeInUp.duration(500)}
                 style={styles.titleBlock}
@@ -744,7 +705,7 @@ export default function GroupSettingsScreen() {
                 </Text>
               </Animated.View>
 
-              {/* ─── Divider ─── */}
+
               <Animated.View
                 entering={FadeIn.duration(400).delay(50)}
                 style={[
@@ -753,7 +714,7 @@ export default function GroupSettingsScreen() {
                 ]}
               />
 
-              {/* ─── Preview Card ─── */}
+
               <Animated.View entering={FadeInDown.duration(400).delay(80)}>
                 <SquircleView
                   style={[
@@ -814,7 +775,7 @@ export default function GroupSettingsScreen() {
                 </SquircleView>
               </Animated.View>
 
-              {/* ─── Section: Details ─── */}
+
               <Animated.View
                 entering={FadeInDown.duration(400).delay(160)}
                 style={styles.section}
@@ -854,7 +815,7 @@ export default function GroupSettingsScreen() {
                 />
               </Animated.View>
 
-              {/* ─── Section: Miembros ─── */}
+
               <Animated.View
                 entering={FadeInDown.duration(400).delay(180)}
                 style={styles.section}
@@ -1027,7 +988,7 @@ export default function GroupSettingsScreen() {
                 </SquircleView>
               </Animated.View>
 
-              {/* ─── Section: Permissions ─── */}
+
               {permissionRows.length > 0 && (
                 <Animated.View
                   entering={FadeInDown.duration(400).delay(200)}
@@ -1067,7 +1028,7 @@ export default function GroupSettingsScreen() {
                 </Animated.View>
               )}
 
-              {/* ─── Danger Zone ─── */}
+
               {isOwner && (
                 <Animated.View
                   entering={FadeInDown.duration(400).delay(240)}
@@ -1200,7 +1161,6 @@ export default function GroupSettingsScreen() {
   );
 }
 
-// ─── Styles ─────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -1222,14 +1182,12 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
 
-  // Loading
   loadingText: {
     fontFamily: "Archivo-Medium",
     fontSize: 14,
     marginTop: 16,
   },
 
-  // Lock / Access Denied
   lockIconContainer: {
     width: 72,
     height: 72,
@@ -1260,7 +1218,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 
-  // Title
   titleBlock: {
     marginTop: 4,
     marginBottom: 4,
@@ -1278,14 +1235,12 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  // Divider
   divider: {
     height: 1,
     marginTop: 16,
     marginBottom: 24,
   },
 
-  // Preview Card
   previewCard: {
     alignItems: "center",
     padding: 28,
@@ -1327,7 +1282,6 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 
-  // Sections
   section: {
     marginBottom: 24,
   },
@@ -1338,7 +1292,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
 
-  // Icon Grid
   iconGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -1355,13 +1308,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
 
-  // Inputs
   input: {
     marginBottom: 14,
     backgroundColor: "transparent",
   },
 
-  // Settings Card
   settingsCard: {
     borderRadius: 22,
     overflow: "hidden",
@@ -1395,7 +1346,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.1,
   },
 
-  // Members
   memberRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1419,7 +1369,6 @@ const styles = StyleSheet.create({
     padding: 8,
   },
 
-  // Toggle
   toggleTrack: {
     width: 44,
     height: 26,
@@ -1432,7 +1381,6 @@ const styles = StyleSheet.create({
     borderRadius: 11,
   },
 
-  // Danger Zone
   dangerCard: {
     borderRadius: 22,
     padding: 18,
@@ -1475,7 +1423,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
-  // Footer
   footer: {
     paddingHorizontal: 24,
     paddingTop: 12,

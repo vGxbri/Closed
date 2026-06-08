@@ -1,3 +1,8 @@
+/**
+ * Contexto de snackbar
+ * Proveedor global de notificaciones breves de éxito, error o info.
+ */
+
 import { Ionicons } from '@expo/vector-icons';
 import { useSegments } from 'expo-router';
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
@@ -5,7 +10,6 @@ import { Animated, Pressable, StyleSheet, View } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-// Default navigation header height
 const HEADER_HEIGHT = 56;
 
 interface SnackbarContextType {
@@ -56,11 +60,7 @@ export const SnackbarProvider: React.FC<SnackbarProviderProps> = ({ children }) 
 
   const segments = useSegments() as string[];
 
-  // Determine if the current screen likely has a header
-  // Logic: 
-  // 1. Must be in (tabs)
-  // 2. Must NOT be 'profile' (headerless)
-  // 3. If in 'home', must NOT be the index (root)
+  // Posición del snackbar: en (tabs) con cabecera, excepto perfil y home raíz
   const inTabs = segments[0] === '(tabs)';
   const inHomeStack = inTabs && segments[1] === 'home';
   const isHomeIndex = inHomeStack && (segments.length === 2 || segments[2] === 'index');
@@ -69,7 +69,6 @@ export const SnackbarProvider: React.FC<SnackbarProviderProps> = ({ children }) 
   const hasHeader = inTabs && !isProfile && !isHomeIndex;
 
   const showSnackbar = useCallback((msg: string, snackType: 'success' | 'error' | 'info' = 'info') => {
-    // Clear any existing timeout
     if (hideTimeoutRef.current) {
       clearTimeout(hideTimeoutRef.current);
     }
@@ -78,7 +77,6 @@ export const SnackbarProvider: React.FC<SnackbarProviderProps> = ({ children }) 
     setType(snackType);
     setVisible(true);
 
-    // Animate in
     Animated.parallel([
       Animated.spring(translateY, {
         toValue: 0,
@@ -93,13 +91,11 @@ export const SnackbarProvider: React.FC<SnackbarProviderProps> = ({ children }) 
       }),
     ]).start();
 
-    // Auto hide after 3 seconds
     hideTimeoutRef.current = setTimeout(() => {
       hideSnackbar();
     }, 3000);
   }, [translateY, opacity, hideSnackbar]);
 
-  // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
       if (hideTimeoutRef.current) {

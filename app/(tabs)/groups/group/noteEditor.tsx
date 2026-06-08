@@ -1,7 +1,17 @@
+/**
+ * Editor de notas del Bloc
+ * Creación y edición de notas con título y contenido enriquecido.
+ */
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -13,7 +23,11 @@ import {
 } from "react-native";
 import SquircleView from "react-native-fast-squircle";
 import { Text, useTheme } from "react-native-paper";
-import Animated, { FadeIn, FadeInDown, FadeInUp } from "react-native-reanimated";
+import Animated, {
+  FadeIn,
+  FadeInDown,
+  FadeInUp,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -23,12 +37,8 @@ import { useAuth, useGroup } from "@/hooks";
 import { notesService } from "@/services/notes.service";
 import { ChecklistItem, Note, NoteBlock } from "@/types/database";
 
-// ─── ID Generator ───────────────────────────────────────────────────────
 const genId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-// ─── Block Components ───────────────────────────────────────────────────
-
-// Text Block
 interface TextBlockProps {
   block: NoteBlock;
   onChangeValue: (value: string) => void;
@@ -56,11 +66,7 @@ const TextBlockEditor = React.memo<TextBlockProps>(
           autoFocus={autoFocus}
           textAlignVertical="top"
         />
-        <Pressable
-          onPress={onRemove}
-          style={styles.blockRemoveBtn}
-          hitSlop={8}
-        >
+        <Pressable onPress={onRemove} style={styles.blockRemoveBtn} hitSlop={8}>
           <Ionicons
             name="close-circle"
             size={18}
@@ -69,11 +75,10 @@ const TextBlockEditor = React.memo<TextBlockProps>(
         </Pressable>
       </View>
     );
-  }
+  },
 );
 TextBlockEditor.displayName = "TextBlockEditor";
 
-// Checklist Block
 interface ChecklistBlockProps {
   block: NoteBlock;
   onUpdateItems: (items: ChecklistItem[]) => void;
@@ -91,28 +96,28 @@ const ChecklistBlockEditor = React.memo<ChecklistBlockProps>(
       (itemId: string) => {
         Haptics.selectionAsync();
         const updated = items.map((i) =>
-          i.id === itemId ? { ...i, checked: !i.checked } : i
+          i.id === itemId ? { ...i, checked: !i.checked } : i,
         );
         onUpdateItems(updated);
       },
-      [items, onUpdateItems]
+      [items, onUpdateItems],
     );
 
     const updateItemText = useCallback(
       (itemId: string, text: string) => {
         const updated = items.map((i) =>
-          i.id === itemId ? { ...i, text } : i
+          i.id === itemId ? { ...i, text } : i,
         );
         onUpdateItems(updated);
       },
-      [items, onUpdateItems]
+      [items, onUpdateItems],
     );
 
     const removeItem = useCallback(
       (itemId: string) => {
         onUpdateItems(items.filter((i) => i.id !== itemId));
       },
-      [items, onUpdateItems]
+      [items, onUpdateItems],
     );
 
     const addItem = useCallback(() => {
@@ -154,9 +159,7 @@ const ChecklistBlockEditor = React.memo<ChecklistBlockProps>(
                 name={item.checked ? "checkbox" : "square-outline"}
                 size={22}
                 color={
-                  item.checked
-                    ? theme.colors.primary
-                    : theme.colors.outline
+                  item.checked ? theme.colors.primary : theme.colors.outline
                 }
               />
             </Pressable>
@@ -180,12 +183,15 @@ const ChecklistBlockEditor = React.memo<ChecklistBlockProps>(
               hitSlop={8}
               style={styles.checklistRemoveBtn}
             >
-              <Ionicons name="remove-circle-outline" size={18} color={theme.colors.outline} />
+              <Ionicons
+                name="remove-circle-outline"
+                size={18}
+                color={theme.colors.outline}
+              />
             </Pressable>
           </View>
         ))}
 
-        {/* Add new item */}
         <View style={styles.checklistAddRow}>
           <Ionicons
             name="add-circle-outline"
@@ -194,7 +200,10 @@ const ChecklistBlockEditor = React.memo<ChecklistBlockProps>(
           />
           <TextInput
             ref={inputRef}
-            style={[styles.checklistAddInput, { color: theme.colors.onSurface }]}
+            style={[
+              styles.checklistAddInput,
+              { color: theme.colors.onSurface },
+            ]}
             placeholder="Añadir elemento..."
             placeholderTextColor={theme.colors.outline}
             value={newItemText}
@@ -205,11 +214,10 @@ const ChecklistBlockEditor = React.memo<ChecklistBlockProps>(
         </View>
       </View>
     );
-  }
+  },
 );
 ChecklistBlockEditor.displayName = "ChecklistBlockEditor";
 
-// ─── Main Screen ────────────────────────────────────────────────────────
 export default function NoteEditorScreen() {
   const { id, noteId, isNew } = useLocalSearchParams<{
     id: string;
@@ -229,19 +237,19 @@ export default function NoteEditorScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [lastFocusedBlockId, setLastFocusedBlockId] = useState<string | null>(null);
+  const [lastFocusedBlockId, setLastFocusedBlockId] = useState<string | null>(
+    null,
+  );
 
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasChangesRef = useRef(false);
-  
-  // Track state for the unmount cleanup to avoid capturing stale values
+
   const unmountStateRef = useRef({ title: "", blocks: [] as NoteBlock[] });
-  
+
   useEffect(() => {
     unmountStateRef.current = { title, blocks };
   }, [title, blocks]);
 
-  // ─── Load note ────────────────────────────────
   useEffect(() => {
     if (!noteId) return;
     let mounted = true;
@@ -254,8 +262,7 @@ export default function NoteEditorScreen() {
           setTitle(data.title);
           setBlocks(data.content);
         }
-      } catch (e) {
-        console.error("Error loading note:", e);
+      } catch {
         showSnackbar("Error al cargar la nota", "error");
       } finally {
         if (mounted) setIsLoading(false);
@@ -268,7 +275,6 @@ export default function NoteEditorScreen() {
     };
   }, [noteId, showSnackbar]);
 
-  // ─── Auto-save with debounce ──────────────────
   const triggerSave = useCallback(
     (newTitle: string, newBlocks: NoteBlock[]) => {
       if (!noteId) return;
@@ -284,61 +290,61 @@ export default function NoteEditorScreen() {
             content: newBlocks,
           });
           hasChangesRef.current = false;
-        } catch (e) {
-          console.error("Error saving note:", e);
+        } catch {
         } finally {
           setIsSaving(false);
         }
       }, 1500);
     },
-    [noteId]
+    [noteId],
   );
 
-  // Save on unmount if pending changes, or delete if empty and new
+  // Guardar al salir si hay cambios; borrar si es nota nueva y vacía
   useEffect(() => {
     return () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-      
+
       if (!noteId) return;
 
-      const { title: finalTitle, blocks: finalBlocks } = unmountStateRef.current;
-      
-      const isEmpty = !finalTitle.trim() && finalBlocks.every(b => {
-        if (b.type === 'checklist') return !b.items || b.items.length === 0;
-        return !b.value.trim();
-      });
+      const { title: finalTitle, blocks: finalBlocks } =
+        unmountStateRef.current;
+
+      const isEmpty =
+        !finalTitle.trim() &&
+        finalBlocks.every((b) => {
+          if (b.type === "checklist") return !b.items || b.items.length === 0;
+          return !b.value.trim();
+        });
 
       if (isEmpty && isNew === "true") {
-        notesService.deleteNote(noteId).catch((e) => console.error("Error deleting empty note on unmount:", e));
+        notesService.deleteNote(noteId).catch(() => {});
       } else if (hasChangesRef.current) {
         notesService
           .updateNote(noteId, { title: finalTitle, content: finalBlocks })
-          .catch((e) => console.error("Error saving on unmount:", e));
+          .catch(() => {});
       }
     };
   }, [noteId, isNew]);
 
-  // ─── Title change ─────────────────────────────
   const handleTitleChange = useCallback(
     (text: string) => {
       setTitle(text);
       triggerSave(text, blocks);
     },
-    [blocks, triggerSave]
+    [blocks, triggerSave],
   );
 
-  // ─── Block mutations ──────────────────────────
   const updateBlock = useCallback(
     (blockId: string, updates: Partial<NoteBlock>) => {
       setBlocks((prev) => {
         const next = prev.map((b) =>
-          b.id === blockId ? { ...b, ...updates } : b
+          b.id === blockId ? { ...b, ...updates } : b,
         );
         triggerSave(title, next);
         return next;
       });
     },
-    [title, triggerSave]
+    [title, triggerSave],
   );
 
   const removeBlock = useCallback(
@@ -349,7 +355,7 @@ export default function NoteEditorScreen() {
         return next;
       });
     },
-    [title, triggerSave]
+    [title, triggerSave],
   );
 
   const addBlock = useCallback(
@@ -368,41 +374,38 @@ export default function NoteEditorScreen() {
       });
       setLastFocusedBlockId(newBlock.id);
     },
-    [title, triggerSave]
+    [title, triggerSave],
   );
 
-  // ─── Delete note ──────────────────────────────
   const handleDelete = useCallback(async () => {
     if (!noteId) return;
     try {
-      // Cancel any pending save
+      // Cancelar guardado pendiente
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
       hasChangesRef.current = false;
 
       await notesService.deleteNote(noteId);
       showSnackbar("Nota eliminada", "success");
       router.back();
-    } catch (e) {
-      console.error("Error deleting note:", e);
+    } catch {
       showSnackbar("Error al eliminar la nota", "error");
     }
     setShowDeleteDialog(false);
   }, [noteId, showSnackbar, router]);
 
-  // ─── Pin toggle ───────────────────────────────
   const handleTogglePin = useCallback(async () => {
     if (!note) return;
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       await notesService.togglePin(note.id, note.is_pinned);
       setNote((prev) =>
-        prev ? { ...prev, is_pinned: !prev.is_pinned } : prev
+        prev ? { ...prev, is_pinned: !prev.is_pinned } : prev,
       );
       showSnackbar(
         note.is_pinned ? "Nota desanclada" : "Nota anclada",
-        "success"
+        "success",
       );
-    } catch (e) {
+    } catch {
       showSnackbar("Error al fijar la nota", "error");
     }
   }, [note, showSnackbar]);
@@ -448,31 +451,23 @@ export default function NoteEditorScreen() {
       <Stack.Screen options={{ headerShown: false }} />
 
       <View
-        style={[
-          styles.container,
-          { backgroundColor: theme.colors.background },
-        ]}
+        style={[styles.container, { backgroundColor: theme.colors.background }]}
       >
         <CustomHeader
           title=""
           showBackButton={true}
           rightAction={
             <View style={styles.headerActions}>
-              {/* Save indicator */}
               {isSaving && (
                 <Animated.View entering={FadeIn.duration(200)}>
                   <Text
-                    style={[
-                      styles.savingText,
-                      { color: theme.colors.outline },
-                    ]}
+                    style={[styles.savingText, { color: theme.colors.outline }]}
                   >
                     Guardando...
                   </Text>
                 </Animated.View>
               )}
 
-              {/* Pin */}
               <Pressable onPress={handleTogglePin} hitSlop={10}>
                 <Ionicons
                   name={note?.is_pinned ? "pin" : "pin-outline"}
@@ -485,7 +480,6 @@ export default function NoteEditorScreen() {
                 />
               </Pressable>
 
-              {/* Delete */}
               {canDelete && (
                 <Pressable
                   onPress={() => setShowDeleteDialog(true)}
@@ -516,7 +510,6 @@ export default function NoteEditorScreen() {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
-            {/* ─── Title ─── */}
             <Animated.View entering={FadeInUp.duration(400)}>
               <TextInput
                 style={[styles.titleInput, { color: theme.colors.onSurface }]}
@@ -529,7 +522,6 @@ export default function NoteEditorScreen() {
               />
             </Animated.View>
 
-            {/* ─── Divider ─── */}
             <View
               style={[
                 styles.titleDivider,
@@ -537,7 +529,6 @@ export default function NoteEditorScreen() {
               ]}
             />
 
-            {/* ─── Blocks ─── */}
             {blocks.map((block, index) => (
               <Animated.View
                 key={block.id}
@@ -566,9 +557,7 @@ export default function NoteEditorScreen() {
                 ) : (
                   <TextBlockEditor
                     block={block}
-                    onChangeValue={(value) =>
-                      updateBlock(block.id, { value })
-                    }
+                    onChangeValue={(value) => updateBlock(block.id, { value })}
                     onRemove={() => removeBlock(block.id)}
                     autoFocus={block.id === lastFocusedBlockId}
                   />
@@ -576,7 +565,6 @@ export default function NoteEditorScreen() {
               </Animated.View>
             ))}
 
-            {/* ─── Empty hint ─── */}
             {blocks.length === 0 && (
               <Animated.View
                 entering={FadeIn.duration(400).delay(200)}
@@ -594,7 +582,6 @@ export default function NoteEditorScreen() {
             )}
           </ScrollView>
 
-          {/* ─── Toolbar ─── */}
           <Animated.View
             entering={FadeInDown.duration(300).delay(200)}
             style={[
@@ -625,7 +612,6 @@ export default function NoteEditorScreen() {
         </KeyboardAvoidingView>
       </View>
 
-      {/* Delete confirmation */}
       <ConfirmDialog
         visible={showDeleteDialog}
         title="Eliminar nota"
@@ -640,7 +626,6 @@ export default function NoteEditorScreen() {
   );
 }
 
-// ─── Toolbar Button ─────────────────────────────────────────────────────
 const ToolbarButton = React.memo(
   ({
     icon,
@@ -679,18 +664,16 @@ const ToolbarButton = React.memo(
         </Text>
       </Pressable>
     );
-  }
+  },
 );
 ToolbarButton.displayName = "ToolbarButton";
 
-// ─── Styles ─────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: { flex: 1 },
   keyboardView: { flex: 1 },
   scrollView: { flex: 1 },
   editorContent: { paddingHorizontal: 24, paddingTop: 4 },
 
-  // Loading
   loadingContainer: {
     flex: 1,
     paddingHorizontal: 24,
@@ -702,7 +685,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
 
-  // Header
   headerActions: {
     flexDirection: "row",
     alignItems: "center",
@@ -714,7 +696,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
 
-  // Title
   titleInput: {
     fontFamily: "InstrumentSerif-Italic",
     fontSize: 32,
@@ -728,7 +709,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
 
-  // Blocks common
   blockContainer: {
     marginBottom: 16,
     position: "relative",
@@ -740,7 +720,6 @@ const styles = StyleSheet.create({
     padding: 4,
   },
 
-  // Text block
   textInput: {
     fontFamily: "Archivo-Medium",
     fontSize: 15,
@@ -749,7 +728,6 @@ const styles = StyleSheet.create({
     minHeight: 36,
   },
 
-  // Heading block
   headingInput: {
     fontFamily: "Archivo-Bold",
     fontSize: 20,
@@ -758,7 +736,6 @@ const styles = StyleSheet.create({
     minHeight: 36,
   },
 
-  // Checklist block
   checklistContainer: {
     borderRadius: 18,
     padding: 14,
@@ -809,7 +786,6 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
 
-  // Empty hint
   emptyHint: {
     alignItems: "center",
     paddingTop: 60,
@@ -821,7 +797,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
 
-  // Toolbar
   toolbar: {
     flexDirection: "row",
     justifyContent: "space-around",

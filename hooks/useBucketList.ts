@@ -1,3 +1,8 @@
+/**
+ * Hook de bucket list
+ * Metas del grupo con filtros y suscripción realtime a Supabase.
+ */
+
 import { useState, useCallback, useRef, useMemo } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../lib/supabase';
@@ -14,7 +19,6 @@ export function useBucketList(groupId: string) {
   const [activeCategory, setActiveCategory] = useState<BucketListCategory | null>(null);
   const isFirstLoadRef = useRef(true);
 
-  // ─── Fetch items ────────────────────────────
   const fetchItems = useCallback(async () => {
     if (!groupId) return;
     try {
@@ -24,19 +28,16 @@ export function useBucketList(groupId: string) {
       const data = await bucketListService.getItems(groupId);
       setItems(data);
       isFirstLoadRef.current = false;
-    } catch (e) {
-      console.error('Error loading bucket list items:', e);
+    } catch {
     } finally {
       setIsLoading(false);
     }
   }, [groupId]);
 
-  // ─── Focus effect + realtime ────────────────
   useFocusEffect(
     useCallback(() => {
       fetchItems();
 
-      // Subscribe to realtime changes
       const subscription = supabase
         .channel(`bucket-list-realtime:${groupId}`)
         .on(
@@ -59,7 +60,6 @@ export function useBucketList(groupId: string) {
     }, [fetchItems, groupId])
   );
 
-  // ─── Derived data ──────────────────────────
   const filteredItems = useMemo(() => {
     if (!activeCategory) return items;
     return items.filter((item) => item.category === activeCategory);
@@ -75,7 +75,6 @@ export function useBucketList(groupId: string) {
     [filteredItems]
   );
 
-  // Counts use unfiltered items for accurate totals
   const pendingCount = useMemo(
     () => items.filter((item) => !item.is_completed).length,
     [items]
@@ -86,7 +85,6 @@ export function useBucketList(groupId: string) {
     [items]
   );
 
-  // ─── Actions ───────────────────────────────
   const addItem = useCallback(
     async (input: CreateBucketListItemInput): Promise<BucketListItem> => {
       const newItem = await bucketListService.createItem(input);
@@ -98,7 +96,6 @@ export function useBucketList(groupId: string) {
 
   const toggleItem = useCallback(
     async (itemId: string, currentlyCompleted: boolean): Promise<void> => {
-      // Optimistic update
       setItems((prev) =>
         prev.map((item) =>
           item.id === itemId
@@ -116,7 +113,6 @@ export function useBucketList(groupId: string) {
       try {
         await bucketListService.toggleComplete(itemId, !currentlyCompleted);
       } catch (e) {
-        // Revert optimistic update
         setItems((prev) =>
           prev.map((item) =>
             item.id === itemId
@@ -139,13 +135,11 @@ export function useBucketList(groupId: string) {
   const deleteItem = useCallback(
     async (itemId: string): Promise<void> => {
       const deletedItem = items.find((i) => i.id === itemId);
-      // Optimistic removal
       setItems((prev) => prev.filter((item) => item.id !== itemId));
 
       try {
         await bucketListService.deleteItem(itemId);
       } catch (e) {
-        // Revert on error
         if (deletedItem) {
           setItems((prev) => [...prev, deletedItem]);
         }

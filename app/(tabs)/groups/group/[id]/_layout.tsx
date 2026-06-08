@@ -1,8 +1,11 @@
+/**
+ * Pestañas del grupo
+ * Barra inferior con inicio, mensajes y perfil del grupo privado.
+ */
 import { Ionicons } from "@expo/vector-icons";
 import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { Tabs } from "expo-router";
 import { Pressable, StyleSheet, View, ViewStyle } from "react-native";
-import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 import SquircleView from "react-native-fast-squircle";
 import { useTheme } from "react-native-paper";
 import Animated, {
@@ -10,6 +13,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 
 type AnimatedIconProps = {
   focused: boolean;
@@ -64,7 +68,9 @@ function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
 
   const currentRoute = state.routes[state.index];
   const currentOptions = descriptors[currentRoute.key].options;
-  const isHidden = (StyleSheet.flatten(currentOptions.tabBarStyle) as ViewStyle)?.display === "none";
+  const isHidden =
+    (StyleSheet.flatten(currentOptions.tabBarStyle) as ViewStyle)?.display ===
+    "none";
 
   if (isHidden) return null;
 
@@ -86,9 +92,21 @@ function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
           <Svg width="100%" height="100%">
             <Defs>
               <LinearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
-                <Stop offset="0" stopColor={theme.colors.background} stopOpacity="0" />
-                <Stop offset="0.4" stopColor={theme.colors.background} stopOpacity="0.7" />
-                <Stop offset="1" stopColor={theme.colors.background} stopOpacity="1" />
+                <Stop
+                  offset="0"
+                  stopColor={theme.colors.background}
+                  stopOpacity="0"
+                />
+                <Stop
+                  offset="0.4"
+                  stopColor={theme.colors.background}
+                  stopOpacity="0.7"
+                />
+                <Stop
+                  offset="1"
+                  stopColor={theme.colors.background}
+                  stopOpacity="1"
+                />
               </LinearGradient>
             </Defs>
             <Rect width="100%" height="100%" fill="url(#grad)" />

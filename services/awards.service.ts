@@ -1,3 +1,8 @@
+/**
+ * Servicio de premios (awards)
+ * CRUD, nominaciones y votaciones de premios grupales vía Supabase.
+ */
+
 import { decode } from 'base64-arraybuffer';
 import * as FileSystem from 'expo-file-system/legacy';
 import { resolveMemberProfileForGroup } from '../lib/memberProfile';
@@ -52,9 +57,6 @@ export const awardsService = {
     return { user, award };
   },
 
-  /**
-   * Get awards for a group
-   */
   async getGroupAwards(groupId: string): Promise<Award[]> {
     const { data, error } = await supabase
       .from('awards')
@@ -67,11 +69,7 @@ export const awardsService = {
     return data || [];
   },
 
-  /**
-   * Get an award by ID with nominees
-   */
   async getAwardById(awardId: string): Promise<AwardWithNominees | null> {
-    // Get the award
     const { data: award, error: awardError } = await supabase
       .from('awards')
       .select(`
@@ -88,7 +86,6 @@ export const awardsService = {
 
     const groupId = award.group_id as string;
 
-    // Get nominees with profiles and per-group membership overrides
     const { data: nominees, error: nomineesError } = await supabase
       .from('nominees')
       .select(`
@@ -114,7 +111,7 @@ export const awardsService = {
             ? {
                 ...rawUser,
                 display_name: resolved?.display_name ?? rawUser.display_name,
-                avatar_url: resolved?.avatar_url ?? rawUser.avatar_url,
+                avatar_url: resolved ? resolved.avatar_url : rawUser.avatar_url,
               }
             : rawUser,
           is_winner: award.is_revealed ? n.is_winner : false,
@@ -123,14 +120,10 @@ export const awardsService = {
     };
   },
 
-  /**
-   * Create a new award with nominees
-   */
   async createAward(input: CreateAwardInput): Promise<Award> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
-    // Create the award
     const { data: award, error: awardError } = await supabase
       .from('awards')
       .insert({
@@ -148,7 +141,7 @@ export const awardsService = {
           max_votes_per_user: 1,
           anonymous_voting: true,
           show_results_before_end: false,
-          ...input.voting_settings, // Override with provided settings
+          ...input.voting_settings,
         },
       })
       .select()
@@ -156,7 +149,6 @@ export const awardsService = {
 
     if (awardError) throw awardError;
 
-    // Add nominees
     if (input.nominee_ids.length > 0) {
       const nomineesData = input.nominee_ids.map(userId => ({
         award_id: award.id,
@@ -174,9 +166,6 @@ export const awardsService = {
     return award;
   },
 
-  /**
-   * Update an award
-   */
   async updateAward(awardId: string, input: UpdateAwardInput): Promise<Award> {
     const { data, error } = await supabase
       .from('awards')
@@ -189,9 +178,6 @@ export const awardsService = {
     return data;
   },
 
-  /**
-   * Delete an award
-   */
   async deleteAward(awardId: string): Promise<void> {
     const { error } = await supabase
       .from('awards')
@@ -201,9 +187,6 @@ export const awardsService = {
     if (error) throw error;
   },
 
-  /**
-   * Change award status
-   */
   async updateAwardStatus(awardId: string, status: AwardStatus, votingEndsAt?: string): Promise<Award> {
     const updates: Partial<Award> = { status };
     
@@ -226,9 +209,6 @@ export const awardsService = {
     return data;
   },
 
-  /**
-   * Add a nominee to an award
-   */
   async addNominee(awardId: string, userId: string, reason?: string, contentUrl?: string): Promise<Nominee> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
@@ -249,9 +229,6 @@ export const awardsService = {
     return data;
   },
 
-  /**
-   * Remove a nominee from an award
-   */
   async removeNominee(nomineeId: string): Promise<void> {
     const { error } = await supabase
       .from('nominees')
@@ -261,17 +238,13 @@ export const awardsService = {
     if (error) throw error;
   },
 
-  /**
-   * Cast a vote
-   */
   async vote(awardId: string, nomineeId: string): Promise<void> {
     const { user, award } = await this.getVotingPermissionContext(awardId);
 
     const votingSettings = award.voting_settings || {};
 
-    // For person-type awards, check nominee voting restrictions
+    // Premios tipo persona: aplicar restricciones de nominados y autovoto
     if (award.vote_type === 'person') {
-      // Check if user is a nominee for this award
       const { data: userNominee, error: checkError } = await supabase
         .from('nominees')
         .select('id')
@@ -281,14 +254,11 @@ export const awardsService = {
 
       if (checkError) throw checkError;
 
-      // If user is a nominee
       if (userNominee) {
-        // Check if nominees can vote at all
         if (!votingSettings.nominees_can_vote) {
           throw new Error('No puedes votar en este premio porque estás nominado.');
         }
 
-        // Check if self-voting is allowed (if voting for themselves)
         if (nomineeId === userNominee.id && !votingSettings.allow_self_vote) {
           throw new Error('No puedes votarte a ti mismo.');
         }
@@ -296,7 +266,6 @@ export const awardsService = {
     }
 
     if (votingSettings.allow_vote_change) {
-      // Use UPSERT to handle both new votes and changing votes atomically
       const { error } = await supabase
         .from('votes')
         .upsert({
@@ -310,7 +279,6 @@ export const awardsService = {
 
       if (error) throw error;
     } else {
-      // If vote change NOT allowed, check existence first or rely on unique constraint
       const { data: existingVote, error: existingVoteError } = await supabase
         .from('votes')
         .select('id')
@@ -334,7 +302,7 @@ export const awardsService = {
         });
 
       if (error) {
-        if (error.code === '23505') { // Unique violation
+        if (error.code === '23505') {
           throw new Error('Ya has votado para este premio.');
         }
         throw error;
@@ -342,9 +310,6 @@ export const awardsService = {
     }
   },
 
-  /**
-   * Remove a vote (retract)
-   */
   async removeVote(awardId: string): Promise<void> {
     const { user, award } = await this.getVotingPermissionContext(awardId);
 
@@ -363,9 +328,6 @@ export const awardsService = {
     if (error) throw error;
   },
 
-  /**
-   * Get user's vote for an award
-   */
   async getMyVote(awardId: string): Promise<string | null> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
@@ -384,11 +346,7 @@ export const awardsService = {
     return data?.nominee_id || null;
   },
 
-  /**
-   * Determine and set the winner
-   */
   async declareWinner(awardId: string): Promise<Award> {
-    // Get nominee with highest votes
     const { data: nominees, error: nomineesError } = await supabase
       .from('nominees')
       .select('*')
@@ -401,16 +359,12 @@ export const awardsService = {
       throw new Error('No se han encontrado nominados.');
     }
 
-    // Find max votes
     const maxVotes = Math.max(...nominees.map(n => Number(n.vote_count) || 0));
 
-    // Check if there are valid votes
     if (maxVotes > 0) {
-      // Find all winners
       const winners = nominees.filter(n => (Number(n.vote_count) || 0) === maxVotes);
       const winnerIds = winners.map(n => n.id);
 
-      // Update all winners
       const { error: updateError } = await supabase
         .from('nominees')
         .update({ is_winner: true })
@@ -418,7 +372,6 @@ export const awardsService = {
         
       if (updateError) throw updateError;
 
-      // Update award with one of the winners (just to confirm completion)
       const { data, error } = await supabase
         .from('awards')
         .update({
@@ -433,7 +386,7 @@ export const awardsService = {
       if (error) throw error;
       return data;
     } else {
-      // No votes - Award Deserted
+      // Sin votos: premio desierto
       const { data, error } = await supabase
         .from('awards')
         .update({
@@ -450,17 +403,6 @@ export const awardsService = {
     }
   },
 
-  /**
-   * Get global award categories
-   */
-  async getCategories(_groupId?: string) {
-    // Legacy placeholder: categories were removed from the data model.
-    return [];
-  },
-
-  /**
-   * Reveal the winner
-   */
   async revealWinner(awardId: string): Promise<Award> {
     const { data, error } = await supabase
       .from('awards')
@@ -473,22 +415,17 @@ export const awardsService = {
     return data;
   },
 
-  /**
-   * Upload nominee media
-   */
   async uploadNomineeMedia(awardId: string, uri: string, mimeType?: string, originalFileName?: string): Promise<string> {
     const fileExt = originalFileName ? originalFileName.split('.').pop()?.toLowerCase() || 'bin' : uri.split('.').pop()?.toLowerCase() || 'bin';
     const fileName = `${awardId}/${Date.now()}.${fileExt}`;
     const filePath = `${fileName}`;
 
     let contentType = mimeType;
-    // If mimeType is missing OR is generic octet-stream, try to detect from extension
+    // Inferir MIME desde extensión si falta o es octet-stream (común en Android)
     if (!contentType || contentType === 'application/octet-stream') {
-       // Fallback detection
        if (['jpg', 'jpeg', 'png', 'webp'].includes(fileExt)) contentType = `image/${fileExt === 'jpg' ? 'jpeg' : fileExt}`;
        else if (['mp4', 'mov', 'avi'].includes(fileExt)) contentType = `video/${fileExt === 'mov' ? 'quicktime' : fileExt}`;
        else if (['mp3', 'wav', 'm4a', 'aac', 'flac', 'ogg', 'wma'].includes(fileExt)) {
-          // Precise audio mime types
           if (fileExt === 'mp3') contentType = 'audio/mpeg';
           else if (fileExt === 'm4a') contentType = 'audio/mp4';
           else if (fileExt === 'wav') contentType = 'audio/wav';
@@ -498,7 +435,6 @@ export const awardsService = {
        else contentType = 'application/octet-stream';
     }
 
-    // Read file as base64 using Expo FileSystem
     const base64 = await FileSystem.readAsStringAsync(uri, {
       encoding: 'base64',
     });
@@ -517,10 +453,7 @@ export const awardsService = {
 
     return data.publicUrl;
   },
-  
-  /**
-   * Get award counts by status for widget preview.
-   */
+
   async getAwardCounts(groupId: string): Promise<{ total: number; voting: number; draft: number; completed: number }> {
     const [totalResult, votingResult, draftResult, completedResult] = await Promise.all([
       supabase
@@ -553,9 +486,6 @@ export const awardsService = {
     };
   },
 
-  /**
-   * Check if award invalid and expire it if needed
-   */
   async checkExpiration(awardId: string): Promise<void> {
     const { error } = await supabase.rpc('check_award_expiration', { 
       check_award_id: awardId 

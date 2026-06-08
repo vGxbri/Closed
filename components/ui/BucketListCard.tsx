@@ -1,3 +1,8 @@
+/**
+ * Tarjeta de bucket list
+ * Ítem del wishlist del grupo con categoría, imagen y estado completado.
+ */
+
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { Image } from "expo-image";
@@ -9,7 +14,6 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 
 import { BucketListItem, BucketListCategory } from "../../types/database";
 
-// ─── Category icon mapping ──────────────────────────────────────────
 const CATEGORY_ICONS: Record<BucketListCategory, keyof typeof Ionicons.glyphMap> = {
   restaurants: "restaurant-outline",
   travel: "airplane-outline",
@@ -18,7 +22,6 @@ const CATEGORY_ICONS: Record<BucketListCategory, keyof typeof Ionicons.glyphMap>
   other: "bulb-outline",
 };
 
-// ─── Props ──────────────────────────────────────────────────────────
 interface BucketListCardProps {
   item: BucketListItem;
   index: number;
@@ -27,7 +30,6 @@ interface BucketListCardProps {
   onLongPress: (item: BucketListItem) => void;
 }
 
-// ─── Component ──────────────────────────────────────────────────────
 export const BucketListCard = React.memo<BucketListCardProps>(
   ({ item, index, onToggleComplete, onPress, onLongPress }) => {
     const theme = useTheme();
@@ -83,7 +85,6 @@ export const BucketListCard = React.memo<BucketListCardProps>(
             ]}
             cornerSmoothing={1}
           >
-            {/* Background image */}
             {hasImage && (
               <>
                 <Image
@@ -105,7 +106,6 @@ export const BucketListCard = React.memo<BucketListCardProps>(
             )}
 
             <View style={styles.cardContent}>
-              {/* Checkbox */}
               <Pressable onPress={handleToggle} hitSlop={8}>
                 <SquircleView
                   style={[
@@ -130,7 +130,6 @@ export const BucketListCard = React.memo<BucketListCardProps>(
                 </SquircleView>
               </Pressable>
 
-              {/* Content */}
               <View style={styles.textBlock}>
                 <Text
                   style={[
@@ -165,7 +164,6 @@ export const BucketListCard = React.memo<BucketListCardProps>(
                 ) : null}
               </View>
 
-              {/* Category badge */}
               <SquircleView
                 style={[
                   styles.categoryBadge,
@@ -201,7 +199,6 @@ export const BucketListCard = React.memo<BucketListCardProps>(
 
 BucketListCard.displayName = "BucketListCard";
 
-// ─── Styles ─────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   card: {
     borderRadius: 20,

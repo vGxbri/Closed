@@ -1,3 +1,8 @@
+/**
+ * Saldo de miembro
+ * Tarjeta con balance neto de un miembro en gastos compartidos.
+ */
+
 import React from "react";
 import { StyleSheet, View } from "react-native";
 import SquircleView from "react-native-fast-squircle";
@@ -5,8 +10,7 @@ import { Text, useTheme } from "react-native-paper";
 import Animated, { FadeInDown } from "react-native-reanimated";
 
 import { GroupMemberView } from "../../types/database";
-import { MemberBalance } from "../../lib/sharedExpenses";
-import { formatCents } from "../../lib/sharedExpenses";
+import { formatCents, MemberBalance } from "../../lib/sharedExpenses";
 import { getMemberAvatarUrl, getMemberDisplayName } from "@/lib/memberProfile";
 import { UserAvatar } from "./UserAvatar";
 

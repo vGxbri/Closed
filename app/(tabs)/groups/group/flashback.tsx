@@ -1,3 +1,7 @@
+/**
+ * Widget Flashback
+ * Configuración y lanzamiento de fiestas flashback con capturas espontáneas del grupo.
+ */
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker, {
   DateTimePickerAndroid,
@@ -23,14 +27,13 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { BottomSheetModal } from "@/components/ui/BottomSheetModal";
+import { CustomHeader } from "@/components/ui/CustomHeader";
 import { useSnackbar } from "@/components/ui/SnackbarContext";
 import { useGroup } from "@/hooks";
 import { flashbackService } from "@/services/flashback.service";
 import { FlashbackPartyWithDetails } from "@/types/database";
-import { BottomSheetModal } from "@/components/ui/BottomSheetModal";
-import { CustomHeader } from "@/components/ui/CustomHeader";
 
-// ─── Countdown helper ─────────────────────────────────────────────────
 function useCountdown(targetDate: string | null) {
   const [timeLeft, setTimeLeft] = useState({ d: 0, h: 0, m: 0, s: 0 });
 
@@ -59,7 +62,6 @@ function formatCountdown(t: { d: number; h: number; m: number; s: number }) {
   return `${t.m}m ${t.s}s`;
 }
 
-// ─── Main Screen ──────────────────────────────────────────────────────
 export default function FlashbackScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -89,8 +91,7 @@ export default function FlashbackScreen() {
       ]);
       setParty(active);
       setArchivedParties(archived);
-    } catch (e) {
-      console.error("Error loading flashback party:", e);
+    } catch {
     } finally {
       setIsLoading(false);
     }
@@ -102,7 +103,6 @@ export default function FlashbackScreen() {
     }, [loadParty]),
   );
 
-  // Auto-redirect based on status
   useEffect(() => {
     if (!party || isLoading) return;
 
@@ -143,7 +143,6 @@ export default function FlashbackScreen() {
     });
   };
 
-  // ─── Combined list: current party + archived ─────────────────────────
   const allParties = (() => {
     const list: FlashbackPartyWithDetails[] = [];
     if (party) list.push(party);
@@ -153,7 +152,6 @@ export default function FlashbackScreen() {
     return list;
   })();
 
-  // ─── Flashback selector button (top of screen) ──────────────────────
   const selectorButton = allParties.length > 0 && (
     <Pressable
       onPress={() => setShowArchiveSheet(true)}
@@ -198,7 +196,6 @@ export default function FlashbackScreen() {
     </Pressable>
   );
 
-  // ─── Archive modal ───────────────────────────────────────────────────
   const archiveModal = (
     <BottomSheetModal
       visible={showArchiveSheet}
@@ -286,7 +283,6 @@ export default function FlashbackScreen() {
     </BottomSheetModal>
   );
 
-  // ─── Loading ────────────────────────────────────────────────────────
   if (isLoading) {
     return (
       <>
@@ -389,7 +385,6 @@ export default function FlashbackScreen() {
     );
   }
 
-  // ─── Scheduled — countdown to start ─────────────────────────────────
   if (status === "scheduled") {
     return (
       <>
@@ -408,7 +403,6 @@ export default function FlashbackScreen() {
             ]}
             showsVerticalScrollIndicator={false}
           >
-            {/* ─── Title ─── */}
             <Animated.View
               entering={FadeInUp.duration(500)}
               style={styles.titleBlock}
@@ -438,7 +432,6 @@ export default function FlashbackScreen() {
 
             {selectorButton}
 
-            {/* ─── Countdown card ─── */}
             <Animated.View
               entering={FadeInDown.duration(400).delay(100)}
               style={styles.emptyContainer}
@@ -527,7 +520,6 @@ export default function FlashbackScreen() {
     );
   }
 
-  // ─── Film used — countdown to reveal ────────────────────────────────
   if (status === "film_used") {
     return (
       <>
@@ -546,7 +538,6 @@ export default function FlashbackScreen() {
             ]}
             showsVerticalScrollIndicator={false}
           >
-            {/* ─── Title ─── */}
             <Animated.View
               entering={FadeInUp.duration(500)}
               style={styles.titleBlock}
@@ -576,7 +567,6 @@ export default function FlashbackScreen() {
 
             {selectorButton}
 
-            {/* ─── Countdown card ─── */}
             <Animated.View
               entering={FadeInDown.duration(400).delay(100)}
               style={styles.emptyContainer}
@@ -639,45 +629,44 @@ export default function FlashbackScreen() {
                   </Text>
                 </SquircleView>
 
-                {/* Secondary CTA */}
                 {canCreateParty && (
-                <Pressable
-                  onPress={() => setShowCreateModal(true)}
-                  style={({ pressed }) => [
-                    styles.emptyButton,
-                    {
-                      opacity: pressed ? 0.9 : 1,
-                      transform: [{ scale: pressed ? 0.97 : 1 }],
-                      marginTop: 20,
-                    },
-                  ]}
-                >
-                  <SquircleView
-                    style={[
-                      styles.emptyButtonInner,
+                  <Pressable
+                    onPress={() => setShowCreateModal(true)}
+                    style={({ pressed }) => [
+                      styles.emptyButton,
                       {
-                        backgroundColor: "transparent",
-                        borderColor: theme.colors.outlineVariant,
-                        borderWidth: 1,
+                        opacity: pressed ? 0.9 : 1,
+                        transform: [{ scale: pressed ? 0.97 : 1 }],
+                        marginTop: 20,
                       },
                     ]}
-                    cornerSmoothing={1}
                   >
-                    <Ionicons
-                      name="add"
-                      size={20}
-                      color={theme.colors.onSurface}
-                    />
-                    <Text
+                    <SquircleView
                       style={[
-                        styles.emptyButtonText,
-                        { color: theme.colors.onSurface },
+                        styles.emptyButtonInner,
+                        {
+                          backgroundColor: "transparent",
+                          borderColor: theme.colors.outlineVariant,
+                          borderWidth: 1,
+                        },
                       ]}
+                      cornerSmoothing={1}
                     >
-                      Crear otro flashback
-                    </Text>
-                  </SquircleView>
-                </Pressable>
+                      <Ionicons
+                        name="add"
+                        size={20}
+                        color={theme.colors.onSurface}
+                      />
+                      <Text
+                        style={[
+                          styles.emptyButtonText,
+                          { color: theme.colors.onSurface },
+                        ]}
+                      >
+                        Crear otro flashback
+                      </Text>
+                    </SquircleView>
+                  </Pressable>
                 )}
               </SquircleView>
             </Animated.View>
@@ -695,7 +684,6 @@ export default function FlashbackScreen() {
     );
   }
 
-  // ─── Feature items for empty state ─────────────────────────────────
   const features: {
     icon: keyof typeof Ionicons.glyphMap;
     title: string;
@@ -718,7 +706,6 @@ export default function FlashbackScreen() {
     },
   ];
 
-  // ─── Empty state (no party or archived) ─────────────────────────────
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
@@ -734,7 +721,6 @@ export default function FlashbackScreen() {
           ]}
           showsVerticalScrollIndicator={false}
         >
-          {/* ─── Title ─── */}
           <Animated.View
             entering={FadeInUp.duration(500)}
             style={styles.titleBlock}
@@ -752,7 +738,6 @@ export default function FlashbackScreen() {
             </Text>
           </Animated.View>
 
-          {/* ─── Divider ─── */}
           <Animated.View
             entering={FadeIn.duration(400).delay(50)}
             style={[
@@ -763,7 +748,6 @@ export default function FlashbackScreen() {
 
           {selectorButton}
 
-          {/* ─── Empty card ─── */}
           <Animated.View
             entering={FadeInDown.duration(400).delay(100)}
             style={styles.emptyContainer}
@@ -803,7 +787,6 @@ export default function FlashbackScreen() {
                 Crea un Flashback
               </Text>
 
-              {/* Feature highlights */}
               <View style={styles.featuresContainer}>
                 {features.map((f, i) => (
                   <Animated.View
@@ -850,40 +833,39 @@ export default function FlashbackScreen() {
                 ))}
               </View>
 
-              {/* CTA Button */}
               {canCreateParty && (
-              <Pressable
-                onPress={() => setShowCreateModal(true)}
-                style={({ pressed }) => [
-                  styles.emptyButton,
-                  {
-                    opacity: pressed ? 0.9 : 1,
-                    transform: [{ scale: pressed ? 0.97 : 1 }],
-                  },
-                ]}
-              >
-                <SquircleView
-                  style={[
-                    styles.emptyButtonInner,
-                    { backgroundColor: theme.colors.primary },
+                <Pressable
+                  onPress={() => setShowCreateModal(true)}
+                  style={({ pressed }) => [
+                    styles.emptyButton,
+                    {
+                      opacity: pressed ? 0.9 : 1,
+                      transform: [{ scale: pressed ? 0.97 : 1 }],
+                    },
                   ]}
-                  cornerSmoothing={1}
                 >
-                  <Ionicons
-                    name="add"
-                    size={20}
-                    color={theme.colors.onPrimary}
-                  />
-                  <Text
+                  <SquircleView
                     style={[
-                      styles.emptyButtonText,
-                      { color: theme.colors.onPrimary },
+                      styles.emptyButtonInner,
+                      { backgroundColor: theme.colors.primary },
                     ]}
+                    cornerSmoothing={1}
                   >
-                    Empezar Flashback
-                  </Text>
-                </SquircleView>
-              </Pressable>
+                    <Ionicons
+                      name="add"
+                      size={20}
+                      color={theme.colors.onPrimary}
+                    />
+                    <Text
+                      style={[
+                        styles.emptyButtonText,
+                        { color: theme.colors.onPrimary },
+                      ]}
+                    >
+                      Empezar Flashback
+                    </Text>
+                  </SquircleView>
+                </Pressable>
               )}
             </SquircleView>
           </Animated.View>
@@ -901,7 +883,6 @@ export default function FlashbackScreen() {
   );
 }
 
-// ─── Create Party Modal ───────────────────────────────────────────────
 export interface CreatePartyModalProps {
   visible: boolean;
   onDismiss: () => void;
@@ -1002,8 +983,7 @@ export function CreatePartyModal({
       onDismiss();
       onCreated();
       setName("");
-    } catch (e) {
-      console.error("Error creating party:", e);
+    } catch {
       showSnackbar("Error al crear el flashback", "error");
     } finally {
       setIsSubmitting(false);
@@ -1022,7 +1002,6 @@ export function CreatePartyModal({
   return (
     <BottomSheetModal visible={visible} onDismiss={onDismiss}>
       <View style={styles.modalContent}>
-        {/* Name */}
         <View style={styles.fieldGroup}>
           <Text
             style={[
@@ -1054,7 +1033,6 @@ export function CreatePartyModal({
           </SquircleView>
         </View>
 
-        {/* Schedule */}
         <View style={styles.fieldGroup}>
           <Text
             style={[
@@ -1065,7 +1043,6 @@ export function CreatePartyModal({
             Horario
           </Text>
 
-          {/* Start + End — same row */}
           <View style={styles.dateRow}>
             <SquircleView
               style={[
@@ -1180,7 +1157,6 @@ export function CreatePartyModal({
             </SquircleView>
           </View>
 
-          {/* Reveal */}
           <SquircleView
             style={[
               styles.dateCard,
@@ -1237,7 +1213,6 @@ export function CreatePartyModal({
           </SquircleView>
         </View>
 
-        {/* Photo limit */}
         <View style={styles.fieldGroup}>
           <Text
             style={[
@@ -1292,7 +1267,6 @@ export function CreatePartyModal({
           </View>
         </View>
 
-        {/* Create button */}
         <Pressable
           onPress={handleCreate}
           disabled={isSubmitting}
@@ -1323,13 +1297,11 @@ export function CreatePartyModal({
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: { paddingHorizontal: 24, paddingTop: 0 },
   centerContent: { alignItems: "center", marginTop: 60, gap: 12 },
 
-  // Title (matches Bloc/Planes screens)
   titleBlock: { marginTop: 4, marginBottom: 4 },
   screenTitle: {
     fontFamily: "InstrumentSerif-Italic",
@@ -1345,7 +1317,6 @@ const styles = StyleSheet.create({
   },
   divider: { height: 1, marginTop: 16, marginBottom: 20 },
 
-  // Empty state card
   emptyContainer: { marginTop: 0 },
   emptyCard: {
     borderRadius: 24,
@@ -1376,7 +1347,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
 
-  // Feature highlights
   featuresContainer: {
     width: "100%",
     gap: 12,
@@ -1408,7 +1378,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.1,
   },
 
-  // Empty CTA button
   emptyButton: { width: "100%" },
   emptyButtonInner: {
     flexDirection: "row",
@@ -1573,7 +1542,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
 
-  // Modal
   modalContent: { paddingHorizontal: 24, paddingBottom: 20, gap: 16 },
   modalTitle: {
     fontFamily: "Archivo-Bold",

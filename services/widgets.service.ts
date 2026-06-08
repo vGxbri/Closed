@@ -1,10 +1,12 @@
+/**
+ * Servicio de widgets del grupo
+ * Widgets activables por grupo desde catálogo en Supabase.
+ */
+
 import { supabase } from '../lib/supabase';
 import { GroupWidgetWithDetails, Widget } from '../types/database';
 
 export const widgetsService = {
-  /**
-   * Get all active widgets for a group
-   */
   async getGroupWidgets(groupId: string): Promise<GroupWidgetWithDetails[]> {
     const { data, error } = await supabase
       .from('group_widgets')
@@ -20,9 +22,6 @@ export const widgetsService = {
     return data as unknown as GroupWidgetWithDetails[];
   },
 
-  /**
-   * Get ALL available widgets from the catalog
-   */
   async getAllWidgets(): Promise<Widget[]> {
     const { data, error } = await supabase
       .from('widgets')
@@ -35,9 +34,6 @@ export const widgetsService = {
     return data as Widget[];
   },
 
-  /**
-   * Get all group_widgets rows for a group (including inactive), to know which ones are linked
-   */
   async getGroupWidgetLinks(groupId: string): Promise<GroupWidgetWithDetails[]> {
     const { data, error } = await supabase
       .from('group_widgets')
@@ -52,11 +48,8 @@ export const widgetsService = {
     return data as unknown as GroupWidgetWithDetails[];
   },
 
-  /**
-   * Add a widget to a group
-   */
   async addWidgetToGroup(groupId: string, widgetId: string): Promise<void> {
-    // Check if a row already exists (maybe it was deactivated before)
+    // Reactivar fila existente en lugar de duplicar
     const { data: existing } = await supabase
       .from('group_widgets')
       .select('id, is_active')
@@ -65,14 +58,12 @@ export const widgetsService = {
       .maybeSingle();
 
     if (existing) {
-      // Reactivate
       const { error } = await supabase
         .from('group_widgets')
         .update({ is_active: true })
         .eq('id', existing.id);
       if (error) throw error;
     } else {
-      // Get the next display_order
       const { data: lastWidget } = await supabase
         .from('group_widgets')
         .select('display_order')
@@ -95,9 +86,6 @@ export const widgetsService = {
     }
   },
 
-  /**
-   * Remove (deactivate) a widget from a group
-   */
   async removeWidgetFromGroup(groupId: string, widgetId: string): Promise<void> {
     const { error } = await supabase
       .from('group_widgets')

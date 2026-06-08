@@ -1,8 +1,12 @@
+/**
+ * Configuración de perfil de usuario
+ * Pantalla inicial donde el usuario completa nombre y avatar antes de acceder a sus grupos.
+ */
 import { decode } from "base64-arraybuffer";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { Alert, StyleSheet, TouchableOpacity, View } from "react-native";
+import { StyleSheet, TouchableOpacity, View } from "react-native";
 import { Avatar, Button, Surface, Text, TextInput, useTheme } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BlurTargetView } from "expo-blur";
@@ -20,7 +24,6 @@ export default function ProfileSetup() {
   const [image, setImage] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
-  // Dialog state
   const [dialogConfig, setDialogConfig] = useState<{
     visible: boolean;
     title: string;
@@ -93,7 +96,6 @@ export default function ProfileSetup() {
       });
       router.replace("/");
     } catch (error) {
-      console.error(error);
       showDialog("Error al actualizar el perfil", (error as Error).message);
     }
   };
@@ -199,9 +201,7 @@ const styles = StyleSheet.create({
     fontFamily: "ClashDisplay-Bold",
     marginBottom: 8,
   },
-  subtitle: {
-    // color se maneja en el componente
-  },
+  subtitle: {},
   avatarContainer: {
     alignItems: "center",
     marginBottom: 32,

@@ -1,3 +1,8 @@
+/**
+ * Indicador circular
+ * Animación de tres puntos en círculo para estados de carga.
+ */
+
 import React, { memo, useEffect } from "react";
 import { View, StyleSheet } from "react-native";
 import Svg, { Circle, CircleProps } from "react-native-svg";

@@ -1,7 +1,9 @@
+/**
+ * Redirección de pestañas principales
+ * Redirige la ruta raíz de tabs hacia la sección de grupos.
+ */
 import { Redirect } from "expo-router";
 
-// This file is hidden from tabs but expo-router requires it
-// Redirect to home/index
 export default function TabIndex() {
   return <Redirect href={"/groups" as any} />;
 }

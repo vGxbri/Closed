@@ -1,6 +1,6 @@
 /**
- * Resolves display name and avatar for a user within a group context.
- * group_avatar_url: null → use global profile; '' → no photo; URL → group photo.
+ * Perfil de miembro en contexto de grupo
+ * Resuelve nombre y avatar según overrides por grupo en Closed (Supabase).
  */
 
 export interface GroupMemberOverrides {
@@ -21,6 +21,9 @@ export function resolveMemberAvatarUrl(
 ): string | null {
   if (groupAvatarUrl !== null && groupAvatarUrl !== undefined && groupAvatarUrl !== '') {
     return groupAvatarUrl;
+  }
+  if (groupAvatarUrl === null || groupAvatarUrl === undefined) {
+    return globalAvatarUrl ?? null;
   }
   return null;
 }
@@ -55,7 +58,6 @@ export function resolveMemberProfileForGroup(
   };
 }
 
-/** Flat member row (e.g. GroupMemberView) with optional group overrides. */
 export function getMemberAvatarUrl(member: {
   avatar_url?: string | null;
   group_avatar_url?: string | null;
@@ -78,7 +80,6 @@ const PROFILE_WITH_GROUP_MEMBERS_SELECT = `
 
 export const profileWithGroupMembersSelect = PROFILE_WITH_GROUP_MEMBERS_SELECT;
 
-/** DB row: group_members + nested profiles from Supabase join */
 export type GroupMemberWithProfileRow = {
   id: string;
   group_id: string;

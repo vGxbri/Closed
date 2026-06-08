@@ -1,3 +1,8 @@
+/**
+ * Campo de texto
+ * Input con etiqueta, texto de ayuda y mensaje de error.
+ */
+
 import React, { useState } from 'react';
 import {
     StyleSheet,

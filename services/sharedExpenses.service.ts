@@ -1,3 +1,8 @@
+/**
+ * Servicio de gastos compartidos
+ * Registro de gastos, reparto y liquidaciones entre miembros del grupo.
+ */
+
 import { groupsService } from './groups.service';
 import { supabase } from '../lib/supabase';
 import {

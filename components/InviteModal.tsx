@@ -1,3 +1,8 @@
+/**
+ * Modal de invitación
+ * Permite copiar o compartir el enlace y código para unirse a un grupo.
+ */
+
 import { Ionicons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
 import React, { useMemo } from "react";
@@ -46,11 +51,6 @@ export const InviteModal: React.FC<InviteModalProps> = ({
     showSnackbar("Código copiado al portapapeles", "success");
   };
 
-  const handleCopyLink = async () => {
-    await Clipboard.setStringAsync(appLink);
-    showSnackbar("Enlace copiado al portapapeles", "success");
-  };
-
   const handleShare = async () => {
     try {
       await Share.share({
@@ -58,8 +58,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({
         title: `Únete a ${groupName} en Closed`,
         url: appLink,
       });
-    } catch (error) {
-      console.error(error);
+    } catch {
     }
   };
 
@@ -84,7 +83,6 @@ export const InviteModal: React.FC<InviteModalProps> = ({
       </View>
 
       <View style={styles.content}>
-        {/* Invite Code Section */}
         <Text
           variant="bodyMedium"
           style={{
@@ -103,7 +101,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({
               {
                 backgroundColor: theme.colors.primaryContainer,
                 borderColor: theme.colors.primary,
-                borderWidth: 2, // Dashed border simulated or just solid
+                borderWidth: 2,
                 borderStyle: "dashed",
               },
             ]}
@@ -137,83 +135,6 @@ export const InviteModal: React.FC<InviteModalProps> = ({
             </View>
           </Surface>
         </TouchableOpacity>
-
-        {/* Divider */}
-        <View style={styles.dividerContainer}>
-          <View
-            style={[
-              styles.divider,
-              { backgroundColor: theme.colors.surfaceVariant },
-            ]}
-          />
-          <Text
-            variant="labelMedium"
-            style={{
-              color: theme.colors.onSurfaceVariant,
-              paddingHorizontal: 12,
-            }}
-          >
-            O COMPARTE EL ENLACE DE LA APP
-          </Text>
-          <View
-            style={[
-              styles.divider,
-              { backgroundColor: theme.colors.surfaceVariant },
-            ]}
-          />
-        </View>
-
-        {/* Link Section */}
-        <Surface
-          style={[
-            styles.linkContainer,
-            {
-              backgroundColor: theme.colors.surfaceVariant,
-              borderColor: theme.colors.outlineVariant,
-              borderWidth: 1,
-            },
-          ]}
-          elevation={0}
-        >
-          <Ionicons
-            name="link"
-            size={20}
-            color={theme.colors.onSurfaceVariant}
-            style={{ marginLeft: 4 }}
-          />
-          <Text
-            numberOfLines={1}
-            style={[styles.linkText, { color: theme.colors.onSurface }]}
-          >
-            {appLink}
-          </Text>
-          <TouchableOpacity
-            style={[
-              styles.copyLinkButton,
-              { backgroundColor: theme.colors.surface },
-            ]}
-            onPress={handleCopyLink}
-          >
-            <Ionicons
-              name="copy-outline"
-              size={18}
-              color={theme.colors.primary}
-            />
-          </TouchableOpacity>
-        </Surface>
-
-        {/* Share Button */}
-        <Text
-          variant="bodySmall"
-          style={{
-            textAlign: "center",
-            color: theme.colors.onSurfaceVariant,
-            marginTop: 4,
-          }}
-        >
-          El enlace abre la app si está instalada. Si no funciona, usa el código en
-          Unirse a un grupo.
-        </Text>
 
         <Button
           mode="contained"
@@ -255,31 +176,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     opacity: 0.6,
     marginTop: 8,
-  },
-  dividerContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginVertical: 8,
-  },
-  divider: {
-    flex: 1,
-    height: 1,
-  },
-  linkContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 8,
-    borderRadius: 14,
-    marginBottom: 8,
-  },
-  linkText: {
-    flex: 1,
-    marginHorizontal: 12,
-    fontSize: 14,
-  },
-  copyLinkButton: {
-    padding: 8,
-    borderRadius: 10,
-    elevation: 1,
   },
 });

@@ -1,3 +1,8 @@
+/**
+ * Esqueletos de premios
+ * Pantallas de carga placeholder mientras se obtienen datos de awards.
+ */
+
 import { BlurTargetView } from "expo-blur";
 import { Stack } from "expo-router";
 import React from "react";
@@ -9,7 +14,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CustomHeader } from "@/components/ui/CustomHeader";
 
-// ─── Skeleton helpers ─────────────────────────────────────────────────────
 function useSkeletonColors() {
   const theme = useTheme();
   const block = (opacity = 0.06) =>
@@ -19,7 +23,6 @@ function useSkeletonColors() {
     surface: theme.colors.surfaceVariant,
     blockLight: block(0.06),
     blockMid: block(0.08),
-    blockSoft: block(0.04),
   };
 }
 
@@ -90,9 +93,7 @@ const SkeletonNomineeRow = React.memo<{ index: number }>(({ index }) => {
 });
 SkeletonNomineeRow.displayName = "SkeletonNomineeRow";
 
-// ─── Form skeleton (create / edit) ──────────────────────────────────────
 interface AwardFormSkeletonProps {
-  /** create shows vote type + nominees sections */
   variant?: "create" | "edit";
 }
 
@@ -140,7 +141,6 @@ export const AwardFormSkeleton = React.memo<AwardFormSkeletonProps>(
               ]}
             />
 
-            {/* Preview card */}
             <Animated.View entering={FadeInDown.duration(350).delay(50)}>
               <SquircleView
                 style={[
@@ -175,7 +175,6 @@ export const AwardFormSkeleton = React.memo<AwardFormSkeletonProps>(
               </SquircleView>
             </Animated.View>
 
-            {/* Name */}
             <Animated.View
               entering={FadeInDown.duration(350).delay(100)}
               style={skeletonStyles.section}
@@ -189,7 +188,6 @@ export const AwardFormSkeleton = React.memo<AwardFormSkeletonProps>(
               <SkeletonBar width="100%" height={48} borderRadius={16} />
             </Animated.View>
 
-            {/* Description */}
             <Animated.View
               entering={FadeInDown.duration(350).delay(140)}
               style={skeletonStyles.section}
@@ -203,7 +201,6 @@ export const AwardFormSkeleton = React.memo<AwardFormSkeletonProps>(
               <SkeletonBar width="100%" height={88} borderRadius={16} />
             </Animated.View>
 
-            {/* Icon grid */}
             <Animated.View
               entering={FadeInDown.duration(350).delay(180)}
               style={skeletonStyles.section}
@@ -234,7 +231,6 @@ export const AwardFormSkeleton = React.memo<AwardFormSkeletonProps>(
 
             {variant === "create" && (
               <>
-                {/* Vote type */}
                 <Animated.View
                   entering={FadeInDown.duration(350).delay(220)}
                   style={skeletonStyles.section}
@@ -300,7 +296,6 @@ export const AwardFormSkeleton = React.memo<AwardFormSkeletonProps>(
                   </SquircleView>
                 </Animated.View>
 
-                {/* Nominees */}
                 <Animated.View
                   entering={FadeInDown.duration(350).delay(260)}
                   style={skeletonStyles.section}
@@ -358,7 +353,6 @@ export const AwardFormSkeleton = React.memo<AwardFormSkeletonProps>(
               </>
             )}
 
-            {/* Voting options */}
             <Animated.View
               entering={FadeInDown.duration(350).delay(
                 variant === "create" ? 300 : 220
@@ -425,7 +419,6 @@ export const AwardFormSkeleton = React.memo<AwardFormSkeletonProps>(
             </Animated.View>
           </ScrollView>
 
-          {/* Footer CTA skeleton */}
           <Animated.View
             entering={FadeIn.duration(400).delay(320)}
             style={[
@@ -446,7 +439,6 @@ export const AwardFormSkeleton = React.memo<AwardFormSkeletonProps>(
 );
 AwardFormSkeleton.displayName = "AwardFormSkeleton";
 
-// ─── Detail skeleton ──────────────────────────────────────────────────────
 export const AwardDetailSkeleton = React.memo(() => {
   const insets = useSafeAreaInsets();
   const { theme } = useSkeletonColors();
@@ -490,7 +482,6 @@ export const AwardDetailSkeleton = React.memo(() => {
             ]}
           />
 
-          {/* Status card */}
           <Animated.View entering={FadeInDown.duration(350).delay(60)}>
             <SquircleView
               style={[
@@ -530,7 +521,6 @@ export const AwardDetailSkeleton = React.memo(() => {
             </SquircleView>
           </Animated.View>
 
-          {/* Nominees section */}
           <Animated.View
             entering={FadeInDown.duration(350).delay(120)}
             style={skeletonStyles.section}
@@ -546,7 +536,6 @@ export const AwardDetailSkeleton = React.memo(() => {
             </View>
           </Animated.View>
 
-          {/* Admin section */}
           <Animated.View
             entering={FadeInDown.duration(350).delay(200)}
             style={skeletonStyles.section}

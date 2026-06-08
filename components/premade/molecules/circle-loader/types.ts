@@ -1,3 +1,8 @@
+/**
+ * Tipos del loader
+ * Props de tamaño, color y duración del CircleLoadingIndicator.
+ */
+
 import type { StyleProp, ViewStyle } from "react-native";
 
 interface ICircleLoadingIndicator {

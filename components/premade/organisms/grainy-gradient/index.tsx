@@ -1,4 +1,9 @@
 // @ts-check
+/**
+ * Gradiente granulado
+ * Fondo animado con shader Skia para pantallas de auth y onboarding.
+ */
+
 import React, { memo, useMemo } from "react";
 import {
   Canvas,

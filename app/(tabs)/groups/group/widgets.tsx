@@ -1,3 +1,7 @@
+/**
+ * Gestión de widgets del grupo
+ * Activa y personaliza los widgets activos del grupo.
+ */
 import { Ionicons } from "@expo/vector-icons";
 import { BlurTargetView } from "expo-blur";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
@@ -19,17 +23,13 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import {
-  ConfirmDialog,
-  DialogType,
-} from "@/components/ui/ConfirmDialog";
+import { ConfirmDialog, DialogType } from "@/components/ui/ConfirmDialog";
 import { CustomHeader } from "@/components/ui/CustomHeader";
 import { useSnackbar } from "@/components/ui/SnackbarContext";
 import { useGroup } from "@/hooks";
 import { widgetsService } from "@/services/widgets.service";
 import { Widget } from "@/types/database";
 
-// ─── Widget Catalog Card ────────────────────────────────────────────────
 interface WidgetCatalogCardProps {
   widget: Widget;
   isActive: boolean;
@@ -61,7 +61,6 @@ const WidgetCatalogCard = React.memo<WidgetCatalogCardProps>(
           cornerSmoothing={1}
         >
           <View style={styles.widgetCardContent}>
-            {/* Icon */}
             <SquircleView
               style={[
                 styles.widgetIconContainer,
@@ -83,7 +82,6 @@ const WidgetCatalogCard = React.memo<WidgetCatalogCardProps>(
               />
             </SquircleView>
 
-            {/* Info */}
             <View style={styles.widgetInfo}>
               <Text
                 style={[styles.widgetName, { color: theme.colors.onSurface }]}
@@ -104,7 +102,6 @@ const WidgetCatalogCard = React.memo<WidgetCatalogCardProps>(
               )}
             </View>
 
-            {/* Toggle Button */}
             <TouchableOpacity
               onPress={onToggle}
               disabled={isToggling}
@@ -125,11 +122,7 @@ const WidgetCatalogCard = React.memo<WidgetCatalogCardProps>(
               {isToggling ? (
                 <ActivityIndicator
                   size={14}
-                  color={
-                    isActive
-                      ? theme.colors.error
-                      : theme.colors.primary
-                  }
+                  color={isActive ? theme.colors.error : theme.colors.primary}
                 />
               ) : (
                 <>
@@ -161,12 +154,11 @@ const WidgetCatalogCard = React.memo<WidgetCatalogCardProps>(
         </SquircleView>
       </Animated.View>
     );
-  }
+  },
 );
 
 WidgetCatalogCard.displayName = "WidgetCatalogCard";
 
-// ─── Skeleton ───────────────────────────────────────────────────────────
 const SkeletonCard = React.memo<{ index: number }>(({ index }) => {
   const theme = useTheme();
   return (
@@ -188,7 +180,6 @@ const SkeletonCard = React.memo<{ index: number }>(({ index }) => {
 });
 SkeletonCard.displayName = "SkeletonCard";
 
-// ─── Main Screen ────────────────────────────────────────────────────────
 export default function ExploreWidgetsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -205,7 +196,7 @@ export default function ExploreWidgetsScreen() {
 
   const [allWidgets, setAllWidgets] = useState<Widget[]>([]);
   const [activeWidgetIds, setActiveWidgetIds] = useState<Set<string>>(
-    new Set()
+    new Set(),
   );
   const [isLoading, setIsLoading] = useState(true);
   const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
@@ -223,13 +214,12 @@ export default function ExploreWidgetsScreen() {
     title: "",
     message: "",
     type: "info",
-    onConfirm: () => { },
+    onConfirm: () => {},
   });
 
   const hideDialog = () =>
     setDialogConfig((prev) => ({ ...prev, visible: false }));
 
-  // Fetch data
   const fetchData = useCallback(async () => {
     if (!id) return;
     try {
@@ -242,13 +232,10 @@ export default function ExploreWidgetsScreen() {
       setAllWidgets(widgets);
 
       const activeIds = new Set(
-        groupWidgets
-          .filter((gw) => gw.is_active)
-          .map((gw) => gw.widget_id)
+        groupWidgets.filter((gw) => gw.is_active).map((gw) => gw.widget_id),
       );
       setActiveWidgetIds(activeIds);
-    } catch (error) {
-      console.error("Error loading widgets catalog:", error);
+    } catch {
       showSnackbar("Error al cargar los widgets", "error");
     } finally {
       setIsLoading(false);
@@ -259,14 +246,12 @@ export default function ExploreWidgetsScreen() {
     fetchData();
   }, [fetchData]);
 
-  // Toggle widget
   const handleToggle = useCallback(
     async (widget: Widget) => {
       if (!id) return;
       const isCurrentlyActive = activeWidgetIds.has(widget.id);
 
       if (isCurrentlyActive) {
-        // Confirm removal
         setDialogConfig({
           visible: true,
           title: "Quitar Widget",
@@ -285,8 +270,7 @@ export default function ExploreWidgetsScreen() {
                 return next;
               });
               showSnackbar(`"${widget.name}" eliminado del grupo`, "success");
-            } catch (error) {
-              console.error("Error removing widget:", error);
+            } catch {
               showSnackbar("Error al quitar el widget", "error");
             } finally {
               setTogglingIds((prev) => {
@@ -298,14 +282,12 @@ export default function ExploreWidgetsScreen() {
           },
         });
       } else {
-        // Add directly
         try {
           setTogglingIds((prev) => new Set(prev).add(widget.id));
           await widgetsService.addWidgetToGroup(id, widget.id);
           setActiveWidgetIds((prev) => new Set(prev).add(widget.id));
           showSnackbar(`"${widget.name}" añadido al grupo`, "success");
-        } catch (error) {
-          console.error("Error adding widget:", error);
+        } catch {
           showSnackbar("Error al añadir el widget", "error");
         } finally {
           setTogglingIds((prev) => {
@@ -316,10 +298,9 @@ export default function ExploreWidgetsScreen() {
         }
       }
     },
-    [id, activeWidgetIds, showSnackbar]
+    [id, activeWidgetIds, showSnackbar],
   );
 
-  // Separate active and available widgets
   const { activeWidgets, availableWidgets } = useMemo(() => {
     const active: Widget[] = [];
     const available: Widget[] = [];
@@ -335,7 +316,6 @@ export default function ExploreWidgetsScreen() {
     return { activeWidgets: active, availableWidgets: available };
   }, [allWidgets, activeWidgetIds]);
 
-  // Access denied
   if (!isGroupLoading && (!group || !canManageWidgets)) {
     return (
       <>
@@ -419,14 +399,11 @@ export default function ExploreWidgetsScreen() {
           ]}
           showsVerticalScrollIndicator={false}
         >
-          {/* ─── Title ─── */}
           <Animated.View
             entering={FadeInUp.duration(500)}
             style={styles.titleBlock}
           >
-            <Text
-              style={[styles.screenTitle, { color: theme.colors.primary }]}
-            >
+            <Text style={[styles.screenTitle, { color: theme.colors.primary }]}>
               Widgets
             </Text>
             <Text
@@ -439,7 +416,6 @@ export default function ExploreWidgetsScreen() {
             </Text>
           </Animated.View>
 
-          {/* ─── Divider ─── */}
           <Animated.View
             entering={FadeIn.duration(400).delay(50)}
             style={[
@@ -456,7 +432,6 @@ export default function ExploreWidgetsScreen() {
             </View>
           ) : (
             <>
-              {/* ─── Active Widgets ─── */}
               {activeWidgets.length > 0 && (
                 <Animated.View
                   entering={FadeInDown.duration(400).delay(80)}
@@ -505,11 +480,10 @@ export default function ExploreWidgetsScreen() {
                 </Animated.View>
               )}
 
-              {/* ─── Available Widgets ─── */}
               {availableWidgets.length > 0 && (
                 <Animated.View
                   entering={FadeInDown.duration(400).delay(
-                    activeWidgets.length > 0 ? 160 : 80
+                    activeWidgets.length > 0 ? 160 : 80,
                   )}
                   style={styles.section}
                 >
@@ -525,11 +499,7 @@ export default function ExploreWidgetsScreen() {
                       ]}
                       cornerSmoothing={1}
                     >
-                      <Ionicons
-                        name="grid-outline"
-                        size={16}
-                        color="#FFFFFF"
-                      />
+                      <Ionicons name="grid-outline" size={16} color="#FFFFFF" />
                     </SquircleView>
                     <Text
                       style={[
@@ -556,11 +526,8 @@ export default function ExploreWidgetsScreen() {
                 </Animated.View>
               )}
 
-              {/* ─── All Active Info Tip ─── */}
               {availableWidgets.length === 0 && activeWidgets.length > 0 && (
-                <Animated.View
-                  entering={FadeInDown.duration(400).delay(200)}
-                >
+                <Animated.View entering={FadeInDown.duration(400).delay(200)}>
                   <SquircleView
                     style={[
                       styles.infoCard,
@@ -585,11 +552,7 @@ export default function ExploreWidgetsScreen() {
                       ]}
                       cornerSmoothing={1}
                     >
-                      <Ionicons
-                        name="sparkles"
-                        size={16}
-                        color="#FFFFFF"
-                      />
+                      <Ionicons name="sparkles" size={16} color="#FFFFFF" />
                     </SquircleView>
                     <View style={styles.infoTextBlock}>
                       <Text
@@ -634,7 +597,6 @@ export default function ExploreWidgetsScreen() {
   );
 }
 
-// ─── Styles ─────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -647,7 +609,6 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
 
-  // Title
   titleBlock: {
     marginTop: 4,
     marginBottom: 4,
@@ -665,14 +626,12 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  // Divider
   divider: {
     height: 1,
     marginTop: 16,
     marginBottom: 24,
   },
 
-  // Sections
   section: {
     marginBottom: 28,
   },
@@ -695,12 +654,10 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
 
-  // Widget List
   widgetList: {
     gap: 10,
   },
 
-  // Widget Card
   widgetCard: {
     borderRadius: 20,
     paddingHorizontal: 16,
@@ -733,7 +690,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.1,
   },
 
-  // Toggle Button
   toggleButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -750,12 +706,10 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
 
-  // Skeleton
   skeletonContainer: {
     gap: 10,
   },
 
-  // Info Card
   infoCard: {
     flexDirection: "row",
     alignItems: "center",
@@ -785,7 +739,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.1,
   },
 
-  // Access Denied
   centerContainer: {
     flex: 1,
     justifyContent: "center",

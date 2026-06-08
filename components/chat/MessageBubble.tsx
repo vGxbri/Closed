@@ -1,3 +1,8 @@
+/**
+ * Burbuja de mensaje
+ * Renderiza cada mensaje del chat con avatar, hora y gestos de respuesta.
+ */
+
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import React, { useCallback } from 'react';
@@ -30,7 +35,6 @@ interface MessageBubbleProps {
   onLongPress: (message: MessageView) => void;
 }
 
-// ─── Reply Quote ────────────────────────────────────────────────────────
 const ReplyQuote = React.memo(({
   senderName,
   content,
@@ -77,10 +81,8 @@ const ReplyQuote = React.memo(({
 
 ReplyQuote.displayName = 'ReplyQuote';
 
-// ─── Swipe threshold ────────────────────────────────────────────────────
 const SWIPE_THRESHOLD = 60;
 
-// ─── Main Bubble ────────────────────────────────────────────────────────
 const MessageBubble = React.memo(({
   message,
   isMine,
@@ -125,7 +127,6 @@ const MessageBubble = React.memo(({
     onLongPress(message);
   }, [message, onLongPress]);
 
-  // ─── Deleted message ────────────────────────────
   if (message.is_deleted) {
     return (
       <Animated.View
@@ -154,7 +155,6 @@ const MessageBubble = React.memo(({
     );
   }
 
-  // ─── Colors ─────────────────────────────────
   const bubbleBg = isMine ? theme.colors.primary : theme.colors.surfaceVariant;
   const textColor = isMine ? theme.colors.onPrimary : theme.colors.onSurface;
   const metaColor = isMine ? 'rgba(255,255,255,0.55)' : theme.colors.outline;
@@ -233,7 +233,6 @@ const MessageBubble = React.memo(({
 MessageBubble.displayName = 'MessageBubble';
 export { MessageBubble };
 
-// ─── Styles ─────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
   messageRow: {
     flexDirection: 'row',

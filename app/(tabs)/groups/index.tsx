@@ -1,3 +1,7 @@
+/**
+ * Lista de grupos del usuario
+ * Muestra los grupos privados con acceso a crear, unirse o abrir cada uno.
+ */
 import { Ionicons } from "@expo/vector-icons";
 import { BlurTargetView } from "expo-blur";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -19,7 +23,6 @@ import { GroupWithDetails } from "@/types/database";
 
 const CARD_GAP = 14;
 
-// ─── Skeleton Placeholder ───────────────────────────────────────────────
 interface SkeletonCardProps {
   index: number;
 }
@@ -42,7 +45,6 @@ const SkeletonCard = React.memo<SkeletonCardProps>(({ index }) => {
         ]}
         cornerSmoothing={1}
       >
-        {/* Icon placeholder */}
         <View
           style={[
             styles.skeletonIcon,
@@ -53,7 +55,6 @@ const SkeletonCard = React.memo<SkeletonCardProps>(({ index }) => {
             },
           ]}
         />
-        {/* Text placeholder */}
         <View
           style={[
             styles.skeletonTextLong,
@@ -81,7 +82,6 @@ const SkeletonCard = React.memo<SkeletonCardProps>(({ index }) => {
 
 SkeletonCard.displayName = "SkeletonCard";
 
-// ─── Group Card ─────────────────────────────────────────────────────────
 interface GroupCardItemProps {
   group: GroupWithDetails;
   index: number;
@@ -117,7 +117,6 @@ const GroupCardItem = React.memo<GroupCardItemProps>(
             ]}
             cornerSmoothing={1}
           >
-            {/* Icon / Cover Image */}
             <UserAvatar
               uri={group.cover_image_url}
               name={group.name}
@@ -125,7 +124,6 @@ const GroupCardItem = React.memo<GroupCardItemProps>(
               borderRadius={14}
             />
 
-            {/* Group Info */}
             <View style={styles.groupInfo}>
               <Text
                 style={[styles.groupName, { color: theme.colors.onSurface }]}
@@ -153,7 +151,6 @@ const GroupCardItem = React.memo<GroupCardItemProps>(
               </View>
             </View>
 
-            {/* Role Badge */}
             {group.my_role && group.my_role !== "member" && (
               <View
                 style={[
@@ -184,7 +181,6 @@ const GroupCardItem = React.memo<GroupCardItemProps>(
 
 GroupCardItem.displayName = "GroupCardItem";
 
-// ─── Main Screen ────────────────────────────────────────────────────────
 export default function GroupsScreen() {
   const router = useRouter();
   const theme = useTheme();
@@ -217,7 +213,6 @@ export default function GroupsScreen() {
     [router],
   );
 
-  // Memoize skeleton cards
   const skeletonCards = useMemo(
     () =>
       Array.from({ length: 4 }).map((_, i) => (
@@ -237,7 +232,7 @@ export default function GroupsScreen() {
           showsVerticalScrollIndicator={false}
           bounces={true}
         >
-          {/* ─── Header ─── */}
+          
           <Animated.View
             entering={FadeInUp.duration(500)}
             style={styles.header}
@@ -258,7 +253,6 @@ export default function GroupsScreen() {
               </Text>
             </View>
 
-            {/* Action buttons */}
             <View style={styles.headerActions}>
               <Pressable
                 onPress={handleJoinGroup}
@@ -318,7 +312,6 @@ export default function GroupsScreen() {
             </View>
           </Animated.View>
 
-          {/* Divider */}
           <Animated.View
             entering={FadeIn.duration(400).delay(100)}
             style={[
@@ -327,12 +320,9 @@ export default function GroupsScreen() {
             ]}
           />
 
-          {/* ─── Content ─── */}
           {isLoading && groups.length === 0 ? (
-            // Skeleton Loading
             <View style={styles.bentoGrid}>{skeletonCards}</View>
           ) : groups.length === 0 ? (
-            // Empty State
             <Animated.View
               entering={FadeInDown.duration(500).delay(150)}
               style={styles.emptyContainer}
@@ -415,7 +405,6 @@ export default function GroupsScreen() {
               </SquircleView>
             </Animated.View>
           ) : (
-            // Groups Grid
             <View style={styles.bentoGrid}>
               {groups.map((group, index) => (
                 <GroupCardItem
@@ -426,7 +415,6 @@ export default function GroupsScreen() {
                 />
               ))}
 
-              {/* "Add New" Card */}
               <Animated.View
                 entering={FadeInDown.duration(400).delay(
                   100 + groups.length * 80,
@@ -486,7 +474,6 @@ export default function GroupsScreen() {
         </ScrollView>
       </SafeAreaView>
 
-      {/* Sign Out Dialog */}
       <ConfirmDialog
         visible={showSignOutDialog}
         title="¿Cerrar sesión?"
@@ -494,13 +481,7 @@ export default function GroupsScreen() {
         type="error"
         confirmText="Cerrar sesión"
         cancelText="Cancelar"
-        onConfirm={async () => {
-          try {
-            await signOut();
-          } catch (error) {
-            console.error("Error signing out:", error);
-          }
-        }}
+        onConfirm={() => signOut()}
         onCancel={() => setShowSignOutDialog(false)}
         blurTargetRef={backgroundRef}
       />
@@ -508,7 +489,6 @@ export default function GroupsScreen() {
   );
 }
 
-// ─── Styles ─────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -525,7 +505,6 @@ const styles = StyleSheet.create({
     paddingBottom: 120,
   },
 
-  // Header
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -557,14 +536,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  // Divider
   divider: {
     height: 1,
     marginTop: 16,
     marginBottom: 20,
   },
 
-  // Bento Grid
   bentoGrid: {
     flexDirection: "column",
     gap: CARD_GAP,
@@ -573,7 +550,6 @@ const styles = StyleSheet.create({
     width: "100%",
   },
 
-  // Group Card
   groupCard: {
     borderRadius: 22,
     padding: 16,
@@ -626,7 +602,6 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
 
-  // Create Card
   createCard: {
     borderStyle: "dashed",
     backgroundColor: "transparent",
@@ -647,7 +622,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
 
-  // Empty State
   emptyContainer: {
     marginTop: 20,
   },
@@ -693,7 +667,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
 
-  // Skeleton
   skeletonIcon: {
     width: 44,
     height: 44,

@@ -1,6 +1,10 @@
+/**
+ * Diseño del calendario mensual
+ * Layout de barras multi-día y marcadores de eventos para la vista grupal.
+ */
+
 import { CalendarEventWithDetails } from "@/types/database";
 
-/** Same size as single-day event dots in the calendar grid */
 export const CALENDAR_EVENT_MARKER_SIZE = 4;
 export const CALENDAR_EVENT_MARKER_GAP = 2;
 export const CALENDAR_MAX_BAR_LANES = 3;
@@ -37,7 +41,6 @@ function addDays(d: Date, n: number): Date {
   return next;
 }
 
-/** Monday = 0 … Sunday = 6 */
 export function getMondayBasedOffset(year: number, month: number): number {
   let first = new Date(year, month, 1).getDay() - 1;
   if (first < 0) first = 6;
@@ -175,7 +178,6 @@ export function buildCalendarMonthLayout(
   return { singleDayDots, weekBarsByRow, maxLanesByRow };
 }
 
-/** True if an event should appear on the given calendar day (incl. multi-day spans). */
 export function eventOverlapsLocalDay(
   event: Pick<CalendarEventWithDetails, "starts_at" | "ends_at">,
   date: Date,

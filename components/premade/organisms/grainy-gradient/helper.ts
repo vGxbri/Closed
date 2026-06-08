@@ -1,3 +1,8 @@
+/**
+ * Utilidades de color
+ * Convierte colores hex a RGBA normalizado para el shader Skia.
+ */
+
 const hexToRgba = <T extends string>(
   hex: T,
 ): [number, number, number, number] => {

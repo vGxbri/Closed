@@ -1,3 +1,6 @@
+/**
+ * Widget Lista de deseos del grupo
+ */
 import { Ionicons } from "@expo/vector-icons";
 import { BlurTargetView } from "expo-blur";
 import * as Haptics from "expo-haptics";
@@ -13,18 +16,17 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { useSnackbar } from "@/components/ui/SnackbarContext";
 import { BottomSheetModal } from "@/components/ui/BottomSheetModal";
 import { BucketListCard } from "@/components/ui/BucketListCard";
 import { CategoryFilter } from "@/components/ui/CategoryFilter";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { CustomHeader } from "@/components/ui/CustomHeader";
+import { useSnackbar } from "@/components/ui/SnackbarContext";
 import { useBucketList } from "@/hooks/useBucketList";
 import { BucketListItem } from "@/types/database";
 
 type TabKey = "pending" | "completed";
 
-// ─── Skeleton ───────────────────────────────────────────────────────────
 const SkeletonCard = React.memo<{ index: number }>(({ index }) => {
   const theme = useTheme();
   return (
@@ -41,7 +43,6 @@ const SkeletonCard = React.memo<{ index: number }>(({ index }) => {
         cornerSmoothing={1}
       >
         <View style={styles.skeletonRow}>
-          {/* Checkbox placeholder */}
           <View
             style={{
               width: 28,
@@ -52,7 +53,6 @@ const SkeletonCard = React.memo<{ index: number }>(({ index }) => {
                 : "rgba(0,0,0,0.06)",
             }}
           />
-          {/* Text placeholders */}
           <View style={{ flex: 1, gap: 8, marginLeft: 14 }}>
             <View
               style={{
@@ -75,7 +75,6 @@ const SkeletonCard = React.memo<{ index: number }>(({ index }) => {
               }}
             />
           </View>
-          {/* Category placeholder */}
           <View
             style={{
               width: 32,
@@ -93,7 +92,6 @@ const SkeletonCard = React.memo<{ index: number }>(({ index }) => {
 });
 SkeletonCard.displayName = "SkeletonCard";
 
-// ─── Tab Pill ───────────────────────────────────────────────────────────
 interface TabPillProps {
   label: string;
   count: number;
@@ -183,7 +181,6 @@ const TabPill = React.memo<TabPillProps>(
 );
 TabPill.displayName = "TabPill";
 
-// ─── Main Screen ────────────────────────────────────────────────────────
 export default function BucketListScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -211,19 +208,16 @@ export default function BucketListScreen() {
     deleteItem,
   } = useBucketList(id);
 
-  // ─── Filtered items by tab ──────────────
   const displayItems = useMemo(() => {
     return activeTab === "pending" ? pendingItems : completedItems;
   }, [activeTab, pendingItems, completedItems]);
 
-  // ─── Handlers ───────────────────────────
   const handleToggleComplete = useCallback(
     async (itemId: string, currentlyCompleted: boolean) => {
       try {
         await toggleItem(itemId, currentlyCompleted);
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      } catch (e) {
-        console.error("Error toggling item:", e);
+      } catch {
         showSnackbar("Error al actualizar", "error");
       }
     },
@@ -232,7 +226,6 @@ export default function BucketListScreen() {
 
   const handleItemPress = useCallback(
     (item: BucketListItem) => {
-      // For now, just toggle - could open detail in the future
       handleToggleComplete(item.id, item.is_completed);
     },
     [handleToggleComplete],
@@ -248,8 +241,7 @@ export default function BucketListScreen() {
     if (!deleteTarget) return;
     try {
       await deleteItem(deleteTarget.id);
-    } catch (e) {
-      console.error("Error deleting item:", e);
+    } catch {
       showSnackbar("Error al eliminar", "error");
     }
     setDeleteTarget(null);
@@ -281,7 +273,6 @@ export default function BucketListScreen() {
           ]}
           showsVerticalScrollIndicator={false}
         >
-          {/* ─── Title ─── */}
           <Animated.View
             entering={FadeInUp.duration(500)}
             style={styles.titleBlock}
@@ -301,7 +292,6 @@ export default function BucketListScreen() {
             </Text>
           </Animated.View>
 
-          {/* ─── Divider ─── */}
           <Animated.View
             entering={FadeIn.duration(400).delay(50)}
             style={[
@@ -310,7 +300,6 @@ export default function BucketListScreen() {
             ]}
           />
 
-          {/* ─── Tabs ─── */}
           <Animated.View
             entering={FadeInDown.duration(300).delay(80)}
             style={styles.tabRow}
@@ -331,7 +320,6 @@ export default function BucketListScreen() {
             />
           </Animated.View>
 
-          {/* ─── Category Filter ─── */}
           {!isLoading && allItems.length > 0 && (
             <Animated.View
               entering={FadeInDown.duration(300).delay(100)}
@@ -344,7 +332,6 @@ export default function BucketListScreen() {
             </Animated.View>
           )}
 
-          {/* ─── Content ─── */}
           {isLoading ? (
             <View style={styles.itemList}>
               {[0, 1, 2, 3, 4].map((i) => (
@@ -463,7 +450,6 @@ export default function BucketListScreen() {
           )}
         </ScrollView>
 
-        {/* ─── FAB (oculto si no hay planes; el vacío ya tiene CTA) ─── */}
         {!isLoading && activeTab === "pending" && allItems.length > 0 && (
           <Animated.View
             entering={FadeIn.duration(400).delay(300)}
@@ -498,7 +484,6 @@ export default function BucketListScreen() {
         )}
       </BlurTargetView>
 
-      {/* ─── Action Bottom Sheet (long press) ─── */}
       <BottomSheetModal
         visible={actionSheetVisible}
         onDismiss={() => {
@@ -535,7 +520,6 @@ export default function BucketListScreen() {
               ]}
               cornerSmoothing={1}
             >
-              {/* Toggle complete */}
               <Pressable
                 style={({ pressed }) => [
                   styles.actionOption,
@@ -589,7 +573,6 @@ export default function BucketListScreen() {
                 ]}
               />
 
-              {/* Delete */}
               <Pressable
                 style={({ pressed }) => [
                   styles.actionOption,
@@ -631,7 +614,6 @@ export default function BucketListScreen() {
         )}
       </BottomSheetModal>
 
-      {/* ─── Delete Confirmation ─── */}
       <ConfirmDialog
         visible={!!deleteTarget}
         title="Eliminar plan"
@@ -647,13 +629,11 @@ export default function BucketListScreen() {
   );
 }
 
-// ─── Styles ─────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollView: { flex: 1 },
   content: { paddingHorizontal: 24, paddingTop: 0 },
 
-  // Title
   titleBlock: { marginTop: 4, marginBottom: 4 },
   screenTitle: {
     fontFamily: "InstrumentSerif-Italic",
@@ -668,10 +648,8 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  // Divider
   divider: { height: 1, marginTop: 16, marginBottom: 20 },
 
-  // Tabs
   tabRow: {
     flexDirection: "row",
     gap: 10,
@@ -702,15 +680,12 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
 
-  // Filter
   filterContainer: {
     marginBottom: 18,
   },
 
-  // Item list
   itemList: { gap: 10 },
 
-  // Skeleton
   skeletonCard: {
     borderRadius: 20,
     paddingHorizontal: 16,
@@ -721,7 +696,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  // Empty
   emptyContainer: { marginTop: 20 },
   emptyCard: {
     borderRadius: 24,
@@ -764,7 +738,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
 
-  // FAB
   fabContainer: {
     position: "absolute",
     right: 24,
@@ -782,7 +755,6 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
 
-  // Action Sheet
   actionSheetContent: {
     paddingHorizontal: 24,
     paddingTop: 8,

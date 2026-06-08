@@ -1,3 +1,7 @@
+/**
+ * Miembros del grupo
+ * Lista de integrantes con avatares, roles y acciones de administración.
+ */
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams } from "expo-router";
 import { BlurTargetView } from "expo-blur";
@@ -102,9 +106,9 @@ export default function GroupMembersScreen() {
               const isMe = user?.id === member.user_id;
               
               // Reglas de permisos:
-              // 1. Owner puede gestionar a todos (menos a sí mismo)
+              // 1. El propietario puede gestionar a todos (menos a sí mismo)
               // 2. Admin puede gestionar a otros admins y miembros
-              // 3. Nadie puede gestionar al Owner
+              // 3. Nadie puede gestionar al propietario
               // 4. Uno no puede gestionarse a sí mismo
               const canManage = (isOwner || (isAdmin && !isMemberOwner)) && !isMe;
               

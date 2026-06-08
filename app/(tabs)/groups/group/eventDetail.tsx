@@ -1,10 +1,12 @@
+/**
+ * Detalle de evento
+ * Muestra fecha, asistentes y permite editar o eliminar un evento del calendario.
+ */
 import { Ionicons } from "@expo/vector-icons";
 import { BlurTargetView } from "expo-blur";
-import { Image } from "expo-image";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  FlatList,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -27,11 +29,9 @@ import { eventsService } from "@/services/events.service";
 import {
   CalendarEventWithDetails,
   EventParticipantWithProfile,
-  GalleryImageWithUser,
   RsvpStatus,
 } from "@/types/database";
 
-// ─── Constants ──────────────────────────────────────────────────────────
 const RSVP_CONFIG: Record<RsvpStatus, { label: string; icon: string; color: string }> = {
   accepted: { label: "Voy", icon: "checkmark-circle", color: "#10B981" },
   maybe: { label: "Quizás", icon: "help-circle", color: "#F59E0B" },
@@ -39,7 +39,6 @@ const RSVP_CONFIG: Record<RsvpStatus, { label: string; icon: string; color: stri
   pending: { label: "Pendiente", icon: "time-outline", color: "#6366F1" },
 };
 
-// ─── Participant Row ────────────────────────────────────────────────────
 interface ParticipantRowProps {
   participant: EventParticipantWithProfile;
 }
@@ -67,7 +66,6 @@ const ParticipantRow = React.memo<ParticipantRowProps>(({ participant }) => {
 });
 ParticipantRow.displayName = "ParticipantRow";
 
-// ─── Skeleton ───────────────────────────────────────────────────────────
 const SkeletonBar = React.memo<{
   width: number | `${number}%`;
   height: number;
@@ -172,7 +170,6 @@ const EventDetailSkeleton = React.memo(() => {
 });
 EventDetailSkeleton.displayName = "EventDetailSkeleton";
 
-// ─── Main Screen ────────────────────────────────────────────────────────
 export default function EventDetailScreen() {
   const { id, eventId } = useLocalSearchParams<{ id: string; eventId: string }>();
   const router = useRouter();
@@ -198,7 +195,6 @@ export default function EventDetailScreen() {
   });
   const hideOptionsMenu = () => setOptionsMenu((prev) => ({ ...prev, visible: false }));
 
-  // ─── Load data ─────────────────────────────────────────────
   const loadEvent = useCallback(async () => {
     if (!eventId) return;
     try {
@@ -207,8 +203,7 @@ export default function EventDetailScreen() {
       setEvent(data);
 
 
-    } catch (error) {
-      console.error("Error loading event:", error);
+    } catch {
       showSnackbar("Error al cargar el evento", "error");
     } finally {
       setIsLoading(false);
@@ -217,7 +212,6 @@ export default function EventDetailScreen() {
 
   useEffect(() => { loadEvent(); }, [loadEvent]);
 
-  // ─── RSVP ──────────────────────────────────────────────────
   const myRsvp = useMemo<RsvpStatus | null>(() => {
     if (!event || !user) return null;
     const me = event.participants.find((p) => p.user_id === user.id);
@@ -229,20 +223,17 @@ export default function EventDetailScreen() {
     try {
       setIsUpdatingRsvp(true);
       await eventsService.updateRsvp(eventId, status);
-      // Refresh
       const data = await eventsService.getEvent(eventId);
       setEvent(data);
       const cfg = RSVP_CONFIG[status];
       showSnackbar(`Respuesta: ${cfg.label}`, "success");
-    } catch (error) {
-      console.error("Error updating RSVP:", error);
+    } catch {
       showSnackbar("Error al actualizar tu respuesta", "error");
     } finally {
       setIsUpdatingRsvp(false);
     }
   }, [eventId, isUpdatingRsvp, showSnackbar]);
 
-  // ─── Delete ────────────────────────────────────────────────
   const handleDelete = useCallback(() => {
     setDialogConfig({
       visible: true,
@@ -257,15 +248,13 @@ export default function EventDetailScreen() {
           await eventsService.deleteEvent(eventId);
           showSnackbar("Evento eliminado", "success");
           router.back();
-        } catch (error) {
-          console.error("Error deleting event:", error);
+        } catch {
           showSnackbar("Error al eliminar el evento", "error");
         }
       },
     });
   }, [event, eventId, showSnackbar, router]);
 
-  // ─── Options Menu ──────────────────────────────────────────
   const handleOptions = useCallback(() => {
     const options: MenuOption[] = [];
     options.push({ label: "Eliminar evento", icon: "trash-outline", isDestructive: true, action: handleDelete });
@@ -285,7 +274,6 @@ export default function EventDetailScreen() {
     [event],
   );
 
-  // ─── Loading / Error ───────────────────────────────────────
   if (isLoading) {
     return <EventDetailSkeleton />;
   }
@@ -321,7 +309,7 @@ export default function EventDetailScreen() {
 
         <ScrollView style={styles.scrollView} contentContainerStyle={[styles.content, { paddingBottom: 120 + insets.bottom }]} showsVerticalScrollIndicator={false}>
 
-          {/* ─── Event Header ─── */}
+
           <Animated.View entering={FadeIn.duration(500)} style={styles.headerBlock}>
             <Text style={[styles.headerTitle, { color: theme.colors.onSurface }]}>{event.title}</Text>
             <Text style={[styles.headerCreator, { color: theme.colors.onSurfaceVariant }]}>
@@ -329,7 +317,7 @@ export default function EventDetailScreen() {
             </Text>
           </Animated.View>
 
-          {/* ─── Info Cards ─── */}
+
           <Animated.View entering={FadeInDown.duration(300).delay(100)}>
             <SquircleView style={[styles.infoCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.outlineVariant, borderWidth: 1 }]} cornerSmoothing={1}>
               <View style={styles.infoRow}>
@@ -365,7 +353,7 @@ export default function EventDetailScreen() {
             </SquircleView>
           </Animated.View>
 
-          {/* ─── Description ─── */}
+
           {event.description && (
             <Animated.View entering={FadeInDown.duration(300).delay(160)}>
               <SquircleView style={[styles.descCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.outlineVariant, borderWidth: 1 }]} cornerSmoothing={1}>
@@ -375,7 +363,7 @@ export default function EventDetailScreen() {
             </Animated.View>
           )}
 
-          {/* ─── RSVP Section ─── */}
+
           {myRsvp !== null && (
             <Animated.View entering={FadeInDown.duration(300).delay(220)} style={styles.rsvpSection}>
               <Text style={[styles.rsvpTitle, { color: theme.colors.onSurfaceVariant }]}>Tu respuesta</Text>
@@ -411,7 +399,7 @@ export default function EventDetailScreen() {
             </Animated.View>
           )}
 
-          {/* ─── Participants ─── */}
+
           <Animated.View entering={FadeInDown.duration(300).delay(280)} style={styles.participantsSection}>
             <Text style={[styles.sectionTitle, { color: theme.colors.onSurface }]}>
               Participantes ({acceptedCount}/{event.participants.length})
@@ -437,7 +425,6 @@ export default function EventDetailScreen() {
   );
 }
 
-// ─── Styles ─────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollView: { flex: 1 },
@@ -449,31 +436,26 @@ const styles = StyleSheet.create({
   skeletonRsvpIcon: { width: 20, height: 20, borderRadius: 10 },
   skeletonAvatar: { width: 36, height: 36, borderRadius: 12 },
 
-  // Header
   headerBlock: { alignItems: "center", paddingTop: 8, marginBottom: 20 },
   headerEmoji: { fontSize: 56, marginBottom: 12 },
   headerTitle: { fontFamily: "Archivo-Bold", fontSize: 24, textAlign: "center", letterSpacing: 0.3 },
   headerCreator: { fontFamily: "Archivo-Medium", fontSize: 13, marginTop: 6, letterSpacing: 0.2 },
 
-  // Info card
   infoCard: { borderRadius: 20, padding: 16, marginBottom: 16 },
   infoRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 6 },
   infoText: { fontFamily: "Archivo-Medium", fontSize: 14, flex: 1 },
   infoSep: { height: 1, marginLeft: 30 },
   colorDot: { width: 14, height: 14, borderRadius: 7 },
 
-  // Description
   descCard: { borderRadius: 20, padding: 16, marginBottom: 16, flexDirection: "row", alignItems: "flex-start", gap: 10 },
   descText: { fontFamily: "Archivo-Medium", fontSize: 14, flex: 1, lineHeight: 20 },
 
-  // RSVP
   rsvpSection: { marginBottom: 20 },
   rsvpTitle: { fontFamily: "Archivo-SemiBold", fontSize: 13, letterSpacing: 0.3, marginBottom: 10 },
   rsvpRow: { flexDirection: "row", gap: 8 },
   rsvpButton: { borderRadius: 16, paddingVertical: 14, alignItems: "center", gap: 4 },
   rsvpButtonText: { fontFamily: "Archivo-SemiBold", fontSize: 12, letterSpacing: 0.2 },
 
-  // Participants
   participantsSection: { marginBottom: 20 },
   sectionTitle: { fontFamily: "Archivo-Bold", fontSize: 15, letterSpacing: 0.3, marginBottom: 12 },
   participantsCard: { borderRadius: 18, overflow: "hidden" },
@@ -484,7 +466,6 @@ const styles = StyleSheet.create({
   emptyParticipants: { padding: 20, alignItems: "center" },
   emptyParticipantsText: { fontFamily: "Archivo-Medium", fontSize: 13 },
 
-  // Gallery
   gallerySection: { marginBottom: 20 },
   galleryScroll: { gap: 8 },
   galleryThumb: { width: 90, height: 90, borderRadius: 16, overflow: "hidden" },

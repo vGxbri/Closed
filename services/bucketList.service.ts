@@ -1,3 +1,8 @@
+/**
+ * Servicio de bucket list
+ * Metas compartidas del grupo con imágenes en Storage de Supabase.
+ */
+
 import { supabase } from '../lib/supabase';
 import { uploadMediaToStorage, deleteMediaFromStorage } from '../lib/storage';
 import {
@@ -9,9 +14,6 @@ import {
 const BUCKET = 'bucket-list';
 
 class BucketListService {
-  /**
-   * Fetches all bucket list items for a group, with optional filters.
-   */
   async getItems(
     groupId: string,
     options?: { isCompleted?: boolean; category?: BucketListCategory }
@@ -33,17 +35,11 @@ class BucketListService {
 
     const { data, error } = await query;
 
-    if (error) {
-      console.error('Error fetching bucket list items:', error);
-      throw error;
-    }
+    if (error) throw error;
 
     return (data || []) as BucketListItem[];
   }
 
-  /**
-   * Gets counts of pending and completed items for widget preview.
-   */
   async getItemCounts(groupId: string): Promise<{ pending: number; completed: number }> {
     const [pendingResult, completedResult] = await Promise.all([
       supabase
@@ -58,22 +54,12 @@ class BucketListService {
         .eq('is_completed', true),
     ]);
 
-    if (pendingResult.error) {
-      console.error('Error counting pending items:', pendingResult.error);
-    }
-    if (completedResult.error) {
-      console.error('Error counting completed items:', completedResult.error);
-    }
-
     return {
       pending: pendingResult.count || 0,
       completed: completedResult.count || 0,
     };
   }
 
-  /**
-   * Creates a new bucket list item.
-   */
   async createItem(input: CreateBucketListItemInput): Promise<BucketListItem> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
@@ -91,17 +77,11 @@ class BucketListService {
       .select()
       .single();
 
-    if (error) {
-      console.error('Error creating bucket list item:', error);
-      throw error;
-    }
+    if (error) throw error;
 
     return data as BucketListItem;
   }
 
-  /**
-   * Updates a bucket list item.
-   */
   async updateItem(
     itemId: string,
     updates: {
@@ -119,15 +99,9 @@ class BucketListService {
       })
       .eq('id', itemId);
 
-    if (error) {
-      console.error('Error updating bucket list item:', error);
-      throw error;
-    }
+    if (error) throw error;
   }
 
-  /**
-   * Toggles the completion status of an item.
-   */
   async toggleComplete(itemId: string, completed: boolean): Promise<void> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
@@ -149,30 +123,21 @@ class BucketListService {
       .update(updatePayload)
       .eq('id', itemId);
 
-    if (error) {
-      console.error('Error toggling bucket list item:', error);
-      throw error;
-    }
+    if (error) throw error;
   }
 
-  /**
-   * Deletes a bucket list item (and its image from storage if any).
-   */
   async deleteItem(itemId: string): Promise<void> {
-    // First get the item to check for image
     const { data: item } = await supabase
       .from('bucket_list_items')
       .select('image_url')
       .eq('id', itemId)
       .single();
 
-    // Delete image from storage if exists
     if (item?.image_url) {
       try {
         await deleteMediaFromStorage(BUCKET, item.image_url);
-      } catch (e) {
-        console.error('Error deleting bucket list image from storage:', e);
-        // Continue with item deletion even if image deletion fails
+      } catch {
+        // Borrar el ítem aunque falle la imagen en almacenamiento
       }
     }
 
@@ -181,15 +146,9 @@ class BucketListService {
       .delete()
       .eq('id', itemId);
 
-    if (error) {
-      console.error('Error deleting bucket list item:', error);
-      throw error;
-    }
+    if (error) throw error;
   }
 
-  /**
-   * Uploads an image for a bucket list item.
-   */
   async uploadItemImage(groupId: string, uri: string): Promise<string> {
     const result = await uploadMediaToStorage({
       bucket: BUCKET,
@@ -199,19 +158,13 @@ class BucketListService {
     return result.publicUrl;
   }
 
-  /**
-   * Links a completed bucket list item to a gallery image.
-   */
   async linkToGallery(itemId: string, galleryImageId: string): Promise<void> {
     const { error } = await supabase
       .from('bucket_list_items')
       .update({ gallery_image_id: galleryImageId })
       .eq('id', itemId);
 
-    if (error) {
-      console.error('Error linking bucket list item to gallery:', error);
-      throw error;
-    }
+    if (error) throw error;
   }
 }
 

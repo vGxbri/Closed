@@ -1,17 +1,18 @@
+/**
+ * Hook de premios
+ * Estado y mutaciones de awards y nominaciones por grupo.
+ */
+
 import { useCallback, useEffect, useState } from 'react';
 import { awardsService } from '../services/awards.service';
 import {
   Award,
-  AwardCategory,
   AwardStatus,
   AwardWithNominees,
   CreateAwardInput,
   UpdateAwardInput,
 } from '../types/database';
 
-/**
- * Hook for fetching awards in a group
- */
 export function useGroupAwards(groupId: string | undefined) {
   const [awards, setAwards] = useState<Award[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -31,7 +32,6 @@ export function useGroupAwards(groupId: string | undefined) {
       setAwards(data);
     } catch (err) {
       setError(err as Error);
-      console.error('Error fetching awards:', err);
     } finally {
       setIsLoading(false);
     }
@@ -57,9 +57,6 @@ export function useGroupAwards(groupId: string | undefined) {
   };
 }
 
-/**
- * Hook for fetching a single award with nominees
- */
 export function useAward(awardId: string | undefined) {
   const [award, setAward] = useState<AwardWithNominees | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -84,7 +81,6 @@ export function useAward(awardId: string | undefined) {
       setMyVote(vote);
     } catch (err) {
       setError(err as Error);
-      console.error('Error fetching award:', err);
     } finally {
       setIsLoading(false);
     }
@@ -154,38 +150,5 @@ export function useAward(awardId: string | undefined) {
     vote,
     declareWinner,
     canVote: award?.status === 'voting' && !myVote,
-  };
-}
-
-/**
- * Hook for fetching award categories
- */
-export function useAwardCategories(groupId?: string) {
-  const [categories, setCategories] = useState<AwardCategory[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const data = await awardsService.getCategories(groupId);
-        setCategories(data);
-      } catch (err) {
-        setError(err as Error);
-        console.error('Error fetching categories:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchCategories();
-  }, [groupId]);
-
-  return {
-    categories,
-    isLoading,
-    error,
   };
 }

@@ -1,3 +1,8 @@
+/**
+ * Tipos del carrusel
+ * Contratos de ítems, props y renderizado del ParallaxCarousel.
+ */
+
 import type { ReactNode } from "react";
 import type { ImageSourcePropType } from "react-native";
 import type { SharedValue } from "react-native-reanimated";

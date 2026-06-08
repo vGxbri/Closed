@@ -1,3 +1,7 @@
+/**
+ * Registrar gasto compartido
+ * Alta de un gasto con división entre miembros del grupo.
+ */
 import { Ionicons } from "@expo/vector-icons";
 import { BlurTargetView } from "expo-blur";
 import * as Haptics from "expo-haptics";
@@ -47,7 +51,6 @@ export default function CreateExpenseScreen() {
   );
   const [isSaving, setIsSaving] = useState(false);
 
-  // Re-sync when members load
   React.useEffect(() => {
     if (activeMembers.length > 0 && selectedSplitIds.size === 0) {
       setSelectedSplitIds(new Set(activeMembers.map((m) => m.user_id)));
@@ -134,8 +137,7 @@ export default function CreateExpenseScreen() {
 
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       router.back();
-    } catch (e) {
-      console.error("Error creating expense:", e);
+    } catch {
       setDialogConfig({
         visible: true,
         title: "Error",
@@ -187,7 +189,6 @@ export default function CreateExpenseScreen() {
             ]}
           />
 
-          {/* ─── Amount ─── */}
           <Animated.View
             entering={FadeInDown.duration(300).delay(80)}
             style={styles.section}
@@ -228,7 +229,6 @@ export default function CreateExpenseScreen() {
             </SquircleView>
           </Animated.View>
 
-          {/* ─── Description ─── */}
           <Animated.View
             entering={FadeInDown.duration(300).delay(120)}
             style={styles.section}
@@ -269,7 +269,6 @@ export default function CreateExpenseScreen() {
             </SquircleView>
           </Animated.View>
 
-          {/* ─── Paid by ─── */}
           <Animated.View
             entering={FadeInDown.duration(300).delay(160)}
             style={styles.section}
@@ -339,7 +338,6 @@ export default function CreateExpenseScreen() {
             </ScrollView>
           </Animated.View>
 
-          {/* ─── Split between ─── */}
           <Animated.View
             entering={FadeInDown.duration(300).delay(200)}
             style={styles.section}
@@ -372,7 +370,6 @@ export default function CreateExpenseScreen() {
           </Animated.View>
         </ScrollView>
 
-        {/* ─── Save button ─── */}
         <View
           style={[
             styles.bottomBar,

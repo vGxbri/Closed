@@ -1,3 +1,8 @@
+/**
+ * Enriquecimiento de respuestas en chat
+ * Completa metadatos de mensajes en hilo tras inserción en Supabase.
+ */
+
 import { MessageView } from '@/types/database';
 
 const REPLY_PREVIEW_MAX = 100;
@@ -8,10 +13,6 @@ function replyPreviewText(parent: MessageView): string {
   return text ? text.slice(0, REPLY_PREVIEW_MAX) : '...';
 }
 
-/**
- * Fills reply_to_content / reply_to_sender_name from the parent message in the list
- * when the view row is missing them (e.g. replication lag after INSERT).
- */
 export function enrichMessagesWithReplies(messages: MessageView[]): MessageView[] {
   const byId = new Map(messages.map((m) => [m.id, m]));
 

@@ -1,4 +1,8 @@
-import { MaterialIcons } from "@expo/vector-icons";
+/**
+ * Cabecera personalizada
+ * Barra superior con título, botón atrás y acción opcional a la derecha.
+ */
+
 import { useRouter } from "expo-router";
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -67,7 +71,7 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   container: {
-    height: 56, // Standard mobile header height
+    height: 56,
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
@@ -80,7 +84,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 22,
-    fontWeight: "400", // MD3 uses lighter weights for headlines usually, or 500
+    fontWeight: "400",
     letterSpacing: 0,
     flex: 1,
   },

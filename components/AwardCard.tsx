@@ -1,3 +1,8 @@
+/**
+ * Tarjeta de premio
+ * Resume estado, icono y nominados de un award en listados del grupo.
+ */
+
 import { Ionicons } from "@expo/vector-icons";
 import React, { useMemo } from "react";
 import { Pressable, StyleSheet, View } from "react-native";

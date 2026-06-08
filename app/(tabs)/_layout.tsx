@@ -1,3 +1,6 @@
+/**
+ * Layout de pestañas principales
+ */
 import { Stack } from "expo-router";
 
 export default function GlobalLayout() {

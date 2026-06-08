@@ -1,3 +1,8 @@
+/**
+ * Servicio de autenticación
+ * Registro, sesión y perfil de usuario en Closed mediante Supabase Auth.
+ */
+
 import { supabase } from "../lib/supabase";
 import { Profile } from "../types/database";
 
@@ -13,9 +18,6 @@ export interface SignInCredentials {
 }
 
 export const authService = {
-  /**
-   * Sign up a new user
-   */
   async signUp({ email, password, displayName }: SignUpCredentials) {
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -31,9 +33,6 @@ export const authService = {
     return data;
   },
 
-  /**
-   * Sign in with email and password
-   */
   async signIn({ email, password }: SignInCredentials) {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -44,26 +43,17 @@ export const authService = {
     return data;
   },
 
-  /**
-   * Sign out the current user
-   */
   async signOut() {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
   },
 
-  /**
-   * Get the current session
-   */
   async getSession() {
     const { data, error } = await supabase.auth.getSession();
     if (error) throw error;
     return data.session;
   },
 
-  /**
-   * Get the current user
-   */
   async getCurrentUser() {
     const {
       data: { user },
@@ -73,9 +63,6 @@ export const authService = {
     return user;
   },
 
-  /**
-   * Get the current user's profile
-   */
   async getCurrentProfile(): Promise<Profile | null> {
     const user = await this.getCurrentUser();
     if (!user) return null;
@@ -90,9 +77,6 @@ export const authService = {
     return data;
   },
 
-  /**
-   * Update the current user's profile
-   */
   async updateProfile(updates: Partial<Omit<Profile, "id" | "created_at">>) {
     const user = await this.getCurrentUser();
     if (!user) throw new Error("Not authenticated");
@@ -111,9 +95,6 @@ export const authService = {
     return data;
   },
 
-  /**
-   * Upload avatar image and return public URL
-   */
   async uploadAvatar(uri: string): Promise<string> {
     const { decode } = await import("base64-arraybuffer");
     const FileSystem = await import("expo-file-system/legacy");
@@ -139,17 +120,11 @@ export const authService = {
     return data.publicUrl;
   },
 
-  /**
-   * Send password reset email
-   */
   async resetPassword(email: string) {
     const { error } = await supabase.auth.resetPasswordForEmail(email);
     if (error) throw error;
   },
 
-  /**
-   * Update password
-   */
   async updatePassword(newPassword: string) {
     const { error } = await supabase.auth.updateUser({
       password: newPassword,
@@ -157,9 +132,6 @@ export const authService = {
     if (error) throw error;
   },
 
-  /**
-   * Subscribe to auth state changes
-   */
   onAuthStateChange(callback: (event: string, session: any) => void) {
     return supabase.auth.onAuthStateChange(callback);
   },

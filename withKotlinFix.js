@@ -1,3 +1,7 @@
+/**
+ * Plugin de configuración Expo (Android)
+ * Evita errores de validación JVM/Kotlin en builds de Gradle.
+ */
 const { withGradleProperties } = require("@expo/config-plugins");
 
 module.exports = function withKotlinFix(config) {

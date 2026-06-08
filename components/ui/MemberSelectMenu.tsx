@@ -1,3 +1,8 @@
+/**
+ * Selector de miembros
+ * Bottom sheet para elegir uno o varios miembros del grupo.
+ */
+
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useRef } from "react";
 import {
@@ -75,7 +80,6 @@ export const MemberSelectMenu: React.FC<MemberSelectMenuProps> = ({
       isScrolledToTop={isScrolledToTop}
       contentStyle={{ paddingHorizontal: 20 }}
     >
-      {/* Header */}
       <View style={styles.header}>
         <Text
           variant="titleMedium"
@@ -109,7 +113,6 @@ export const MemberSelectMenu: React.FC<MemberSelectMenuProps> = ({
         </View>
       </View>
 
-      {/* Members List */}
       {members.length === 0 ? (
         <View
           style={[
@@ -191,7 +194,6 @@ export const MemberSelectMenu: React.FC<MemberSelectMenuProps> = ({
         </ScrollView>
       )}
 
-      {/* Actions */}
       <View style={styles.actions}>
         <TouchableOpacity
           style={[

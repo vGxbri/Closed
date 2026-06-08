@@ -1,3 +1,7 @@
+/**
+ * Stack del módulo de grupos
+ * Define la navegación entre lista de grupos, detalle, premios y pantallas modales del grupo.
+ */
 import { Stack } from "expo-router";
 import { useTheme } from "react-native-paper";
 

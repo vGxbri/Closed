@@ -1,3 +1,7 @@
+/**
+ * Revelación de Flashback
+ * Muestra en carrusel las fotos capturadas durante un Flashback activo.
+ */
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { Image } from "expo-image";
@@ -26,15 +30,15 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { BottomSheetModal } from "@/components/ui/BottomSheetModal";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { CustomHeader } from "@/components/ui/CustomHeader";
 import { useSnackbar } from "@/components/ui/SnackbarContext";
 import { flashbackService } from "@/services/flashback.service";
 import {
   FlashbackPartyWithDetails,
   FlashbackPhotoWithUser,
 } from "@/types/database";
-import { BottomSheetModal } from "@/components/ui/BottomSheetModal";
-import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { CustomHeader } from "@/components/ui/CustomHeader";
 import { CreatePartyModal } from "./flashback";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -42,7 +46,6 @@ const GRID_GAP = 4;
 const COLS = 3;
 const PHOTO_SIZE = (SCREEN_WIDTH - 24 * 2 - GRID_GAP * (COLS - 1)) / COLS;
 
-// ─── Full Screen Photo Viewer ─────────────────────────────────────────
 const FlashbackPhotoViewer = React.memo<{
   visible: boolean;
   photos: FlashbackPhotoWithUser[];
@@ -69,12 +72,26 @@ const FlashbackPhotoViewer = React.memo<{
       backgroundOpacity.value = 1;
 
       setTimeout(() => {
-        if (flatListRef.current && initialIndex >= 0 && initialIndex < photos.length) {
-          flatListRef.current.scrollToIndex({ index: initialIndex, animated: false });
+        if (
+          flatListRef.current &&
+          initialIndex >= 0 &&
+          initialIndex < photos.length
+        ) {
+          flatListRef.current.scrollToIndex({
+            index: initialIndex,
+            animated: false,
+          });
         }
       }, 0);
     }
-  }, [visible, initialIndex, photos.length, translateY, scale, backgroundOpacity]);
+  }, [
+    visible,
+    initialIndex,
+    photos.length,
+    translateY,
+    scale,
+    backgroundOpacity,
+  ]);
 
   const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
     if (viewableItems.length > 0) {
@@ -95,18 +112,31 @@ const FlashbackPhotoViewer = React.memo<{
     .failOffsetX([-20, 20])
     .onUpdate((event) => {
       translateY.value = event.translationY;
-      scale.value = Math.max(0.8, 1 - Math.abs(event.translationY) / SCREEN_HEIGHT);
-      backgroundOpacity.value = Math.max(0.2, 1 - Math.abs(event.translationY) / (SCREEN_HEIGHT / 2));
+      scale.value = Math.max(
+        0.8,
+        1 - Math.abs(event.translationY) / SCREEN_HEIGHT,
+      );
+      backgroundOpacity.value = Math.max(
+        0.2,
+        1 - Math.abs(event.translationY) / (SCREEN_HEIGHT / 2),
+      );
     })
     .onEnd((event) => {
-      if (Math.abs(event.translationY) > 120 || Math.abs(event.velocityY) > 800) {
+      if (
+        Math.abs(event.translationY) > 120 ||
+        Math.abs(event.velocityY) > 800
+      ) {
         runOnJS(setIsClosing)(true);
         const destY = event.translationY + event.velocityY * 0.2;
         translateY.value = withTiming(destY, { duration: 250 });
         scale.value = withTiming(0.4, { duration: 250 });
-        backgroundOpacity.value = withTiming(0, { duration: 250 }, (finished) => {
-          if (finished) runOnJS(handleClose)();
-        });
+        backgroundOpacity.value = withTiming(
+          0,
+          { duration: 250 },
+          (finished) => {
+            if (finished) runOnJS(handleClose)();
+          },
+        );
       } else {
         translateY.value = withTiming(0, { duration: 250 });
         scale.value = withTiming(1, { duration: 250 });
@@ -124,7 +154,9 @@ const FlashbackPhotoViewer = React.memo<{
 
   const topUIStyle = useAnimatedStyle(() => ({
     opacity: withTiming(showUI ? 1 : 0, { duration: 200 }),
-    transform: [{ translateY: withTiming(showUI ? 0 : -20, { duration: 200 }) }],
+    transform: [
+      { translateY: withTiming(showUI ? 0 : -20, { duration: 200 }) },
+    ],
   }));
 
   const bottomUIStyle = useAnimatedStyle(() => ({
@@ -147,8 +179,15 @@ const FlashbackPhotoViewer = React.memo<{
     >
       {visible && (
         <>
-          <Animated.View style={[StyleSheet.absoluteFill, animatedBackgroundStyle]}>
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.95)" }]} />
+          <Animated.View
+            style={[StyleSheet.absoluteFill, animatedBackgroundStyle]}
+          >
+            <View
+              style={[
+                StyleSheet.absoluteFill,
+                { backgroundColor: "rgba(0,0,0,0.95)" },
+              ]}
+            />
           </Animated.View>
 
           <Animated.View
@@ -161,7 +200,10 @@ const FlashbackPhotoViewer = React.memo<{
           >
             <Animated.View
               entering={FadeInUp.duration(400)}
-              style={[viewerStyles.topBar, { paddingTop: Math.max(insets.top, 20) + 8 }]}
+              style={[
+                viewerStyles.topBar,
+                { paddingTop: Math.max(insets.top, 20) + 8 },
+              ]}
             >
               <TouchableOpacity
                 onPress={handleClose}
@@ -173,14 +215,19 @@ const FlashbackPhotoViewer = React.memo<{
 
               <View style={viewerStyles.topInfo}>
                 {currentPhoto.user && (
-                  <Text style={viewerStyles.author}>{currentPhoto.user.display_name}</Text>
+                  <Text style={viewerStyles.author}>
+                    {currentPhoto.user.display_name}
+                  </Text>
                 )}
                 <Text style={viewerStyles.date}>
-                  {new Date(currentPhoto.created_at).toLocaleDateString("es-ES", {
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                  })}
+                  {new Date(currentPhoto.created_at).toLocaleDateString(
+                    "es-ES",
+                    {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    },
+                  )}
                 </Text>
               </View>
             </Animated.View>
@@ -203,7 +250,9 @@ const FlashbackPhotoViewer = React.memo<{
                   index,
                 })}
                 initialScrollIndex={
-                  initialIndex >= 0 && initialIndex < photos.length ? initialIndex : 0
+                  initialIndex >= 0 && initialIndex < photos.length
+                    ? initialIndex
+                    : 0
                 }
                 renderItem={({ item }) => (
                   <View style={viewerStyles.itemContainer}>
@@ -225,7 +274,13 @@ const FlashbackPhotoViewer = React.memo<{
 
           <Animated.View
             style={[
-              { position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 10 },
+              {
+                position: "absolute",
+                bottom: 0,
+                left: 0,
+                right: 0,
+                zIndex: 10,
+              },
               animatedBackgroundStyle,
               bottomUIStyle,
             ]}
@@ -233,11 +288,18 @@ const FlashbackPhotoViewer = React.memo<{
           >
             <Animated.View
               entering={FadeInDown.duration(400)}
-              style={[viewerStyles.bottomBar, { paddingBottom: Math.max(insets.bottom, 20) + 20 }]}
+              style={[
+                viewerStyles.bottomBar,
+                { paddingBottom: Math.max(insets.bottom, 20) + 20 },
+              ]}
             >
               <View style={viewerStyles.metadataRow}>
                 <View style={viewerStyles.metadataItem}>
-                  <Ionicons name="image-outline" size={14} color="rgba(255,255,255,0.5)" />
+                  <Ionicons
+                    name="image-outline"
+                    size={14}
+                    color="rgba(255,255,255,0.5)"
+                  />
                   <Text style={viewerStyles.metadataText}>
                     Foto #{currentPhoto.shot_number}
                   </Text>
@@ -331,8 +393,11 @@ export default function FlashbackPartyScreen() {
 
   const [party, setParty] = useState<FlashbackPartyWithDetails | null>(null);
   const [photos, setPhotos] = useState<FlashbackPhotoWithUser[]>([]);
-  const [activeParty, setActiveParty] = useState<FlashbackPartyWithDetails | null>(null);
-  const [archivedParties, setArchivedParties] = useState<FlashbackPartyWithDetails[]>([]);
+  const [activeParty, setActiveParty] =
+    useState<FlashbackPartyWithDetails | null>(null);
+  const [archivedParties, setArchivedParties] = useState<
+    FlashbackPartyWithDetails[]
+  >([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showSwitchSheet, setShowSwitchSheet] = useState(false);
@@ -347,9 +412,7 @@ export default function FlashbackPartyScreen() {
       ]);
       setParty(partyData);
       setPhotos(photosData);
-    } catch (e) {
-      console.error("Error loading party data:", e);
-    }
+    } catch {}
   }, []);
 
   const loadData = useCallback(async () => {
@@ -370,8 +433,7 @@ export default function FlashbackPartyScreen() {
       if (initialPartyId) {
         await loadPartyData(initialPartyId);
       }
-    } catch (e) {
-      console.error("Error loading flashback data:", e);
+    } catch {
     } finally {
       setIsLoading(false);
     }
@@ -380,7 +442,7 @@ export default function FlashbackPartyScreen() {
   useFocusEffect(
     useCallback(() => {
       loadData();
-    }, [loadData])
+    }, [loadData]),
   );
 
   const allParties = (() => {
@@ -446,8 +508,7 @@ export default function FlashbackPartyScreen() {
       await flashbackService.deleteParty(party.id);
       showSnackbar("Flashback eliminado", "success");
       router.back();
-    } catch (e) {
-      console.error("Error deleting party:", e);
+    } catch {
       showSnackbar("Error al eliminar el flashback", "error");
     } finally {
       setIsDeleting(false);
@@ -458,7 +519,9 @@ export default function FlashbackPartyScreen() {
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
-      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <View
+        style={[styles.container, { backgroundColor: theme.colors.background }]}
+      >
         <CustomHeader
           title={party?.name || "Flashback"}
           showBackButton
@@ -468,7 +531,11 @@ export default function FlashbackPartyScreen() {
                 onPress={() => setShowDeleteConfirm(true)}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
-                <Ionicons name="trash-outline" size={20} color={theme.colors.error} />
+                <Ionicons
+                  name="trash-outline"
+                  size={20}
+                  color={theme.colors.error}
+                />
               </TouchableOpacity>
             ) : undefined
           }
@@ -481,12 +548,15 @@ export default function FlashbackPartyScreen() {
           ]}
           showsVerticalScrollIndicator={false}
         >
-          {/* Switch flashback dropdown */}
           {allParties.length > 0 && (
             <Pressable
               onPress={() => setShowSwitchSheet(true)}
               style={({ pressed }) => [
-                { opacity: pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.98 : 1 }], marginBottom: 12 },
+                {
+                  opacity: pressed ? 0.9 : 1,
+                  transform: [{ scale: pressed ? 0.98 : 1 }],
+                  marginBottom: 12,
+                },
               ]}
             >
               <SquircleView
@@ -500,25 +570,42 @@ export default function FlashbackPartyScreen() {
                 ]}
                 cornerSmoothing={1}
               >
-                <Ionicons name="swap-horizontal-outline" size={16} color={theme.colors.onSurfaceVariant} />
-                <Text style={[styles.switchButtonText, { color: theme.colors.onSurfaceVariant }]}>
+                <Ionicons
+                  name="swap-horizontal-outline"
+                  size={16}
+                  color={theme.colors.onSurfaceVariant}
+                />
+                <Text
+                  style={[
+                    styles.switchButtonText,
+                    { color: theme.colors.onSurfaceVariant },
+                  ]}
+                >
                   {party?.name ?? "Cambiar flashback"}
                 </Text>
-                <Ionicons name="chevron-down" size={14} color={theme.colors.onSurfaceVariant} />
+                <Ionicons
+                  name="chevron-down"
+                  size={14}
+                  color={theme.colors.onSurfaceVariant}
+                />
               </SquircleView>
             </Pressable>
           )}
 
-          {/* Stats header */}
           {party && photos.length > 0 && (
-            <Animated.View entering={FadeIn.duration(400)} style={styles.statsRow}>
+            <Animated.View
+              entering={FadeIn.duration(400)}
+              style={styles.statsRow}
+            >
               <View style={styles.statItem}>
                 <Ionicons
                   name="camera-outline"
                   size={16}
                   color={theme.colors.primary}
                 />
-                <Text style={[styles.statText, { color: theme.colors.onSurface }]}>
+                <Text
+                  style={[styles.statText, { color: theme.colors.onSurface }]}
+                >
                   {photos.length} foto{photos.length !== 1 ? "s" : ""}
                 </Text>
               </View>
@@ -529,21 +616,23 @@ export default function FlashbackPartyScreen() {
                   size={16}
                   color={theme.colors.primary}
                 />
-                <Text style={[styles.statText, { color: theme.colors.onSurface }]}>
-                  {uniquePhotographers} fotógrafo{uniquePhotographers !== 1 ? "s" : ""}
+                <Text
+                  style={[styles.statText, { color: theme.colors.onSurface }]}
+                >
+                  {uniquePhotographers} fotógrafo
+                  {uniquePhotographers !== 1 ? "s" : ""}
                 </Text>
               </View>
             </Animated.View>
           )}
 
-          {/* Photo grid */}
           {photos.length > 0 ? (
             <View style={styles.photoGrid}>
               {photos.map((photo, index) => (
                 <Animated.View
                   key={photo.id}
                   entering={FadeInUp.duration(400).delay(
-                    Math.min(index * 80, 1500)
+                    Math.min(index * 80, 1500),
                   )}
                   style={styles.photoWrapper}
                 >
@@ -571,7 +660,6 @@ export default function FlashbackPartyScreen() {
                         contentFit="cover"
                         transition={300}
                       />
-                      {/* Photo info overlay */}
                       <View style={styles.photoOverlay}>
                         <Text style={styles.photoUser} numberOfLines={1}>
                           {photo.user?.display_name || "Anónimo"}
@@ -593,7 +681,10 @@ export default function FlashbackPartyScreen() {
                 color={theme.colors.onSurfaceVariant}
               />
               <Text
-                style={[styles.emptyText, { color: theme.colors.onSurfaceVariant }]}
+                style={[
+                  styles.emptyText,
+                  { color: theme.colors.onSurfaceVariant },
+                ]}
               >
                 Aún no hay fotos
               </Text>
@@ -618,11 +709,13 @@ export default function FlashbackPartyScreen() {
             </View>
           )}
         </ScrollView>
-        
-        {/* FAB */}
+
         <Animated.View
           entering={FadeIn.duration(400).delay(300)}
-          style={[styles.fabContainer, { bottom: Math.max(insets.bottom + 24, 40) }]}
+          style={[
+            styles.fabContainer,
+            { bottom: Math.max(insets.bottom + 24, 40) },
+          ]}
         >
           <Pressable
             onPress={() => setShowCreateModal(true)}
@@ -653,7 +746,10 @@ export default function FlashbackPartyScreen() {
           onDismiss={() => setShowCreateModal(false)}
           groupId={id!}
           onCreated={() => {
-            router.replace({ pathname: "/groups/group/flashback", params: { id } } as any);
+            router.replace({
+              pathname: "/groups/group/flashback",
+              params: { id },
+            } as any);
           }}
         />
 
@@ -669,10 +765,15 @@ export default function FlashbackPartyScreen() {
           onDismiss={() => setShowSwitchSheet(false)}
         >
           <View style={styles.sheetContent}>
-            <Text style={[styles.sheetTitle, { color: theme.colors.onSurface }]}>
+            <Text
+              style={[styles.sheetTitle, { color: theme.colors.onSurface }]}
+            >
               Flashbacks
             </Text>
-            <ScrollView style={styles.sheetScroll} showsVerticalScrollIndicator={false}>
+            <ScrollView
+              style={styles.sheetScroll}
+              showsVerticalScrollIndicator={false}
+            >
               {allParties.map((ap) => {
                 const isCurrent = party?.id === ap.id;
                 return (
@@ -682,34 +783,55 @@ export default function FlashbackPartyScreen() {
                     style={({ pressed }) => [
                       styles.sheetRow,
                       {
-                        backgroundColor:
-                          isCurrent
-                            ? theme.colors.primaryContainer
-                            : pressed
-                              ? theme.colors.surfaceVariant
-                              : "transparent",
+                        backgroundColor: isCurrent
+                          ? theme.colors.primaryContainer
+                          : pressed
+                            ? theme.colors.surfaceVariant
+                            : "transparent",
                       },
                     ]}
                   >
                     <Text
                       style={[
                         styles.sheetRowName,
-                        { color: isCurrent ? theme.colors.onSurface : theme.colors.onSurfaceVariant },
+                        {
+                          color: isCurrent
+                            ? theme.colors.onSurface
+                            : theme.colors.onSurfaceVariant,
+                        },
                       ]}
                       numberOfLines={1}
                     >
                       {ap.name}
                     </Text>
-                    <Text style={[styles.sheetRowMeta, { color: theme.colors.onSurfaceVariant }]}>
+                    <Text
+                      style={[
+                        styles.sheetRowMeta,
+                        { color: theme.colors.onSurfaceVariant },
+                      ]}
+                    >
                       {formatPartyDate(ap.starts_at)}
                     </Text>
-                    <Text style={[styles.sheetRowMeta, { color: theme.colors.onSurfaceVariant }]}>
+                    <Text
+                      style={[
+                        styles.sheetRowMeta,
+                        { color: theme.colors.onSurfaceVariant },
+                      ]}
+                    >
                       {ap.photos_count} foto{ap.photos_count !== 1 ? "s" : ""}
                     </Text>
                     {isCurrent ? (
-                      <Ionicons name="checkmark" size={16} color={theme.colors.primary} />
+                      <Ionicons
+                        name="checkmark"
+                        size={16}
+                        color={theme.colors.primary}
+                      />
                     ) : (
-                      <Ionicons name="chevron-forward" size={16} color={theme.colors.onSurfaceVariant} />
+                      <Ionicons
+                        name="chevron-forward"
+                        size={16}
+                        color={theme.colors.onSurfaceVariant}
+                      />
                     )}
                   </Pressable>
                 );
@@ -737,7 +859,6 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: { paddingHorizontal: 24, paddingTop: 8 },
 
-  // Switch button
   switchButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -752,7 +873,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
 
-  // Switch sheet
   sheetContent: {
     paddingHorizontal: 24,
     paddingBottom: 16,
@@ -783,7 +903,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
 
-  // Stats
   statsRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -801,7 +920,6 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(128,128,128,0.4)",
   },
 
-  // Photo grid
   photoGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -839,7 +957,6 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
   },
 
-  // Empty
   emptyContainer: {
     alignItems: "center",
     justifyContent: "center",
@@ -852,7 +969,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
-  // FAB
   fabContainer: {
     position: "absolute",
     right: 24,

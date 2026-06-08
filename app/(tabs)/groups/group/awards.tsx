@@ -1,4 +1,9 @@
+/**
+ * Widget Premios del grupo
+ * Lista de premios y trofeos compartidos entre los miembros del grupo.
+ */
 import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
 import { BlurTargetView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
@@ -12,7 +17,6 @@ import Animated, {
   FadeInUp,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useFocusEffect } from "@react-navigation/native";
 
 import { AwardCard } from "@/components/AwardCard";
 import { CustomHeader } from "@/components/ui/CustomHeader";
@@ -30,7 +34,6 @@ const STATUS_PRIORITY: Record<AwardStatus, number> = {
   archived: 4,
 };
 
-// ─── Skeleton ───────────────────────────────────────────────────────────
 const SkeletonCard = React.memo<{ index: number }>(({ index }) => {
   const theme = useTheme();
   return (
@@ -96,7 +99,6 @@ const SkeletonCard = React.memo<{ index: number }>(({ index }) => {
 });
 SkeletonCard.displayName = "SkeletonCard";
 
-// ─── Tab Pill ───────────────────────────────────────────────────────────
 interface TabPillProps {
   label: string;
   count: number;
@@ -182,11 +184,10 @@ const TabPill = React.memo<TabPillProps>(
         </SquircleView>
       </Pressable>
     );
-  }
+  },
 );
 TabPill.displayName = "TabPill";
 
-// ─── Main Screen ────────────────────────────────────────────────────────
 export default function AwardsListScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -201,7 +202,7 @@ export default function AwardsListScreen() {
   useFocusEffect(
     useCallback(() => {
       refetch();
-    }, [refetch])
+    }, [refetch]),
   );
 
   useFocusEffect(
@@ -220,14 +221,14 @@ export default function AwardsListScreen() {
           },
           () => {
             refetch();
-          }
+          },
         )
         .subscribe();
 
       return () => {
         subscription.unsubscribe();
       };
-    }, [id, refetch])
+    }, [id, refetch]),
   );
 
   const canCreate = isAdmin || group?.settings?.allow_member_nominations;
@@ -236,20 +237,18 @@ export default function AwardsListScreen() {
     () =>
       awards
         .filter((a) => a.status !== "completed" && a.status !== "archived")
-        .sort(
-          (a, b) => STATUS_PRIORITY[a.status] - STATUS_PRIORITY[b.status]
-        ),
-    [awards]
+        .sort((a, b) => STATUS_PRIORITY[a.status] - STATUS_PRIORITY[b.status]),
+    [awards],
   );
 
   const completedAwards = useMemo(
     () => awards.filter((a) => a.status === "completed"),
-    [awards]
+    [awards],
   );
 
   const votingCount = useMemo(
     () => activeAwards.filter((a) => a.status === "voting").length,
-    [activeAwards]
+    [activeAwards],
   );
 
   const currentList = activeTab === "active" ? activeAwards : completedAwards;
@@ -262,7 +261,7 @@ export default function AwardsListScreen() {
         params: { id: award.id, groupId: id },
       } as any);
     },
-    [router, id]
+    [router, id],
   );
 
   const handleCreatePress = useCallback(() => {
@@ -284,17 +283,15 @@ export default function AwardsListScreen() {
     const parts: string[] = [];
     if (activeAwards.length > 0) {
       parts.push(
-        `${activeAwards.length} activo${activeAwards.length !== 1 ? "s" : ""}`
+        `${activeAwards.length} activo${activeAwards.length !== 1 ? "s" : ""}`,
       );
     }
     if (votingCount > 0) {
-      parts.push(
-        `${votingCount} en votación`
-      );
+      parts.push(`${votingCount} en votación`);
     }
     if (completedAwards.length > 0) {
       parts.push(
-        `${completedAwards.length} completado${completedAwards.length !== 1 ? "s" : ""}`
+        `${completedAwards.length} completado${completedAwards.length !== 1 ? "s" : ""}`,
       );
     }
     return parts.join(" · ");
@@ -443,9 +440,7 @@ export default function AwardsListScreen() {
             entering={FadeInUp.duration(500)}
             style={styles.titleBlock}
           >
-            <Text
-              style={[styles.screenTitle, { color: theme.colors.primary }]}
-            >
+            <Text style={[styles.screenTitle, { color: theme.colors.primary }]}>
               Premios
             </Text>
             <Text
@@ -516,11 +511,7 @@ export default function AwardsListScreen() {
                 ]}
                 cornerSmoothing={1}
               >
-                <Ionicons
-                  name="add"
-                  size={28}
-                  color={theme.colors.onPrimary}
-                />
+                <Ionicons name="add" size={28} color={theme.colors.onPrimary} />
               </SquircleView>
             </Pressable>
           </Animated.View>

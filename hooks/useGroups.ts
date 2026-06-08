@@ -1,10 +1,12 @@
+/**
+ * Hook de grupos
+ * Lista, detalle, creación y edición de grupos privados del usuario.
+ */
+
 import { useCallback, useEffect, useState } from 'react';
 import { groupsService } from '../services/groups.service';
 import { CreateGroupInput, GroupWithDetails, MemberRole, UpdateGroupInput } from '../types/database';
 
-/**
- * Hook for fetching and managing groups list
- */
 export function useGroups() {
   const [groups, setGroups] = useState<GroupWithDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -18,7 +20,6 @@ export function useGroups() {
       setGroups(data);
     } catch (err) {
       setError(err as Error);
-      console.error('Error fetching groups:', err);
     } finally {
       setIsLoading(false);
     }
@@ -30,7 +31,7 @@ export function useGroups() {
 
   const createGroup = async (input: CreateGroupInput) => {
     const newGroup = await groupsService.createGroup(input);
-    await fetchGroups(); // Refresh list
+    await fetchGroups();
     return newGroup;
   };
 
@@ -43,9 +44,6 @@ export function useGroups() {
   };
 }
 
-/**
- * Hook for fetching a single group with details
- */
 export function useGroup(groupId: string | undefined) {
   const [group, setGroup] = useState<GroupWithDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -65,7 +63,6 @@ export function useGroup(groupId: string | undefined) {
       setGroup(data);
     } catch (err) {
       setError(err as Error);
-      console.error('Error fetching group:', err);
     } finally {
       setIsLoading(false);
     }
@@ -97,13 +94,13 @@ export function useGroup(groupId: string | undefined) {
   const updateMemberRole = async (userId: string, role: MemberRole) => {
     if (!groupId) throw new Error('No group ID');
     await groupsService.updateMemberRole(groupId, userId, role);
-    await fetchGroup(); // Refresh
+    await fetchGroup();
   };
 
   const removeMember = async (userId: string) => {
     if (!groupId) throw new Error('No group ID');
     await groupsService.removeMember(groupId, userId);
-    await fetchGroup(); // Refresh
+    await fetchGroup();
   };
 
   const regenerateInviteCode = async () => {
@@ -116,7 +113,7 @@ export function useGroup(groupId: string | undefined) {
   const updateMyMembership = async (updates: { group_display_name?: string | null; group_avatar_url?: string | null; group_bio?: string | null; }) => {
     if (!groupId) throw new Error('No group ID');
     await groupsService.updateMyMembership(groupId, updates);
-    await fetchGroup(); // Refresh
+    await fetchGroup();
   };
 
   const uploadMemberAvatar = async (uri: string) => {
@@ -149,9 +146,6 @@ export function useGroup(groupId: string | undefined) {
   };
 }
 
-/**
- * Hook for joining a group with an invite code
- */
 export function useJoinGroup() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);

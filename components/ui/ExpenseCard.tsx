@@ -1,4 +1,8 @@
-import { Ionicons } from "@expo/vector-icons";
+/**
+ * Tarjeta de gasto
+ * Muestra un gasto compartido con monto, pagador y participantes.
+ */
+
 import React, { useCallback } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import SquircleView from "react-native-fast-squircle";

@@ -1,3 +1,8 @@
+/**
+ * Hook de gastos compartidos
+ * Gastos, liquidaciones y balances calculados por grupo.
+ */
+
 import { useState, useCallback, useRef, useMemo } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../lib/supabase';
@@ -22,8 +27,7 @@ export function useSharedExpenses(groupId: string) {
       setExpenses(exp);
       setSettlements(sett);
       isFirstLoadRef.current = false;
-    } catch (e) {
-      console.error('Error loading shared expenses:', e);
+    } catch {
     } finally {
       setIsLoading(false);
     }

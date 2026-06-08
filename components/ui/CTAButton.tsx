@@ -1,3 +1,8 @@
+/**
+ * Botón CTA
+ * Llamada a la acción destacada con icono, título y descripción opcional.
+ */
+
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import {

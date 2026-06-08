@@ -1,3 +1,8 @@
+/**
+ * Bottom sheet modal
+ * Panel deslizable desde abajo con blur, gestos y cierre por arrastre.
+ */
+
 import { BlurView } from "expo-blur";
 import React, { useCallback, useContext, useEffect, useState } from "react";
 import {
@@ -47,7 +52,6 @@ export const BottomSheetModal: React.FC<BottomSheetModalProps> = ({
   const snackbarContext = useContext(SnackbarContext);
   const [shouldRender, setShouldRender] = useState(false);
 
-  // Animated values
   const translateY = useSharedValue(SCREEN_HEIGHT);
   const backdropOpacity = useSharedValue(0);
   const context = useSharedValue(0);
@@ -59,7 +63,6 @@ export const BottomSheetModal: React.FC<BottomSheetModalProps> = ({
     runOnJS(onDismiss)();
   }, [onDismiss, translateY, backdropOpacity]);
 
-  // Open / close animation
   useEffect(() => {
     if (visible) {
       setShouldRender(true);
@@ -79,18 +82,16 @@ export const BottomSheetModal: React.FC<BottomSheetModalProps> = ({
     }
   }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Pan gesture for dragging down
   const panGesture = Gesture.Pan()
     .activeOffsetY([-10, 10])
     .onStart(() => {
       context.value = translateY.value;
     })
     .onUpdate((event) => {
-      // Only allow downward drag when scrolled to top (or always if no scroll value provided)
+      // Solo arrastrar hacia abajo si el scroll está arriba
       const isAtTop = isScrolledToTop ? isScrolledToTop.value : true;
       if (isAtTop || event.translationY > 0) {
         translateY.value = Math.max(0, context.value + event.translationY);
-        // Fade backdrop proportionally
         const progress = Math.max(
           0,
           1 - translateY.value / SCREEN_HEIGHT
@@ -116,10 +117,8 @@ export const BottomSheetModal: React.FC<BottomSheetModalProps> = ({
 
   const keyboard = useAnimatedKeyboard();
 
-  // Animated styles
   const sheetStyle = useAnimatedStyle(() => {
-    // When translateY is 0 (open), offset is 100% of keyboard height.
-    // When translateY is SCREEN_HEIGHT (closed), offset is 0%.
+    // El teclado desplaza la hoja solo cuando está abierta
     const progress = 1 - (translateY.value / SCREEN_HEIGHT);
     return {
       transform: [
@@ -137,7 +136,6 @@ export const BottomSheetModal: React.FC<BottomSheetModalProps> = ({
 
   const sheet = (
     <View style={styles.container}>
-        {/* Backdrop */}
         <Pressable style={styles.backdrop} onPress={onDismiss}>
           <Animated.View style={[StyleSheet.absoluteFill, backdropStyle]}>
             <BlurView
@@ -150,7 +148,6 @@ export const BottomSheetModal: React.FC<BottomSheetModalProps> = ({
           </Animated.View>
         </Pressable>
 
-        {/* Bottom Sheet */}
         <GestureDetector gesture={panGesture}>
           <Animated.View
             style={[
@@ -164,7 +161,6 @@ export const BottomSheetModal: React.FC<BottomSheetModalProps> = ({
               contentStyle,
             ]}
           >
-            {/* Handle bar — drag target */}
             <View style={styles.handleArea}>
               <View
                 style={[

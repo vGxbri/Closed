@@ -1,3 +1,8 @@
+/**
+ * Formato de agenda de eventos
+ * Etiquetas de fecha y hora en español para el calendario grupal de Closed.
+ */
+
 import { CalendarEvent } from "@/types/database";
 
 const MONTHS_ES = [
@@ -80,7 +85,6 @@ export function getEventDaySpan(
   return { start, end, isMultiDay, dayCount };
 }
 
-/** Labels for event detail, list cards, widgets, etc. */
 export function getEventScheduleDisplay(
   event: EventScheduleInput,
 ): EventScheduleDisplay {
@@ -122,7 +126,6 @@ export function getEventScheduleDisplay(
   };
 }
 
-/** Compact line for calendar list cards */
 export function getEventScheduleCompact(event: EventScheduleInput): string {
   const display = getEventScheduleDisplay(event);
   if (display.isMultiDay) {

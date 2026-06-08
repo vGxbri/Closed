@@ -1,3 +1,7 @@
+/**
+ * Detalle de premio
+ * Vista completa de un premio con medios, comentarios y reacciones.
+ */
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
@@ -10,50 +14,45 @@ import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useVideoPlayer, VideoView } from "expo-video";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-    Animated,
-    Modal,
-    Pressable,
-    TextInput as RNTextInput,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    View,
+  Animated,
+  Modal,
+  Pressable,
+  TextInput as RNTextInput,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import SquircleView from "react-native-fast-squircle";
 import {
-    ActivityIndicator,
-    Portal,
-    Surface,
-    Text,
-    useTheme,
+  ActivityIndicator,
+  Portal,
+  Surface,
+  Text,
+  useTheme,
 } from "react-native-paper";
 import ReanimatedAnimated, {
-    FadeIn,
-    FadeInDown,
-    FadeInUp,
+  FadeIn,
+  FadeInDown,
+  FadeInUp,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AwardDetailSkeleton } from "@/components/award/AwardSkeletons";
-import { useSnackbar } from "@/components/ui/SnackbarContext";
 import { MemberAvatar } from "@/components/MemberAvatar";
-import {
-    ConfirmDialog,
-    DialogType,
-} from "@/components/ui/ConfirmDialog";
+import { ConfirmDialog, DialogType } from "@/components/ui/ConfirmDialog";
 import { CustomHeader } from "@/components/ui/CustomHeader";
 import { MemberSelectMenu } from "@/components/ui/MemberSelectMenu";
+import { useSnackbar } from "@/components/ui/SnackbarContext";
 import {
-    defaultAwardIcon,
-    getIconComponent,
-    IconName,
+  defaultAwardIcon,
+  getIconComponent,
+  IconName,
 } from "@/constants/icons";
 import { useAuth, useGroup } from "@/hooks";
 import { supabase } from "@/lib/supabase";
 import { awardsService } from "@/services";
 import { AwardWithNominees } from "@/types/database";
-
-// ... constants ...
 
 const formatDate = (dateString: string) => {
   if (!dateString) return "";
@@ -85,7 +84,6 @@ export default function AwardDetailScreen() {
   const [myVote, setMyVote] = useState<string | null>(null);
   const backgroundRef = React.useRef(null);
 
-  // Dialog State
   const [dialogConfig, setDialogConfig] = useState<{
     visible: boolean;
     title: string;
@@ -110,7 +108,6 @@ export default function AwardDetailScreen() {
   const [showStartVotingModal, setShowStartVotingModal] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
-  // Audio nomination temp state
   const [showAudioTitleModal, setShowAudioTitleModal] = useState(false);
   const [tempAudio, setTempAudio] = useState<{
     uri: string;
@@ -118,7 +115,6 @@ export default function AwardDetailScreen() {
     name: string;
   } | null>(null);
 
-  // Text nomination state
   const [showTextModal, setShowTextModal] = useState(false);
 
   const fetchAward = React.useCallback(async () => {
@@ -127,13 +123,10 @@ export default function AwardDetailScreen() {
       setAward(data);
 
       if (data) {
-        // Check for expiration
         if (data.status === "voting" && data.voting_end_at) {
           const endDate = new Date(data.voting_end_at);
           if (new Date() > endDate) {
-            console.log("Award expired, triggering check...");
             await awardsService.checkExpiration(id);
-            // Reload
             const updated = await awardsService.getAwardById(id);
             setAward(updated);
             if (updated && updated.status === "completed") {
@@ -145,8 +138,7 @@ export default function AwardDetailScreen() {
         const vote = await awardsService.getMyVote(id);
         setMyVote(vote);
       }
-    } catch (error) {
-      console.error(error);
+    } catch {
       showSnackbar("No se pudo cargar el premio", "error");
     } finally {
       setLoading(false);
@@ -159,7 +151,6 @@ export default function AwardDetailScreen() {
     }, [fetchAward]),
   );
 
-  // Realtime Subscriptions
   useEffect(() => {
     if (!id || !user) return;
 
@@ -193,7 +184,6 @@ export default function AwardDetailScreen() {
             const updatedNominees = current.nominees.map((n) =>
               n.id === payload.new.id ? { ...n, ...payload.new } : n,
             );
-            // Re-sort by created_at to keep order stable
             return {
               ...current,
               nominees: updatedNominees.sort((a, b) =>
@@ -212,7 +202,7 @@ export default function AwardDetailScreen() {
           filter: `award_id=eq.${id}`,
         },
         (payload: any) => {
-          // For INSERT or DELETE, best to reload to get profile data or remove correctly
+          // Inserción/borrado: recargar para traer perfiles o quitar nominados bien
           if (
             payload.eventType === "INSERT" ||
             payload.eventType === "DELETE"
@@ -230,14 +220,11 @@ export default function AwardDetailScreen() {
           filter: `award_id=eq.${id}`,
         },
         (payload: any) => {
-          // Always refresh award data to update total vote counts
           fetchAward();
 
-          // Check if it affects me (local state optimization)
           if (payload.new && (payload.new as any).voter_id === user.id) {
             setMyVote((payload.new as any).nominee_id);
           } else if (payload.eventType === "DELETE") {
-            // If a deletion happens, we re-verify our own vote just in case
             awardsService.getMyVote(id).then(setMyVote);
           }
         },
@@ -252,7 +239,6 @@ export default function AwardDetailScreen() {
   const [showManageNomineesModal, setShowManageNomineesModal] = useState(false);
   const [selectedNomineeIds, setSelectedNomineeIds] = useState<string[]>([]);
 
-  // Sync selected nominees when modal opens
   const openManageNomineesModal = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSelectedNomineeIds(award?.nominees.map((n) => n.user_id) || []);
@@ -275,8 +261,7 @@ export default function AwardDetailScreen() {
       await fetchAward();
       setShowManageNomineesModal(false);
       showSnackbar("Lista de nominados actualizada", "success");
-    } catch (e) {
-      console.error(e);
+    } catch {
       showSnackbar("Error al actualizar nominados", "error");
     } finally {
       setActionLoading(false);
@@ -296,8 +281,7 @@ export default function AwardDetailScreen() {
           await awardsService.removeNominee(nomineeId);
           await fetchAward();
           showSnackbar("Nominación eliminada correctamente", "success");
-        } catch (e) {
-          console.error(e);
+        } catch {
           showSnackbar("Error al eliminar nominación", "error");
         } finally {
           setActionLoading(false);
@@ -345,7 +329,6 @@ export default function AwardDetailScreen() {
 
       setActionLoading(true);
 
-      // Validation: Minimum 2 nominees/photos required
       if (award.nominees.length < 2) {
         showSnackbar(
           "Se necesitan mínimo 2 candidatos para empezar la votación",
@@ -377,22 +360,19 @@ export default function AwardDetailScreen() {
     try {
       setActionLoading(true);
 
-      // If clicking the same nominee, check if we can remove the vote
       if (myVote === nomineeId) {
         if (award.voting_settings?.allow_vote_change) {
           await awardsService.removeVote(award.id);
           setMyVote(null);
-          // Small delay to allow DB triggers to finish
+          // Esperar triggers de BD antes de refrescar conteos
           setTimeout(() => fetchAward(), 500);
           showSnackbar("Voto retirado", "success");
         }
         return;
       }
 
-      // Casting a new vote (or changing to a new person)
       await awardsService.vote(award.id, nomineeId);
       setMyVote(nomineeId);
-      // Small delay to allow DB triggers to finish
       setTimeout(() => fetchAward(), 500);
 
       if (myVote) {
@@ -493,7 +473,7 @@ export default function AwardDetailScreen() {
 
       if (isAudio) {
         const docResult = await DocumentPicker.getDocumentAsync({
-          type: "*/*", // Allow all files to avoid Android MIME type issues
+          type: "*/*", // Evitar problemas de MIME en Android
           copyToCacheDirectory: true,
         });
 
@@ -523,12 +503,10 @@ export default function AwardDetailScreen() {
         mimeType = asset.mimeType;
         fileName = asset.name;
 
-        // Open modal to ask for title
         setTempAudio({ uri, mimeType, name: fileName });
         setShowAudioTitleModal(true);
-        return; // Stop here, wait for modal submit
+        return;
       } else {
-        // Photo or Video
         const result = await ImagePicker.launchImageLibraryAsync({
           mediaTypes: isVideo ? ["videos"] : ["images"],
           allowsEditing: false,
@@ -542,15 +520,13 @@ export default function AwardDetailScreen() {
 
       setActionLoading(true);
 
-      // 2. Upload Media
       const publicUrl = await awardsService.uploadNomineeMedia(
         award.id,
         uri!,
         mimeType,
         fileName,
-      ); // uri is guaranteed here
+      );
 
-      // 3. Add Nominee
       await awardsService.addNominee(award.id, user.id, undefined, publicUrl);
 
       let typeLabel = "Foto";
@@ -559,7 +535,6 @@ export default function AwardDetailScreen() {
       showSnackbar(`${typeLabel} añadida correctamente`, "success");
       fetchAward();
     } catch (error: any) {
-      console.error(error);
       showSnackbar(error.message || "No se pudo subir", "error");
     } finally {
       setActionLoading(false);
@@ -575,7 +550,6 @@ export default function AwardDetailScreen() {
 
     try {
       setActionLoading(true);
-      // Upload
       const publicUrl = await awardsService.uploadNomineeMedia(
         award.id,
         tempAudio.uri,
@@ -583,7 +557,6 @@ export default function AwardDetailScreen() {
         tempAudio.name,
       );
 
-      // Add nominee with Reason = Title
       await awardsService.addNominee(award.id, user.id, title, publicUrl);
 
       showSnackbar("Audio añadido correctamente", "success");
@@ -716,7 +689,6 @@ export default function AwardDetailScreen() {
           ]}
           showsVerticalScrollIndicator={false}
         >
-          {/* ─── Title ─── */}
           <ReanimatedAnimated.View
             entering={FadeInUp.duration(500)}
             style={styles.titleBlock}
@@ -747,7 +719,6 @@ export default function AwardDetailScreen() {
             ]}
           />
 
-          {/* ─── Status Card ─── */}
           <ReanimatedAnimated.View
             entering={FadeInDown.duration(350).delay(80)}
             style={styles.section}
@@ -917,7 +888,6 @@ export default function AwardDetailScreen() {
             </SquircleView>
           </ReanimatedAnimated.View>
 
-          {/* ─── Nominees Section ─── */}
           <ReanimatedAnimated.View
             entering={FadeInDown.duration(350).delay(120)}
             style={styles.section}
@@ -958,7 +928,6 @@ export default function AwardDetailScreen() {
               </SquircleView>
             </View>
 
-            {/* Manage Nominees Button (Only for Person awards in draft) */}
             {isAdmin &&
               award?.vote_type === "person" &&
               award.status === "draft" && (
@@ -1004,7 +973,6 @@ export default function AwardDetailScreen() {
                 </Pressable>
               )}
 
-            {/* Nominees List */}
             <View style={styles.nomineesList}>
               {award.nominees.length === 0 && (
                 <SquircleView
@@ -1067,247 +1035,244 @@ export default function AwardDetailScreen() {
                       ]}
                       cornerSmoothing={1}
                     >
-                    {/* Winner Banner */}
-                    {isWinner && (
-                      <View
-                        style={[
-                          styles.winnerBanner,
-                          { backgroundColor: "#FFD700" },
-                        ]}
-                      >
-                        <Ionicons name="trophy" size={12} color="#000" />
-                        <Text
-                          style={{
-                            color: "#000",
-                            fontWeight: "700",
-                            marginLeft: 4,
-                            fontSize: 11,
-                          }}
+                      {isWinner && (
+                        <View
+                          style={[
+                            styles.winnerBanner,
+                            { backgroundColor: "#FFD700" },
+                          ]}
                         >
-                          GANADOR
-                        </Text>
-                      </View>
-                    )}
+                          <Ionicons name="trophy" size={12} color="#000" />
+                          <Text
+                            style={{
+                              color: "#000",
+                              fontWeight: "700",
+                              marginLeft: 4,
+                              fontSize: 11,
+                            }}
+                          >
+                            GANADOR
+                          </Text>
+                        </View>
+                      )}
 
-                    {/* User Row */}
-                    <View style={styles.nomineeUserRow}>
-                      <MemberAvatar user={nominee.user} size="md" />
-                      <View style={{ flex: 1, marginLeft: 12 }}>
-                        <Text variant="bodyLarge" style={{ fontWeight: "600" }}>
-                          {nominee.user.display_name}
-                        </Text>
-                        {award.vote_type !== "person" &&
-                          nominee.nomination_reason && (
+                      <View style={styles.nomineeUserRow}>
+                        <MemberAvatar user={nominee.user} size="md" />
+                        <View style={{ flex: 1, marginLeft: 12 }}>
+                          <Text
+                            variant="bodyLarge"
+                            style={{ fontWeight: "600" }}
+                          >
+                            {nominee.user.display_name}
+                          </Text>
+                          {award.vote_type !== "person" &&
+                            nominee.nomination_reason && (
+                              <Text
+                                variant="labelSmall"
+                                style={{ color: theme.colors.onSurfaceVariant }}
+                              >
+                                {nominee.nomination_reason}
+                              </Text>
+                            )}
+                        </View>
+
+                        {award.status === "voting" &&
+                          (() => {
+                            const isCurrentUserNominee =
+                              award.vote_type === "person" &&
+                              award.nominees.some(
+                                (n) => n.user_id === user?.id,
+                              );
+                            const isSelf = nominee.user_id === user?.id;
+
+                            const isVoteDisabled =
+                              actionLoading ||
+                              (!!myVote &&
+                                !award.voting_settings?.allow_vote_change) ||
+                              (isCurrentUserNominee &&
+                                !award.voting_settings?.nominees_can_vote) ||
+                              (isCurrentUserNominee &&
+                                isSelf &&
+                                !award.voting_settings?.allow_self_vote);
+
+                            const isDisabledStyle =
+                              isVoteDisabled && myVote !== nominee.id
+                                ? { opacity: 0.5 }
+                                : {};
+
+                            return (
+                              <TouchableOpacity
+                                style={[
+                                  styles.voteButton,
+                                  {
+                                    backgroundColor:
+                                      myVote === nominee.id
+                                        ? theme.colors.primary
+                                        : "transparent",
+                                    borderColor:
+                                      myVote === nominee.id
+                                        ? theme.colors.primary
+                                        : theme.colors.outline,
+                                  },
+                                  isDisabledStyle,
+                                ]}
+                                disabled={isVoteDisabled}
+                                onPress={() => handleVote(nominee.id)}
+                              >
+                                <Ionicons
+                                  name={
+                                    myVote === nominee.id
+                                      ? "checkmark"
+                                      : "heart-outline"
+                                  }
+                                  size={16}
+                                  color={
+                                    myVote === nominee.id
+                                      ? theme.colors.onPrimary
+                                      : theme.colors.outline
+                                  }
+                                />
+                                <Text
+                                  style={{
+                                    marginLeft: 6,
+                                    fontWeight: "600",
+                                    color:
+                                      myVote === nominee.id
+                                        ? theme.colors.onPrimary
+                                        : theme.colors.outline,
+                                  }}
+                                >
+                                  {myVote === nominee.id ? "Votado" : "Votar"}
+                                </Text>
+                              </TouchableOpacity>
+                            );
+                          })()}
+
+                        {award.status !== "voting" && myVote === nominee.id && (
+                          <View
+                            style={{
+                              flexDirection: "row",
+                              alignItems: "center",
+                              backgroundColor: isWinner
+                                ? "#FFD70025"
+                                : theme.colors.primaryContainer,
+                              paddingHorizontal: 12,
+                              paddingVertical: 6,
+                              borderRadius: 20,
+                              borderWidth: 1,
+                              borderColor: isWinner
+                                ? "#FFD700"
+                                : theme.colors.primary,
+                            }}
+                          >
+                            <Ionicons
+                              name="checkmark-circle"
+                              size={16}
+                              color={
+                                isWinner ? "#B8860B" : theme.colors.onSurface
+                              }
+                            />
                             <Text
                               variant="labelSmall"
-                              style={{ color: theme.colors.onSurfaceVariant }}
+                              style={{
+                                color: isWinner
+                                  ? "#B8860B"
+                                  : theme.colors.onSurface,
+                                marginLeft: 6,
+                                fontWeight: "700",
+                              }}
                             >
-                              {nominee.nomination_reason}
+                              Tu voto
                             </Text>
+                          </View>
+                        )}
+
+                        {award.is_revealed && (
+                          <View
+                            style={{
+                              flexDirection: "row",
+                              alignItems: "center",
+                              backgroundColor: theme.colors.surfaceVariant,
+                              paddingHorizontal: 10,
+                              paddingVertical: 6,
+                              borderRadius: 20,
+                              marginLeft: 8,
+                            }}
+                          >
+                            <Text
+                              variant="labelSmall"
+                              style={{
+                                color: theme.colors.onSurfaceVariant,
+                                fontWeight: "700",
+                              }}
+                            >
+                              {nominee.vote_count}{" "}
+                              {nominee.vote_count === 1 ? "voto" : "votos"}
+                            </Text>
+                          </View>
+                        )}
+
+                        {isAdmin &&
+                          award.status === "draft" &&
+                          award.vote_type !== "person" && (
+                            <TouchableOpacity
+                              onPress={() => handleDeleteNomination(nominee.id)}
+                              style={{ padding: 8 }}
+                            >
+                              <Ionicons
+                                name="trash-outline"
+                                size={20}
+                                color={theme.colors.error}
+                              />
+                            </TouchableOpacity>
                           )}
                       </View>
 
-                      {/* Vote Button */}
-                      {award.status === "voting" &&
-                        (() => {
-                          const isCurrentUserNominee =
-                            award.vote_type === "person" &&
-                            award.nominees.some((n) => n.user_id === user?.id);
-                          const isSelf = nominee.user_id === user?.id;
-
-                          const isVoteDisabled =
-                            actionLoading ||
-                            (!!myVote &&
-                              !award.voting_settings?.allow_vote_change) ||
-                            (isCurrentUserNominee &&
-                              !award.voting_settings?.nominees_can_vote) ||
-                            (isCurrentUserNominee &&
-                              isSelf &&
-                              !award.voting_settings?.allow_self_vote);
-
-                          // Style for disabled state (e.g. grayed out if strict restriction)
-                          // If I voted, I want only the OTHER buttons to look disabled (if change is not allowed)
-                          // The selected button should remain opaque (primary color)
-                          const isDisabledStyle =
-                            isVoteDisabled && myVote !== nominee.id
-                              ? { opacity: 0.5 }
-                              : {};
-
-                          return (
+                      {nominee.content_url && (
+                        <View style={styles.nomineeContentWrapper}>
+                          {award.vote_type === "video" ? (
                             <TouchableOpacity
-                              style={[
-                                styles.voteButton,
-                                {
-                                  backgroundColor:
-                                    myVote === nominee.id
-                                      ? theme.colors.primary
-                                      : "transparent",
-                                  borderColor:
-                                    myVote === nominee.id
-                                      ? theme.colors.primary
-                                      : theme.colors.outline,
-                                },
-                                isDisabledStyle,
-                              ]}
-                              disabled={isVoteDisabled}
-                              onPress={() => handleVote(nominee.id)}
+                              onPress={() =>
+                                setSelectedImage(nominee.content_url)
+                              }
+                              activeOpacity={0.9}
+                              style={styles.mediaContainer}
                             >
-                              <Ionicons
-                                name={
-                                  myVote === nominee.id
-                                    ? "checkmark"
-                                    : "heart-outline"
-                                }
-                                size={16}
-                                color={
-                                  myVote === nominee.id
-                                    ? theme.colors.onPrimary
-                                    : theme.colors.outline
-                                }
+                              <NomineeVideoThumbnail
+                                uri={nominee.content_url}
                               />
-                              <Text
-                                style={{
-                                  marginLeft: 6,
-                                  fontWeight: "600",
-                                  color:
-                                    myVote === nominee.id
-                                      ? theme.colors.onPrimary
-                                      : theme.colors.outline,
-                                }}
-                              >
-                                {myVote === nominee.id ? "Votado" : "Votar"}
-                              </Text>
                             </TouchableOpacity>
-                          );
-                        })()}
-
-                      {/* Persistent Vote Indicator (when not voting) */}
-                      {award.status !== "voting" && myVote === nominee.id && (
-                        <View
-                          style={{
-                            flexDirection: "row",
-                            alignItems: "center",
-                            backgroundColor: isWinner
-                              ? "#FFD70025"
-                              : theme.colors.primaryContainer,
-                            paddingHorizontal: 12,
-                            paddingVertical: 6,
-                            borderRadius: 20,
-                            borderWidth: 1,
-                            borderColor: isWinner
-                              ? "#FFD700"
-                              : theme.colors.primary,
-                          }}
-                        >
-                          <Ionicons
-                            name="checkmark-circle"
-                            size={16}
-                            color={
-                              isWinner ? "#B8860B" : theme.colors.onSurface
-                            }
-                          />
-                          <Text
-                            variant="labelSmall"
-                            style={{
-                              color: isWinner
-                                ? "#B8860B"
-                                : theme.colors.onSurface,
-                              marginLeft: 6,
-                              fontWeight: "700",
-                            }}
-                          >
-                            Tu voto
-                          </Text>
+                          ) : award.vote_type === "audio" ? (
+                            <TouchableOpacity
+                              onPress={() =>
+                                setSelectedImage(nominee.content_url)
+                              }
+                              activeOpacity={0.9}
+                            >
+                              <NomineeAudioPlayer
+                                uri={nominee.content_url}
+                                title={nominee.nomination_reason || "Audio"}
+                              />
+                            </TouchableOpacity>
+                          ) : award.vote_type === "text" ? (
+                            <NomineeTextCard text={nominee.content_url} />
+                          ) : (
+                            <TouchableOpacity
+                              onPress={() =>
+                                setSelectedImage(nominee.content_url)
+                              }
+                              activeOpacity={0.9}
+                              style={styles.mediaContainer}
+                            >
+                              <Image
+                                source={{ uri: nominee.content_url }}
+                                style={styles.nomineeImage}
+                                contentFit="cover"
+                              />
+                            </TouchableOpacity>
+                          )}
                         </View>
                       )}
-
-                      {/* Vote Count (when revealed) */}
-                      {award.is_revealed && (
-                        <View
-                          style={{
-                            flexDirection: "row",
-                            alignItems: "center",
-                            backgroundColor: theme.colors.surfaceVariant,
-                            paddingHorizontal: 10,
-                            paddingVertical: 6,
-                            borderRadius: 20,
-                            marginLeft: 8,
-                          }}
-                        >
-                          <Text
-                            variant="labelSmall"
-                            style={{
-                              color: theme.colors.onSurfaceVariant,
-                              fontWeight: "700",
-                            }}
-                          >
-                            {nominee.vote_count}{" "}
-                            {nominee.vote_count === 1 ? "voto" : "votos"}
-                          </Text>
-                        </View>
-                      )}
-
-                      {/* Delete Button (Draft Mode) */}
-                      {isAdmin &&
-                        award.status === "draft" &&
-                        award.vote_type !== "person" && (
-                          <TouchableOpacity
-                            onPress={() => handleDeleteNomination(nominee.id)}
-                            style={{ padding: 8 }}
-                          >
-                            <Ionicons
-                              name="trash-outline"
-                              size={20}
-                              color={theme.colors.error}
-                            />
-                          </TouchableOpacity>
-                        )}
-                    </View>
-
-                    {/* Content Display */}
-                    {nominee.content_url && (
-                      <View style={styles.nomineeContentWrapper}>
-                        {award.vote_type === "video" ? (
-                          <TouchableOpacity
-                            onPress={() =>
-                              setSelectedImage(nominee.content_url)
-                            }
-                            activeOpacity={0.9}
-                            style={styles.mediaContainer}
-                          >
-                            <NomineeVideoThumbnail uri={nominee.content_url} />
-                          </TouchableOpacity>
-                        ) : award.vote_type === "audio" ? (
-                          <TouchableOpacity
-                            onPress={() =>
-                              setSelectedImage(nominee.content_url)
-                            }
-                            activeOpacity={0.9}
-                          >
-                            <NomineeAudioPlayer
-                              uri={nominee.content_url}
-                              title={nominee.nomination_reason || "Audio"}
-                            />
-                          </TouchableOpacity>
-                        ) : award.vote_type === "text" ? (
-                          <NomineeTextCard text={nominee.content_url} />
-                        ) : (
-                          <TouchableOpacity
-                            onPress={() =>
-                              setSelectedImage(nominee.content_url)
-                            }
-                            activeOpacity={0.9}
-                            style={styles.mediaContainer}
-                          >
-                            <Image
-                              source={{ uri: nominee.content_url }}
-                              style={styles.nomineeImage}
-                              contentFit="cover"
-                            />
-                          </TouchableOpacity>
-                        )}
-                      </View>
-                    )}
                     </SquircleView>
                   </ReanimatedAnimated.View>
                 );
@@ -1315,7 +1280,6 @@ export default function AwardDetailScreen() {
             </View>
           </ReanimatedAnimated.View>
 
-          {/* ─── Admin Actions ─── */}
           {isAdmin && (
             <ReanimatedAnimated.View
               entering={FadeInDown.duration(350).delay(180)}
@@ -1498,8 +1462,7 @@ export default function AwardDetailScreen() {
                                 styles.adminButtonTitle,
                                 {
                                   color:
-                                    action.titleColor ??
-                                    theme.colors.onSurface,
+                                    action.titleColor ?? theme.colors.onSurface,
                                 },
                               ]}
                             >
@@ -1540,7 +1503,6 @@ export default function AwardDetailScreen() {
         </ScrollView>
       </BlurTargetView>
 
-      {/* Start Voting Modal - ConfirmDialog Style */}
       <StartVotingModal
         visible={showStartVotingModal}
         onClose={() => setShowStartVotingModal(false)}
@@ -1577,7 +1539,6 @@ export default function AwardDetailScreen() {
         </View>
       </Modal>
 
-      {/* Text Nomination Modal - ConfirmDialog Style */}
       <TextNominationModal
         visible={showTextModal}
         onClose={() => setShowTextModal(false)}
@@ -1625,9 +1586,6 @@ export default function AwardDetailScreen() {
   );
 }
 
-// ==========================================
-// START VOTING MODAL - ConfirmDialog Style
-// ==========================================
 interface StartVotingModalProps {
   visible: boolean;
   onClose: () => void;
@@ -1653,16 +1611,13 @@ function StartVotingModal({
   const translateYAnim = useRef(new Animated.Value(40)).current;
   const [shouldRender, setShouldRender] = useState(visible);
 
-  // Local state for deadline settings - prevents parent re-renders
   const [deadlineMode, setDeadlineMode] = useState<
     "24h" | "48h" | "1w" | "custom"
   >("24h");
 
-  // Use refs for uncontrolled inputs to avoid re-renders while typing
   const dateRef = useRef("");
   const timeRef = useRef("");
 
-  // Reset state when modal opens
   useEffect(() => {
     if (visible) {
       setDeadlineMode("24h");
@@ -1727,7 +1682,6 @@ function StartVotingModal({
   return (
     <Portal>
       <View style={modalStyles.container}>
-        {/* Backdrop with Blur */}
         <Pressable style={modalStyles.backdrop} onPress={onClose}>
           <Animated.View
             style={[StyleSheet.absoluteFill, { opacity: opacityAnim }]}
@@ -1742,7 +1696,6 @@ function StartVotingModal({
           </Animated.View>
         </Pressable>
 
-        {/* Dialog */}
         <Animated.View
           style={[
             modalStyles.dialogContainer,
@@ -1754,7 +1707,6 @@ function StartVotingModal({
             },
           ]}
         >
-          {/* Icon */}
           <View
             style={[
               modalStyles.iconContainer,
@@ -1771,7 +1723,6 @@ function StartVotingModal({
             />
           </View>
 
-          {/* Title */}
           <Text
             variant="titleLarge"
             style={[modalStyles.title, { color: theme.colors.onSurface }]}
@@ -1779,7 +1730,6 @@ function StartVotingModal({
             Iniciar Votación
           </Text>
 
-          {/* Message */}
           <Text
             variant="bodyMedium"
             style={[
@@ -1792,7 +1742,6 @@ function StartVotingModal({
               : "Necesitas más nominados para iniciar"}
           </Text>
 
-          {/* Validation Warning */}
           {award && award.nominees.length < 2 && (
             <View
               style={[
@@ -1825,7 +1774,6 @@ function StartVotingModal({
             </View>
           )}
 
-          {/* Duration Options */}
           {canStart && (
             <>
               <Text
@@ -1981,7 +1929,6 @@ function StartVotingModal({
             </>
           )}
 
-          {/* Actions */}
           <View style={modalStyles.actions}>
             <TouchableOpacity
               style={[
@@ -2037,9 +1984,6 @@ function StartVotingModal({
   );
 }
 
-// ==========================================
-// TEXT NOMINATION MODAL - ConfirmDialog Style
-// ==========================================
 interface TextNominationModalProps {
   visible: boolean;
   onClose: () => void;
@@ -2061,11 +2005,9 @@ function TextNominationModal({
   const translateYAnim = useRef(new Animated.Value(40)).current;
   const [shouldRender, setShouldRender] = useState(visible);
 
-  // Uncontrolled input to prevent double-typing/cursor jumps
   const textRef = useRef("");
   const [charCount, setCharCount] = useState(0);
 
-  // Reset text when modal opens
   useEffect(() => {
     if (visible) {
       textRef.current = "";
@@ -2129,7 +2071,6 @@ function TextNominationModal({
   return (
     <Portal>
       <View style={modalStyles.container}>
-        {/* Backdrop with Blur */}
         <Pressable style={modalStyles.backdrop} onPress={onClose}>
           <Animated.View
             style={[StyleSheet.absoluteFill, { opacity: opacityAnim }]}
@@ -2144,7 +2085,6 @@ function TextNominationModal({
           </Animated.View>
         </Pressable>
 
-        {/* Dialog */}
         <Animated.View
           style={[
             modalStyles.dialogContainer,
@@ -2156,7 +2096,6 @@ function TextNominationModal({
             },
           ]}
         >
-          {/* Icon */}
           <View
             style={[
               modalStyles.iconContainer,
@@ -2173,7 +2112,6 @@ function TextNominationModal({
             />
           </View>
 
-          {/* Title */}
           <Text
             variant="titleLarge"
             style={[modalStyles.title, { color: theme.colors.onSurface }]}
@@ -2181,7 +2119,6 @@ function TextNominationModal({
             Tu Nominación
           </Text>
 
-          {/* Message */}
           <Text
             variant="bodyMedium"
             style={[
@@ -2192,7 +2129,6 @@ function TextNominationModal({
             Escribe el texto que quieres nominar
           </Text>
 
-          {/* Text Input */}
           <View style={{ width: "100%", marginBottom: 20 }}>
             <View
               style={{
@@ -2200,7 +2136,7 @@ function TextNominationModal({
                 borderColor: theme.colors.outline,
                 borderRadius: 14,
                 backgroundColor: theme.colors.surface,
-                minHeight: 120, // Slightly taller for better UX
+                minHeight: 120,
                 paddingHorizontal: 16,
                 paddingVertical: 12,
               }}
@@ -2217,7 +2153,7 @@ function TextNominationModal({
                 style={{
                   color: theme.colors.onSurface,
                   fontSize: 16,
-                  textAlignVertical: "top", // Important for Android multiline
+                  textAlignVertical: "top",
                   flex: 1,
                 }}
               />
@@ -2234,7 +2170,6 @@ function TextNominationModal({
             </Text>
           </View>
 
-          {/* Actions */}
           <View style={modalStyles.actions}>
             <TouchableOpacity
               style={[
@@ -2309,9 +2244,6 @@ function TextNominationModal({
   );
 }
 
-// ==========================================
-// AUDIO TITLE MODAL - ConfirmDialog Style
-// ==========================================
 interface AudioTitleModalProps {
   visible: boolean;
   onClose: () => void;
@@ -2335,11 +2267,9 @@ function AudioTitleModal({
   const translateYAnim = useRef(new Animated.Value(40)).current;
   const [shouldRender, setShouldRender] = useState(visible);
 
-  // Uncontrolled input pattern
   const titleRef = useRef("");
   const [hasText, setHasText] = useState(false);
 
-  // Reset title when modal opens
   useEffect(() => {
     if (visible) {
       titleRef.current = "";
@@ -2403,7 +2333,6 @@ function AudioTitleModal({
   return (
     <Portal>
       <View style={modalStyles.container}>
-        {/* Backdrop with Blur */}
         <Pressable style={modalStyles.backdrop} onPress={onClose}>
           <Animated.View
             style={[StyleSheet.absoluteFill, { opacity: opacityAnim }]}
@@ -2418,7 +2347,6 @@ function AudioTitleModal({
           </Animated.View>
         </Pressable>
 
-        {/* Dialog */}
         <Animated.View
           style={[
             modalStyles.dialogContainer,
@@ -2430,7 +2358,6 @@ function AudioTitleModal({
             },
           ]}
         >
-          {/* Icon */}
           <View
             style={[
               modalStyles.iconContainer,
@@ -2447,7 +2374,6 @@ function AudioTitleModal({
             />
           </View>
 
-          {/* Title */}
           <Text
             variant="titleLarge"
             style={[modalStyles.title, { color: theme.colors.onSurface }]}
@@ -2455,7 +2381,6 @@ function AudioTitleModal({
             Título del Audio
           </Text>
 
-          {/* File name info */}
           <View
             style={{
               flexDirection: "row",
@@ -2481,7 +2406,6 @@ function AudioTitleModal({
             </Text>
           </View>
 
-          {/* Text Input */}
           <View style={{ width: "100%", marginBottom: 20 }}>
             <View
               style={{
@@ -2490,7 +2414,7 @@ function AudioTitleModal({
                 borderRadius: 14,
                 backgroundColor: theme.colors.surface,
                 paddingHorizontal: 12,
-                height: 56, // Standard height
+                height: 56,
                 flexDirection: "row",
                 alignItems: "center",
               }}
@@ -2518,7 +2442,6 @@ function AudioTitleModal({
             </View>
           </View>
 
-          {/* Actions */}
           <View style={modalStyles.actions}>
             <TouchableOpacity
               style={[
@@ -2593,7 +2516,6 @@ function AudioTitleModal({
   );
 }
 
-// Modal Styles (shared between both modals)
 const modalStyles = StyleSheet.create({
   container: {
     ...StyleSheet.absoluteFillObject,
@@ -2691,7 +2613,6 @@ const modalStyles = StyleSheet.create({
   },
 });
 
-// Video Helper Components
 function NomineeVideoThumbnail({ uri }: { uri: string }) {
   const player = useVideoPlayer(uri, (player) => {
     player.muted = true;
@@ -2759,7 +2680,6 @@ function NomineeAudioPlayer({ uri, title }: { uri: string; title?: string }) {
           padding: 16,
         }}
       >
-        {/* Play Button with premium style */}
         <View
           style={{
             width: 56,
@@ -2780,7 +2700,6 @@ function NomineeAudioPlayer({ uri, title }: { uri: string; title?: string }) {
           />
         </View>
 
-        {/* Title & Waveform */}
         <View style={{ flex: 1, marginLeft: 14 }}>
           <Text
             style={{
@@ -2795,7 +2714,6 @@ function NomineeAudioPlayer({ uri, title }: { uri: string; title?: string }) {
             {title || "Audio"}
           </Text>
 
-          {/* Waveform bars with theme color */}
           <View
             style={{
               flexDirection: "row",
@@ -2821,7 +2739,6 @@ function NomineeAudioPlayer({ uri, title }: { uri: string; title?: string }) {
           </View>
         </View>
 
-        {/* Music note indicator */}
         <View
           style={{
             width: 36,
@@ -2918,7 +2835,6 @@ function NomineeTextCard({ text }: { text: string }) {
       }}
       elevation={0}
     >
-      {/* Quote icon decorator */}
       <View
         style={{
           position: "absolute",
@@ -2942,7 +2858,6 @@ function NomineeTextCard({ text }: { text: string }) {
         />
       </View>
 
-      {/* Text content */}
       <View
         style={{ paddingTop: 56, paddingHorizontal: 16, paddingBottom: 16 }}
       >
@@ -3004,7 +2919,6 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
 
-  // ─── Title ─────────────────────────────────────────────────────────
   titleBlock: { marginTop: 4, marginBottom: 4 },
   screenTitle: {
     fontFamily: "InstrumentSerif-Italic",
@@ -3021,7 +2935,6 @@ const styles = StyleSheet.create({
   },
   divider: { height: 1, marginTop: 16, marginBottom: 20 },
 
-  // ─── Section ───────────────────────────────────────────────────────
   section: { marginBottom: 24 },
   sectionTitleRow: {
     flexDirection: "row",
@@ -3048,7 +2961,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
 
-  // ─── Status Card ───────────────────────────────────────────────────
   statusCard: {
     borderRadius: 22,
     paddingHorizontal: 16,
@@ -3110,7 +3022,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  // ─── Manage Button ─────────────────────────────────────────────────
   manageButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -3127,7 +3038,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
 
-  // ─── Nominees ──────────────────────────────────────────────────────
   nomineesList: { gap: 10 },
   nomineeCard: {
     borderRadius: 20,
@@ -3185,7 +3095,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#f0f0f0",
   },
 
-  // ─── Admin ─────────────────────────────────────────────────────────
   adminCard: {
     borderRadius: 20,
     overflow: "hidden",

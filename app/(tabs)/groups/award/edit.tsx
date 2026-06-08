@@ -1,3 +1,7 @@
+/**
+ * Editar premio
+ * Modifica título, destinatario, medios y datos de un premio existente.
+ */
 import { Ionicons } from "@expo/vector-icons";
 import { BlurTargetView } from "expo-blur";
 import * as Haptics from "expo-haptics";
@@ -97,8 +101,7 @@ export default function EditAwardScreen() {
             setAllowVoteChange(data.voting_settings.allow_vote_change || false);
           }
         }
-      } catch (error) {
-        console.error(error);
+      } catch {
         showSnackbar("Error al cargar el premio", "error");
       } finally {
         setLoading(false);
@@ -284,7 +287,6 @@ export default function EditAwardScreen() {
               ]}
             />
 
-            {/* ─── Preview Card ─── */}
             <Animated.View
               entering={FadeInDown.duration(300).delay(80)}
               style={styles.section}
@@ -364,7 +366,6 @@ export default function EditAwardScreen() {
               </SquircleView>
             </Animated.View>
 
-            {/* ─── Name ─── */}
             <Animated.View
               entering={FadeInDown.duration(300).delay(120)}
               style={styles.section}
@@ -378,7 +379,6 @@ export default function EditAwardScreen() {
               />
             </Animated.View>
 
-            {/* ─── Description ─── */}
             <Animated.View
               entering={FadeInDown.duration(300).delay(160)}
               style={styles.section}
@@ -393,7 +393,6 @@ export default function EditAwardScreen() {
               />
             </Animated.View>
 
-            {/* ─── Icon ─── */}
             <Animated.View
               entering={FadeInDown.duration(300).delay(200)}
               style={styles.section}
@@ -408,7 +407,6 @@ export default function EditAwardScreen() {
               />
             </Animated.View>
 
-            {/* ─── Voting Settings ─── */}
             <Animated.View
               entering={FadeInDown.duration(300).delay(240)}
               style={styles.section}
@@ -471,7 +469,6 @@ export default function EditAwardScreen() {
             </Animated.View>
           </ScrollView>
 
-          {/* ─── Footer CTA ─── */}
           <Animated.View
             entering={FadeIn.duration(400).delay(280)}
             style={[

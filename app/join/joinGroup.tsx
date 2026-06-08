@@ -1,3 +1,7 @@
+/**
+ * Entrada manual de código de invitación
+ * Permite introducir un código para unirse a un grupo privado.
+ */
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useRef, useState } from "react";
@@ -93,7 +97,6 @@ export default function JoinGroupInputScreen() {
               entering={FadeInDown.duration(200).delay(200)}
               style={styles.form}
             >
-              {/* Contenedor relativo para el truco del Input superpuesto */}
               <View style={styles.codeContainer}>
                 {Array(CODE_LENGTH)
                   .fill(0)
@@ -136,7 +139,6 @@ export default function JoinGroupInputScreen() {
                     );
                   })}
 
-                {/* Input invisible que cubre exactamente todos los cuadrados */}
                 <RNTextInput
                   ref={inputRef}
                   value={code}
@@ -161,7 +163,6 @@ export default function JoinGroupInputScreen() {
                 />
               </View>
 
-              {/* CTA Section */}
               <Pressable
                 onPress={handleContinue}
                 disabled={code.length !== CODE_LENGTH}

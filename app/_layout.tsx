@@ -1,3 +1,7 @@
+/**
+ * Layout raíz de la aplicación
+ * Configura fuentes, temas y la navegación de la app.
+ */
 import {
   DarkTheme as NavigationDarkTheme,
   DefaultTheme as NavigationDefaultTheme,
@@ -22,13 +26,12 @@ import { SnackbarProvider } from "@/components/ui/SnackbarContext";
 import { customColors, customColorsDark } from "@/constants/Colors";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 
-// Prevent the splash screen from auto-hiding before asset loading is complete.
+// Mantener splash hasta cargar fuentes y assets
 SplashScreen.preventAutoHideAsync();
 
 const fontConfig = {
   fontFamily: "Archivo-Regular",
 };
-
 
 function RootLayoutNav({ paperTheme, navigationTheme, colorScheme }: any) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -76,7 +79,6 @@ function RootLayoutNav({ paperTheme, navigationTheme, colorScheme }: any) {
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const [loaded] = useFonts({
-    // Archivo
     "Archivo-Black": require("../assets/fonts/Archivo/Archivo-Black.otf"),
     "Archivo-BlackItalic": require("../assets/fonts/Archivo/Archivo-BlackItalic.otf"),
     "Archivo-Bold": require("../assets/fonts/Archivo/Archivo-Bold.otf"),
@@ -95,16 +97,12 @@ export default function RootLayout() {
     "Archivo-SemiBoldItalic": require("../assets/fonts/Archivo/Archivo-SemiBoldItalic.otf"),
     "Archivo-Thin": require("../assets/fonts/Archivo/Archivo-Thin.otf"),
     "Archivo-ThinItalic": require("../assets/fonts/Archivo/Archivo-ThinItalic.otf"),
-
-    // Clash Display
     "ClashDisplay-Bold": require("../assets/fonts/ClashDisplay/ClashDisplay-Bold.otf"),
     "ClashDisplay-Extralight": require("../assets/fonts/ClashDisplay/ClashDisplay-Extralight.otf"),
     "ClashDisplay-Light": require("../assets/fonts/ClashDisplay/ClashDisplay-Light.otf"),
     "ClashDisplay-Medium": require("../assets/fonts/ClashDisplay/ClashDisplay-Medium.otf"),
     "ClashDisplay-Regular": require("../assets/fonts/ClashDisplay/ClashDisplay-Regular.otf"),
     "ClashDisplay-Semibold": require("../assets/fonts/ClashDisplay/ClashDisplay-Semibold.otf"),
-
-    // Other
     "InstrumentSerif-Italic": require("../assets/fonts/other/InstrumentSerif-Italic.ttf"),
   });
 
@@ -127,7 +125,7 @@ export default function RootLayout() {
           colors: { ...MD3LightTheme.colors, ...customColors },
         };
 
-  // React Navigation theme (controls transition backgrounds)
+  // Tema de navegación: fondo de transiciones entre pantallas
   const navigationTheme =
     colorScheme === "dark"
       ? {
@@ -136,7 +134,7 @@ export default function RootLayout() {
             ...NavigationDarkTheme.colors,
             primary: customColorsDark.primary,
             background: customColorsDark.background,
-            card: customColorsDark.background, // Same as background for consistent transitions
+            card: customColorsDark.background,
             text: customColorsDark.onSurface,
             border: customColorsDark.outline,
             notification: customColorsDark.primary,
@@ -148,7 +146,7 @@ export default function RootLayout() {
             ...NavigationDefaultTheme.colors,
             primary: customColors.primary,
             background: customColors.background,
-            card: customColors.background, // Same as background for consistent transitions
+            card: customColors.background,
             text: customColors.onSurface,
             border: customColors.outline,
             notification: customColors.primary,

@@ -1,10 +1,11 @@
+/**
+ * Menú de opciones
+ * Bottom sheet con acciones contextuales e iconos por item.
+ */
+
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
-import {
-  StyleSheet,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { StyleSheet, TouchableOpacity, View } from "react-native";
 import { Text, useTheme } from "react-native-paper";
 import { BottomSheetModal } from "./BottomSheetModal";
 

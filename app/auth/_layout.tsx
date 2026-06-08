@@ -1,3 +1,7 @@
+/**
+ * Layout de autenticación
+ * Stack de navegación para las pantallas de inicio de sesión y registro.
+ */
 import { Stack } from "expo-router";
 import { useTheme } from "react-native-paper";
 
@@ -33,7 +37,7 @@ export default function AuthLayout() {
         name="register"
         options={{
           title: "",
-          headerShown: false, // Hide header for consistency
+          headerShown: false,
         }}
       />
     </Stack>

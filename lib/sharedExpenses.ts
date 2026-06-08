@@ -1,3 +1,8 @@
+/**
+ * Lógica de gastos compartidos
+ * Cálculo de saldos netos y simplificación de deudas entre miembros del grupo.
+ */
+
 import { SharedExpenseWithDetails, SharedExpenseSettlement } from '../types/database';
 
 export interface MemberBalance {
@@ -13,11 +18,6 @@ export interface DebtTransfer {
   amountCents: number;
 }
 
-/**
- * Computes the net balance for each member involved in the expenses.
- * Positive = the group owes them money (overpaid).
- * Negative = they owe the group money (underpaid).
- */
 export function computeBalances(
   expenses: SharedExpenseWithDetails[],
   settlements: SharedExpenseSettlement[]
@@ -46,7 +46,6 @@ export function computeBalances(
     for (let i = 0; i < expense.splits.length; i++) {
       const split = expense.splits[i];
       const member = getOrCreate(split.user_id);
-      // First `remainder` participants pay 1 extra cent (payer gets priority to absorb remainder)
       const share = perPerson + (i < remainder ? 1 : 0);
       member.totalOwed += share;
     }
@@ -67,9 +66,6 @@ export function computeBalances(
   return balances;
 }
 
-/**
- * Greedy algorithm to compute the minimum number of transfers to settle all debts.
- */
 export function simplifyDebts(balances: Map<string, MemberBalance>): DebtTransfer[] {
   const creditors: { userId: string; amount: number }[] = [];
   const debtors: { userId: string; amount: number }[] = [];

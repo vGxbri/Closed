@@ -1,4 +1,11 @@
+/**
+ * Registro de cuenta
+ * Formulario para crear una cuenta nueva y acceder a la app.
+ */
+import { GrainyGradient } from "@/components/premade/organisms/grainy-gradient";
 import { CTAButton } from "@/components/ui/CTAButton";
+import { useSnackbar } from "@/components/ui/SnackbarContext";
+import { useAuth } from "@/hooks";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
@@ -8,15 +15,12 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import SquircleView from "react-native-fast-squircle";
 import { HelperText, Text, TextInput, useTheme } from "react-native-paper";
 import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { GrainyGradient } from "@/components/premade/organisms/grainy-gradient";
-import { useSnackbar } from "@/components/ui/SnackbarContext";
-import { useAuth } from "@/hooks";
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -96,7 +100,6 @@ export default function RegisterScreen() {
     <View
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
-      {/* Background decoration */}
       <Animated.View
         entering={FadeInUp.duration(600)}
         style={styles.backgroundContainer}
@@ -125,7 +128,6 @@ export default function RegisterScreen() {
             bounces={false}
             overScrollMode="never"
           >
-            {/* Header Section */}
             <Animated.View
               entering={FadeInUp.duration(600)}
               style={styles.header}
@@ -170,7 +172,6 @@ export default function RegisterScreen() {
               </Text>
             </Animated.View>
 
-            {/* Form Section */}
             <Animated.View
               entering={FadeInDown.duration(600).delay(200)}
               style={styles.form}
@@ -275,7 +276,6 @@ export default function RegisterScreen() {
                 )}
               </View>
 
-              {/* Register CTA Button */}
               <CTAButton
                 title="Crear Cuenta"
                 loadingText="Creando..."
@@ -286,7 +286,6 @@ export default function RegisterScreen() {
               />
             </Animated.View>
 
-            {/* Footer Section */}
             <Animated.View
               entering={FadeInDown.duration(600).delay(400)}
               style={styles.footer}

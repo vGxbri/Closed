@@ -1,3 +1,7 @@
+/**
+ * Widget Calendario del grupo
+ * Vista de eventos y acceso a crear o abrir detalles de cada uno.
+ */
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { BlurTargetView } from "expo-blur";
@@ -33,9 +37,9 @@ import { UserAvatar } from "@/components/ui/UserAvatar";
 import { useAuth, useGroup } from "@/hooks";
 import {
   buildCalendarMonthLayout,
-  CalendarWeekBar,
   CALENDAR_EVENT_MARKER_GAP,
   CALENDAR_EVENT_MARKER_SIZE,
+  CalendarWeekBar,
   getMondayBasedOffset,
 } from "@/lib/calendarMonthLayout";
 import { getEventScheduleCompact } from "@/lib/eventSchedule";
@@ -46,7 +50,6 @@ import {
   GalleryImageWithUser,
 } from "@/types/database";
 
-// ─── Constants ──────────────────────────────────────────────────────────
 const DAYS_ES = ["L", "M", "X", "J", "V", "S", "D"];
 const MONTHS_ES = [
   "Enero",
@@ -70,14 +73,11 @@ const RSVP_ICONS: Record<string, { icon: string; color: string }> = {
   maybe: { icon: "help-circle", color: "#6366F1" },
 };
 
-// ─── Continuous multi-day bar overlayed on a week row ──────────────────
 const MARKER_STEP = CALENDAR_EVENT_MARKER_SIZE + CALENDAR_EVENT_MARKER_GAP;
 const BASE_ROW_HEIGHT = 46;
 
 const WeekEventBar = React.memo<{ bar: CalendarWeekBar }>(({ bar }) => {
-  const leftFrac = bar.roundLeft
-    ? (bar.startCol + 0.5) / 7
-    : bar.startCol / 7;
+  const leftFrac = bar.roundLeft ? (bar.startCol + 0.5) / 7 : bar.startCol / 7;
   const rightFrac = bar.roundRight
     ? (bar.endCol + 0.5) / 7
     : (bar.endCol + 1) / 7;
@@ -104,10 +104,9 @@ const WeekEventBar = React.memo<{ bar: CalendarWeekBar }>(({ bar }) => {
 });
 WeekEventBar.displayName = "WeekEventBar";
 
-// ─── Calendar Grid ──────────────────────────────────────────────────────
 interface CalendarGridProps {
   year: number;
-  month: number; // 0-indexed
+  month: number;
   selectedDate: Date;
   singleDayDots: Map<number, string[]>;
   weekBarsByRow: Map<number, CalendarWeekBar[]>;
@@ -162,7 +161,6 @@ const CalendarGrid = React.memo<CalendarGridProps>(
 
     return (
       <View style={styles.calendarGrid}>
-        {/* Day headers */}
         <View style={styles.dayHeaderRow}>
           {DAYS_ES.map((d) => (
             <View key={d} style={styles.dayHeaderCell}>
@@ -178,7 +176,6 @@ const CalendarGrid = React.memo<CalendarGridProps>(
           ))}
         </View>
 
-        {/* Day cells — render row by row */}
         {Array.from({ length: Math.ceil(cells.length / 7) }).map(
           (_, rowIdx) => {
             const rowCells = cells.slice(rowIdx * 7, rowIdx * 7 + 7);
@@ -197,10 +194,7 @@ const CalendarGrid = React.memo<CalendarGridProps>(
             const dotBottom = 2 + laneCount * MARKER_STEP;
 
             return (
-              <View
-                key={rowIdx}
-                style={[styles.dayRow, { height: rowHeight }]}
-              >
+              <View key={rowIdx} style={[styles.dayRow, { height: rowHeight }]}>
                 {rowCells.map((day, colIdx) => {
                   if (day === null) {
                     return (
@@ -256,18 +250,12 @@ const CalendarGrid = React.memo<CalendarGridProps>(
 
                       {colors.length > 0 && (
                         <View
-                          style={[
-                            styles.dotRowAbsolute,
-                            { bottom: dotBottom },
-                          ]}
+                          style={[styles.dotRowAbsolute, { bottom: dotBottom }]}
                         >
                           {colors.slice(0, 3).map((c, i) => (
                             <View
                               key={i}
-                              style={[
-                                styles.eventDot,
-                                { backgroundColor: c },
-                              ]}
+                              style={[styles.eventDot, { backgroundColor: c }]}
                             />
                           ))}
                         </View>
@@ -277,10 +265,7 @@ const CalendarGrid = React.memo<CalendarGridProps>(
                 })}
 
                 {rowBars.length > 0 && (
-                  <View
-                    style={StyleSheet.absoluteFill}
-                    pointerEvents="none"
-                  >
+                  <View style={StyleSheet.absoluteFill} pointerEvents="none">
                     {rowBars.map((bar) => (
                       <WeekEventBar
                         key={`${bar.eventId}-${bar.lane}-${bar.startCol}`}
@@ -300,7 +285,6 @@ const CalendarGrid = React.memo<CalendarGridProps>(
 
 CalendarGrid.displayName = "CalendarGrid";
 
-// ─── Event Card ─────────────────────────────────────────────────────────
 interface EventCardProps {
   event: CalendarEventWithDetails;
   index: number;
@@ -310,10 +294,7 @@ interface EventCardProps {
 const EventCard = React.memo<EventCardProps>(({ event, index, onPress }) => {
   const theme = useTheme();
 
-  const timeLabel = useMemo(
-    () => getEventScheduleCompact(event),
-    [event],
-  );
+  const timeLabel = useMemo(() => getEventScheduleCompact(event), [event]);
 
   const acceptedCount = useMemo(
     () => event.participants.filter((p) => p.status === "accepted").length,
@@ -345,13 +326,11 @@ const EventCard = React.memo<EventCardProps>(({ event, index, onPress }) => {
           ]}
           cornerSmoothing={1}
         >
-          {/* Color accent bar */}
           <View
             style={[styles.eventColorBar, { backgroundColor: event.color }]}
           />
 
           <View style={styles.eventCardBody}>
-            {/* Top row: icon + title + time */}
             <View style={styles.eventTopRow}>
               <Ionicons name="calendar" size={24} color={event.color} />
               <View style={styles.eventTitleBlock}>
@@ -372,9 +351,7 @@ const EventCard = React.memo<EventCardProps>(({ event, index, onPress }) => {
               </View>
             </View>
 
-            {/* Bottom row: participants + location + photos */}
             <View style={styles.eventBottomRow}>
-              {/* Participants */}
               {event.participants.length > 0 && (
                 <View style={styles.eventChip}>
                   <View style={styles.miniAvatarRow}>
@@ -406,7 +383,6 @@ const EventCard = React.memo<EventCardProps>(({ event, index, onPress }) => {
                 </View>
               )}
 
-              {/* Location */}
               {event.location && (
                 <View style={styles.eventChip}>
                   <Ionicons
@@ -426,7 +402,6 @@ const EventCard = React.memo<EventCardProps>(({ event, index, onPress }) => {
                 </View>
               )}
 
-              {/* Photos */}
               {event.gallery_count > 0 && (
                 <View style={styles.eventChip}>
                   <Ionicons
@@ -454,7 +429,6 @@ const EventCard = React.memo<EventCardProps>(({ event, index, onPress }) => {
 
 EventCard.displayName = "EventCard";
 
-// ─── Day Photos Row ─────────────────────────────────────────────────────
 interface DayPhotosRowProps {
   photos: GalleryImageWithUser[];
 }
@@ -509,12 +483,10 @@ const DayPhotosRow = React.memo<DayPhotosRowProps>(({ photos }) => {
 
 DayPhotosRow.displayName = "DayPhotosRow";
 
-// ─── Skeleton ───────────────────────────────────────────────────────────
 const CalendarSkeleton = React.memo(() => {
   const theme = useTheme();
   return (
     <Animated.View entering={FadeIn.duration(400)} style={styles.skeletonWrap}>
-      {/* Grid skeleton */}
       <SquircleView
         style={[
           styles.skeletonGrid,
@@ -526,7 +498,7 @@ const CalendarSkeleton = React.memo(() => {
         ]}
         cornerSmoothing={1}
       />
-      {/* Event skeletons */}
+
       {[0, 1].map((i) => (
         <SquircleView
           key={i}
@@ -547,7 +519,6 @@ const CalendarSkeleton = React.memo(() => {
 
 CalendarSkeleton.displayName = "CalendarSkeleton";
 
-// ─── Main Screen ────────────────────────────────────────────────────────
 export default function CalendarScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -573,7 +544,6 @@ export default function CalendarScreen() {
 
   const isFirstLoad = useRef(true);
 
-  // ─── Fetch events for current month ────────────────────────
   const fetchMonthEvents = useCallback(async () => {
     if (!id) return;
     try {
@@ -586,8 +556,7 @@ export default function CalendarScreen() {
         currentMonth,
       );
       setEvents(data);
-    } catch (error) {
-      console.error("Error loading calendar events:", error);
+    } catch {
       showSnackbar("Error al cargar los eventos", "error");
     } finally {
       setIsLoading(false);
@@ -599,15 +568,13 @@ export default function CalendarScreen() {
     fetchMonthEvents();
   }, [fetchMonthEvents]);
 
-  // ─── Fetch events for selected day (bottom list) ───────────
   const fetchDayEvents = useCallback(async () => {
     if (!id) return;
     try {
       setIsLoadingDayEvents(true);
       const data = await eventsService.getEventsForDate(id, selectedDate);
       setDayEvents(data);
-    } catch (error) {
-      console.error("Error loading day events:", error);
+    } catch {
       showSnackbar("Error al cargar los eventos del día", "error");
     } finally {
       setIsLoadingDayEvents(false);
@@ -618,19 +585,17 @@ export default function CalendarScreen() {
     fetchDayEvents();
   }, [fetchDayEvents]);
 
-  // ─── Fetch photos for selected day ─────────────────────────
   const fetchDayPhotos = useCallback(async () => {
     if (!id) return;
     try {
       setIsLoadingDay(true);
-      setDayPhotos([]); // Clear old photos to avoid flashes of previous selection
+      setDayPhotos([]);
       const photos = await eventsService.getGalleryImagesForDate(
         id,
         selectedDate,
       );
       setDayPhotos(photos);
-    } catch (error) {
-      console.error("Error loading day photos:", error);
+    } catch {
     } finally {
       setIsLoadingDay(false);
     }
@@ -679,7 +644,6 @@ export default function CalendarScreen() {
     [events, currentYear, currentMonth],
   );
 
-  // ─── Navigation ────────────────────────────────────────────
   const goToPreviousMonth = useCallback(() => {
     setEvents([]);
     setDayEvents([]);
@@ -692,7 +656,6 @@ export default function CalendarScreen() {
     setCurrentMonth(newMonth);
     setCurrentYear(newYear);
 
-    // Keep same day number but bound to the target month's total days
     const currentDay = selectedDate.getDate();
     const daysInNewMonth = new Date(newYear, newMonth + 1, 0).getDate();
     const targetDay = Math.min(currentDay, daysInNewMonth);
@@ -711,7 +674,6 @@ export default function CalendarScreen() {
     setCurrentMonth(newMonth);
     setCurrentYear(newYear);
 
-    // Keep same day number but bound to the target month's total days
     const currentDay = selectedDate.getDate();
     const daysInNewMonth = new Date(newYear, newMonth + 1, 0).getDate();
     const targetDay = Math.min(currentDay, daysInNewMonth);
@@ -734,7 +696,7 @@ export default function CalendarScreen() {
     if (!canCreateEvents) {
       showSnackbar(
         "Solo los administradores pueden crear eventos en este grupo",
-        "info"
+        "info",
       );
       return;
     }
@@ -754,7 +716,6 @@ export default function CalendarScreen() {
     [router, id],
   );
 
-  // ─── Selected day label ────────────────────────────────────
   const selectedDayLabel = useMemo(() => {
     const daysOfWeek = [
       "Domingo",
@@ -811,7 +772,6 @@ export default function CalendarScreen() {
           ]}
           showsVerticalScrollIndicator={false}
         >
-          {/* ─── Title ─── */}
           <Animated.View
             entering={FadeInUp.duration(500)}
             style={styles.titleBlock}
@@ -829,7 +789,6 @@ export default function CalendarScreen() {
             </Text>
           </Animated.View>
 
-          {/* ─── Divider ─── */}
           <Animated.View
             entering={FadeIn.duration(400).delay(50)}
             style={[
@@ -842,7 +801,6 @@ export default function CalendarScreen() {
             <CalendarSkeleton />
           ) : (
             <>
-              {/* ─── Month Navigator ─── */}
               <Animated.View
                 entering={FadeInDown.duration(400).delay(80)}
                 style={styles.monthNavigator}
@@ -883,7 +841,6 @@ export default function CalendarScreen() {
                 </TouchableOpacity>
               </Animated.View>
 
-              {/* ─── Calendar Grid ─── */}
               <Animated.View entering={FadeInDown.duration(400).delay(120)}>
                 <SquircleView
                   style={[
@@ -909,7 +866,6 @@ export default function CalendarScreen() {
                 </SquircleView>
               </Animated.View>
 
-              {/* ─── Selected Day Divider ─── */}
               <Animated.View
                 entering={FadeInDown.duration(300).delay(160)}
                 style={styles.dayDivider}
@@ -936,7 +892,6 @@ export default function CalendarScreen() {
                 />
               </Animated.View>
 
-              {/* ─── Events List ─── */}
               {isLoadingDayEvents ? (
                 <SquircleView
                   style={[
@@ -1010,7 +965,6 @@ export default function CalendarScreen() {
                 </Animated.View>
               )}
 
-              {/* ─── Day Photos ─── */}
               <DayPhotosRow photos={dayPhotos} />
             </>
           )}
@@ -1020,7 +974,6 @@ export default function CalendarScreen() {
   );
 }
 
-// ─── Styles ─────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -1033,7 +986,6 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
 
-  // Title
   titleBlock: {
     marginTop: 4,
     marginBottom: 4,
@@ -1056,7 +1008,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
 
-  // Add button
   addButton: {
     width: 36,
     height: 36,
@@ -1065,7 +1016,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  // Month Navigator
   monthNavigator: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -1079,7 +1029,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
 
-  // Calendar container
   calendarContainer: {
     borderRadius: 22,
     padding: 16,
@@ -1147,7 +1096,6 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
 
-  // Day divider
   dayDivider: {
     flexDirection: "row",
     alignItems: "center",
@@ -1164,7 +1112,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
 
-  // Events list
   eventsList: {
     gap: 10,
     marginBottom: 20,
@@ -1228,7 +1175,6 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
 
-  // Empty day
   emptyDay: {
     marginBottom: 20,
   },
@@ -1250,7 +1196,6 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 
-  // Day Photos
   photosSection: {
     marginBottom: 20,
   },
@@ -1279,7 +1224,6 @@ const styles = StyleSheet.create({
     height: 80,
   },
 
-  // Skeleton
   skeletonWrap: {
     gap: 12,
   },

@@ -1,19 +1,23 @@
-import React from 'react';
-import { StyleSheet, View, ViewStyle } from 'react-native';
-import { Colors } from '../../constants/Colors';
-import { theme } from '../../constants/theme';
+/**
+ * Tarjeta contenedora
+ */
+
+import React from "react";
+import { StyleSheet, View, ViewStyle } from "react-native";
+import { Colors } from "../../constants/Colors";
+import { theme } from "../../constants/theme";
 
 interface CardProps {
   children: React.ReactNode;
-  variant?: 'default' | 'elevated' | 'glass';
-  padding?: 'none' | 'sm' | 'md' | 'lg';
+  variant?: "default" | "elevated" | "glass";
+  padding?: "none" | "sm" | "md" | "lg";
   style?: ViewStyle;
 }
 
 export const Card: React.FC<CardProps> = ({
   children,
-  variant = 'default',
-  padding = 'md',
+  variant = "default",
+  padding = "md",
   style,
 }) => {
   const cardStyles: ViewStyle[] = [
@@ -29,10 +33,9 @@ export const Card: React.FC<CardProps> = ({
 const styles = StyleSheet.create({
   base: {
     borderRadius: theme.borderRadius.lg,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
-  
-  // Variants
+
   default: {
     backgroundColor: Colors.surface,
     ...theme.shadows.sm,
@@ -44,11 +47,10 @@ const styles = StyleSheet.create({
   glass: {
     backgroundColor: Colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: "rgba(255, 255, 255, 0.3)",
     ...theme.shadows.sm,
   },
-  
-  // Padding
+
   padding_none: {
     padding: 0,
   },

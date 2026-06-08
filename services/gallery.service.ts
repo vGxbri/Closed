@@ -1,3 +1,8 @@
+/**
+ * Servicio de galería grupal
+ * Subida y listado de imágenes compartidas en Supabase Storage.
+ */
+
 import { profileWithGroupMembersSelect, resolveMemberProfileForGroup } from '../lib/memberProfile';
 import { supabase } from '../lib/supabase';
 import { deleteMediaFromStorage, uploadMediaToStorage } from '../lib/storage';
@@ -30,9 +35,6 @@ const BUCKET = 'gallery';
 const PAGE_SIZE = 20;
 
 export const galleryService = {
-  /**
-   * Get paginated gallery media for a group
-   */
   async getGroupImages(
     groupId: string,
     page: number = 0
@@ -56,15 +58,12 @@ export const galleryService = {
     );
   },
 
-  /**
-   * Get a random media from a group's gallery (for widget preview)
-   */
   async getRandomPreviewImage(groupId: string): Promise<string | null> {
     const { count, error: countError } = await supabase
       .from('gallery_images')
       .select('*', { count: 'exact', head: true })
       .eq('group_id', groupId)
-      .eq('media_type', 'image'); // Prefer images for preview if possible
+      .eq('media_type', 'image');
 
     if (countError || !count || count === 0) return null;
 
@@ -83,15 +82,12 @@ export const galleryService = {
     return data.media_url;
   },
 
-  /**
-   * Get the latest image from a group's gallery (for widget preview)
-   */
   async getLatestImage(groupId: string): Promise<string | null> {
     const { data, error } = await supabase
       .from('gallery_images')
       .select('media_url')
       .eq('group_id', groupId)
-      .eq('media_type', 'image') // Preview normally shows images
+      .eq('media_type', 'image')
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -100,9 +96,6 @@ export const galleryService = {
     return data.media_url;
   },
 
-  /**
-   * Get the media count for a group
-   */
   async getImageCount(groupId: string): Promise<number> {
     const { count, error } = await supabase
       .from('gallery_images')
@@ -113,9 +106,6 @@ export const galleryService = {
     return count || 0;
   },
 
-  /**
-   * Upload a media file to the group gallery
-   */
   async uploadImage(
     groupId: string,
     uri: string,
@@ -133,7 +123,6 @@ export const galleryService = {
       uri,
     });
 
-    // Save metadata to DB
     const { data, error } = await supabase
       .from('gallery_images')
       .insert({
@@ -151,9 +140,6 @@ export const galleryService = {
     return data as GalleryImage;
   },
 
-  /**
-   * Upload multiple media files
-   */
   async uploadMultipleImages(
     groupId: string,
     uris: string[]
@@ -166,9 +152,6 @@ export const galleryService = {
     return results;
   },
 
-  /**
-   * Get total storage used by a group's gallery (in bytes)
-   */
   async getStorageUsed(groupId: string): Promise<number> {
     const { data, error } = await supabase
       .from('gallery_images')
@@ -179,9 +162,6 @@ export const galleryService = {
     return data.reduce((sum, row) => sum + (row.file_size || 0), 0);
   },
 
-  /**
-   * Delete a gallery media file
-   */
   async deleteImage(imageId: string, mediaUrl: string): Promise<void> {
     await deleteMediaFromStorage(BUCKET, mediaUrl);
 

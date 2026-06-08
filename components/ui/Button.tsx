@@ -1,3 +1,8 @@
+/**
+ * Botón
+ * Acción táctil con variantes, tamaños y estado de carga.
+ */
+
 import React from 'react';
 import {
     ActivityIndicator,
@@ -78,8 +83,6 @@ const styles = StyleSheet.create({
     gap: 8,
     borderRadius: theme.borderRadius.md,
   },
-  
-  // Variants
   primary: {
     backgroundColor: Colors.primary,
     ...theme.shadows.md,
@@ -92,8 +95,6 @@ const styles = StyleSheet.create({
   ghost: {
     backgroundColor: 'transparent',
   },
-  
-  // Sizes
   size_sm: {
     paddingVertical: 8,
     paddingHorizontal: 16,
@@ -106,13 +107,9 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
     paddingHorizontal: 32,
   },
-  
-  // Text base
   text: {
     fontWeight: '600',
   },
-  
-  // Text variants
   text_primary: {
     color: Colors.textOnPrimary,
   },
@@ -123,7 +120,6 @@ const styles = StyleSheet.create({
     color: Colors.primary,
   },
   
-  // Text sizes
   textSize_sm: {
     fontSize: 14,
   },
@@ -134,7 +130,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   
-  // Disabled
   disabled: {
     opacity: 0.5,
   },

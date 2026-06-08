@@ -1,12 +1,16 @@
+/**
+ * Filtro por categoría
+ * Chips horizontales para filtrar items del bucket list del grupo.
+ */
+
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet } from "react-native";
 import SquircleView from "react-native-fast-squircle";
 import { Text, useTheme } from "react-native-paper";
 
 import { BucketListCategory } from "../../types/database";
 
-// ─── Category definitions ───────────────────────────────────────────
 const CATEGORIES: {
   key: BucketListCategory | null;
   label: string;
@@ -20,13 +24,11 @@ const CATEGORIES: {
   { key: "other", label: "Ideas", icon: "bulb-outline" },
 ];
 
-// ─── Props ──────────────────────────────────────────────────────────
 interface CategoryFilterProps {
   activeCategory: BucketListCategory | null;
   onCategoryChange: (category: BucketListCategory | null) => void;
 }
 
-// ─── Component ──────────────────────────────────────────────────────
 export const CategoryFilter = React.memo<CategoryFilterProps>(
   ({ activeCategory, onCategoryChange }) => {
     const theme = useTheme();
@@ -35,7 +37,7 @@ export const CategoryFilter = React.memo<CategoryFilterProps>(
       (key: BucketListCategory | null) => {
         onCategoryChange(key);
       },
-      [onCategoryChange]
+      [onCategoryChange],
     );
 
     return (
@@ -52,7 +54,10 @@ export const CategoryFilter = React.memo<CategoryFilterProps>(
               key={cat.key ?? "all"}
               onPress={() => handlePress(cat.key)}
               style={({ pressed }) => [
-                { opacity: pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.96 : 1 }] },
+                {
+                  opacity: pressed ? 0.85 : 1,
+                  transform: [{ scale: pressed ? 0.96 : 1 }],
+                },
               ]}
             >
               <SquircleView
@@ -97,12 +102,11 @@ export const CategoryFilter = React.memo<CategoryFilterProps>(
         })}
       </ScrollView>
     );
-  }
+  },
 );
 
 CategoryFilter.displayName = "CategoryFilter";
 
-// ─── Styles ─────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   scrollContent: {
     gap: 8,
