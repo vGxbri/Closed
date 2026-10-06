@@ -43,6 +43,12 @@
         {
           "android": {
             "kotlinVersion": "2.1.20"
+          },
+          "ios": {
+            "extraPods": [
+              { "name": "GoogleUtilities", "modular_headers": true },
+              { "name": "RecaptchaInterop", "modular_headers": true }
+            ]
           }
         }
       ],
