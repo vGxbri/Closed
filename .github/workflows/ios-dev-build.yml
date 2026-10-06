@@ -1,0 +1,58 @@
+name: iOS dev build (sin firmar)
+
+# Genera un .ipa del development client sin firmar, para firmarlo e
+# instalarlo después con SideStore/Sideloadly usando un Apple ID gratuito.
+# Solo hace falta relanzarlo cuando cambian dependencias nativas o app.json.
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Generar proyecto nativo
+        run: npx expo prebuild --platform ios --clean
+
+      - name: Compilar sin firma
+        working-directory: ios
+        run: |
+          WORKSPACE=$(ls -d *.xcworkspace | head -n 1)
+          SCHEME="${WORKSPACE%.xcworkspace}"
+          xcodebuild \
+            -workspace "$WORKSPACE" \
+            -scheme "$SCHEME" \
+            -configuration Debug \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY=""
+
+      - name: Empaquetar .ipa
+        run: |
+          APP=$(ls -d ios/build/Build/Products/Debug-iphoneos/*.app | head -n 1)
+          mkdir Payload
+          cp -R "$APP" Payload/
+          zip -qry Closed-dev.ipa Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Closed-dev-ipa
+          path: Closed-dev.ipa
+          retention-days: 14
