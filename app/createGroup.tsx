@@ -555,7 +555,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   backgroundContainer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   safeArea: {
     flex: 1,
@@ -663,7 +663,7 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   textOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(0,0,0,0.3)",
     borderRadius: 20,
   },

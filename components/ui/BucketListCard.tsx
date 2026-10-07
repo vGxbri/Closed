@@ -89,13 +89,13 @@ export const BucketListCard = React.memo<BucketListCardProps>(
               <>
                 <Image
                   source={{ uri: item.image_url! }}
-                  style={StyleSheet.absoluteFillObject}
+                  style={StyleSheet.absoluteFill}
                   contentFit="cover"
                   transition={300}
                 />
                 <View
                   style={[
-                    StyleSheet.absoluteFillObject,
+                    StyleSheet.absoluteFill,
                     {
                       backgroundColor: "rgba(0,0,0,0.45)",
                       borderRadius: 20,

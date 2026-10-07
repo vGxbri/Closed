@@ -318,7 +318,7 @@ const styles = StyleSheet.create({
     fontFamily: "Archivo-Bold",
   },
   hiddenOverlayInput: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     opacity: 0,
   },
   ctaCard: {

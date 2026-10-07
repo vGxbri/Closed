@@ -195,7 +195,7 @@ export default function CreateBucketItemScreen() {
                   <>
                     <Image
                       source={{ uri: imageUri }}
-                      style={StyleSheet.absoluteFillObject}
+                      style={StyleSheet.absoluteFill}
                       contentFit="cover"
                       transition={200}
                     />
@@ -480,7 +480,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   imageOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(0,0,0,0.3)",
     borderRadius: 16,
     justifyContent: "center",

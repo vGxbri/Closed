@@ -22,7 +22,7 @@ import {
   GroupWidgetWithDetails,
 } from "@/types/database";
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect } from "expo-router/react-navigation";
 import { Image } from "expo-image";
 import { Stack, useGlobalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
@@ -137,13 +137,13 @@ const ArchivoWidgetCard = React.memo<WidgetCardProps>(
               <>
                 <Image
                   source={{ uri: previewUrl }}
-                  style={StyleSheet.absoluteFillObject}
+                  style={StyleSheet.absoluteFill}
                   contentFit="cover"
                   transition={300}
                 />
                 <View
                   style={[
-                    StyleSheet.absoluteFillObject,
+                    StyleSheet.absoluteFill,
                     {
                       backgroundColor: "rgba(0,0,0,0.4)",
                       borderRadius: 22,

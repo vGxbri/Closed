@@ -3,7 +3,7 @@
  * Vista completa de un premio con medios, comentarios y reacciones.
  */
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect } from "expo-router/react-navigation";
 import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 import { BlurTargetView, BlurView } from "expo-blur";
 import * as DocumentPicker from "expo-document-picker";
@@ -2518,13 +2518,13 @@ function AudioTitleModal({
 
 const modalStyles = StyleSheet.create({
   container: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     justifyContent: "center",
     alignItems: "center",
     zIndex: 1000,
   },
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   dialogContainer: {
     width: "88%",
@@ -2629,7 +2629,7 @@ function NomineeVideoThumbnail({ uri }: { uri: string }) {
       />
       <View
         style={{
-          ...StyleSheet.absoluteFillObject,
+          ...StyleSheet.absoluteFill,
           backgroundColor: "rgba(0,0,0,0.3)",
           justifyContent: "center",
           alignItems: "center",

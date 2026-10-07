@@ -198,7 +198,7 @@ const VideoPlayerItem = React.memo(({ url, isVisible, showUI, onToggleUI }: { ur
   });
 
   useEffect(() => {
-    let timer: NodeJS.Timeout;
+    let timer: ReturnType<typeof setTimeout>;
     if (isVisible) {
       timer = setTimeout(() => setIsMounted(true), 150);
     } else {
@@ -219,7 +219,7 @@ const VideoPlayerItem = React.memo(({ url, isVisible, showUI, onToggleUI }: { ur
   }, [isVisible, player, isMounted]);
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setTimeout>;
     if (isPlaying && player && isVisible && !isSeeking) {
       interval = setInterval(() => {
         setProgress(player.currentTime);
@@ -1002,7 +1002,7 @@ const styles = StyleSheet.create({
   masonryImage: { width: "100%", borderRadius: 16, backgroundColor: "rgba(0,0,0,0.05)" },
   videoIndicator: { position: "absolute", top: 8, right: 8, width: 28, height: 28, borderRadius: 14, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center" },
 
-  selectionOverlay: { ...StyleSheet.absoluteFillObject, borderRadius: 16, backgroundColor: "rgba(0,0,0,0.2)", borderWidth: 2, borderColor: "transparent", zIndex: 5 },
+  selectionOverlay: { ...StyleSheet.absoluteFill, borderRadius: 16, backgroundColor: "rgba(0,0,0,0.2)", borderWidth: 2, borderColor: "transparent", zIndex: 5 },
   selectionOverlayActive: { backgroundColor: "rgba(0,0,0,0.5)" },
   selectionIcon: { position: "absolute", top: 8, right: 8, zIndex: 10, textShadowColor: 'rgba(0,0,0,0.3)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
 
@@ -1020,7 +1020,7 @@ const styles = StyleSheet.create({
   emptyButtonInner: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 14, borderRadius: 16 },
   emptyButtonText: { fontFamily: "Archivo-Bold", fontSize: 16, letterSpacing: 0.3 },
 
-  uploadOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "center", alignItems: "center", zIndex: 100 },
+  uploadOverlay: { ...StyleSheet.absoluteFill, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "center", alignItems: "center", zIndex: 100 },
   uploadOverlayCard: { paddingHorizontal: 36, paddingVertical: 28, borderRadius: 22, alignItems: "center", gap: 14 },
   uploadOverlayText: { fontFamily: "Archivo-SemiBold", fontSize: 15 },
 
@@ -1049,7 +1049,7 @@ const styles = StyleSheet.create({
   videoWrapper: { width: SCREEN_WIDTH, height: SCREEN_HEIGHT * 0.7, justifyContent: "center", alignItems: "center" },
   videoPressable: { flex: 1, width: "100%", height: "100%", justifyContent: "center", alignItems: "center" },
   imagePressable: { flex: 1, width: "100%", height: "100%", justifyContent: "center", alignItems: "center" },
-  customPlayOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: "center", alignItems: "center", zIndex: 20 },
+  customPlayOverlay: { ...StyleSheet.absoluteFill, justifyContent: "center", alignItems: "center", zIndex: 20 },
   customPlayButton: { width: 80, height: 80, borderRadius: 40, justifyContent: "center", alignItems: "center", overflow: "hidden", backgroundColor: "rgba(0,0,0,0.3)" },
 
   scrubberContainer: { position: "absolute", bottom: -15, left: 0, right: 0, height: 30, justifyContent: "center", zIndex: 30 },

@@ -3,9 +3,9 @@
  * Barra inferior con inicio, mensajes y perfil del grupo privado.
  */
 import { Ionicons } from "@expo/vector-icons";
-import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
+import { BottomTabBarProps } from "expo-router/js-tabs";
 import { Tabs } from "expo-router";
-import { Pressable, StyleSheet, View, ViewStyle } from "react-native";
+import { ColorValue, Pressable, StyleSheet, View, ViewStyle } from "react-native";
 import SquircleView from "react-native-fast-squircle";
 import { useTheme } from "react-native-paper";
 import Animated, {
@@ -18,7 +18,7 @@ import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 type AnimatedIconProps = {
   focused: boolean;
   iconName: any;
-  color: string;
+  color: ColorValue;
   theme: any;
 };
 

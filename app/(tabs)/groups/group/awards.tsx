@@ -3,7 +3,7 @@
  * Lista de premios y trofeos compartidos entre los miembros del grupo.
  */
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect } from "expo-router/react-navigation";
 import { BlurTargetView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";

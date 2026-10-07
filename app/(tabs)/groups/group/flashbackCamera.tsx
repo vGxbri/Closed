@@ -3,7 +3,7 @@
  * Captura fotos durante una fiesta flashback con la cámara del dispositivo.
  */
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect } from "expo-router/react-navigation";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import * as Haptics from "expo-haptics";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
@@ -312,7 +312,7 @@ export default function FlashbackCameraScreen() {
         >
           <Animated.View
             style={[
-              StyleSheet.absoluteFillObject,
+              StyleSheet.absoluteFill,
               { backgroundColor: "#FFFFFF" },
               flashStyle,
             ]}
