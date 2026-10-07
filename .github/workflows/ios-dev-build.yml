@@ -9,6 +9,7 @@ on:
     paths:
       - .github/workflows/ios-dev-build.yml
       - app.json
+      - pnpm-lock.yaml
 
 jobs:
   build:
