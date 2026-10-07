@@ -1,13 +1,20 @@
 /**
  * Diálogo de confirmación
- * Modal para avisos, errores y acciones destructivas con blur.
+ * Modal para avisos, errores y acciones destructivas.
+ * El fondo se difumina; en iOS 26+ el panel es Liquid Glass y en el resto una superficie opaca.
  */
 
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
+import {
+  GlassView,
+  isGlassEffectAPIAvailable,
+  isLiquidGlassAvailable,
+} from "expo-glass-effect";
 import React from "react";
 import {
   Animated,
+  Easing,
   Pressable,
   StyleSheet,
   TouchableOpacity,
@@ -30,6 +37,8 @@ interface ConfirmDialogProps {
   blurTargetRef?: React.RefObject<any>;
 }
 
+const glassAvailable = isLiquidGlassAvailable() && isGlassEffectAPIAvailable();
+
 export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   visible,
   title,
@@ -43,21 +52,24 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   blurTargetRef,
 }) => {
   const theme = useTheme();
-  const opacityAnim = React.useRef(new Animated.Value(0)).current;
+  const [anim] = React.useState(() => new Animated.Value(0));
   const [shouldRender, setShouldRender] = React.useState(visible);
+
+  // Se monta en cuanto pasa a visible; se desmonta al terminar la animación de salida
+  if (visible && !shouldRender) setShouldRender(true);
 
   React.useEffect(() => {
     if (visible) {
-      setShouldRender(true);
-      opacityAnim.setValue(0);
+      anim.setValue(0);
 
-      Animated.timing(opacityAnim, {
+      Animated.timing(anim, {
         toValue: 1,
-        duration: 350,
+        duration: 240,
+        easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }).start();
     } else {
-      Animated.timing(opacityAnim, {
+      Animated.timing(anim, {
         toValue: 0,
         duration: 150,
         useNativeDriver: true,
@@ -65,78 +77,114 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         setShouldRender(false);
       });
     }
-  }, [visible, opacityAnim]);
+  }, [visible, anim]);
 
-  const getIconConfig = (): {
-    name: keyof typeof Ionicons.glyphMap;
+  const getTypeConfig = (): {
+    icon: keyof typeof Ionicons.glyphMap;
     color: string;
-    bgColor: string;
+    onColor: string;
   } => {
     switch (type) {
       case "success":
         return {
-          name: "checkmark-circle",
-          color: "#4CAF50",
-          bgColor: "#4CAF5020",
+          icon: "checkmark-circle",
+          color: "#2E7D32",
+          onColor: "#FFFFFF",
         };
       case "error":
         return {
-          name: "close-circle",
+          icon: "alert-circle",
           color: theme.colors.error,
-          bgColor: `${theme.colors.error}20`,
+          onColor: theme.colors.onError,
         };
       case "warning":
-        return { name: "warning", color: "#FF9800", bgColor: "#FF980020" };
+        return { icon: "warning", color: "#E65100", onColor: "#FFFFFF" };
       case "confirm":
         return {
-          name: "help-circle",
+          icon: "help-circle",
           color: theme.colors.primary,
-          bgColor: `${theme.colors.primary}20`,
+          onColor: theme.colors.onPrimary,
         };
       default:
         return {
-          name: "information-circle",
+          icon: "information-circle",
           color: theme.colors.primary,
-          bgColor: `${theme.colors.primary}20`,
+          onColor: theme.colors.onPrimary,
         };
     }
   };
 
-  const iconConfig = getIconConfig();
-
-  const getConfirmButtonStyle = () => {
-    switch (type) {
-      case "error":
-        return {
-          backgroundColor: theme.colors.errorContainer,
-          borderColor: theme.colors.error,
-        };
-      case "warning":
-        return { backgroundColor: "#FF980020", borderColor: "#FF9800" };
-      case "success":
-        return { backgroundColor: "#4CAF5020", borderColor: "#4CAF50" };
-      default:
-        return {
-          backgroundColor: theme.colors.primaryContainer,
-          borderColor: theme.colors.primary,
-        };
-    }
-  };
-
-  const getConfirmTextColor = () => {
-    switch (type) {
-      case "error":
-        return theme.colors.error;
-      case "warning":
-        return "#FF9800";
-      case "success":
-        return "#4CAF50";
-      default:
-        return theme.colors.onSurface;
-    }
-  };
+  const typeConfig = getTypeConfig();
 
   if (!shouldRender) return null;
+
+  const scale = anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.94, 1],
+  });
+
+  const content = (
+    <>
+      <View
+        style={[styles.iconChip, { backgroundColor: `${typeConfig.color}1F` }]}
+      >
+        <Ionicons name={typeConfig.icon} size={24} color={typeConfig.color} />
+      </View>
+
+      <Text style={[styles.title, { color: theme.colors.onSurface }]}>
+        {title}
+      </Text>
+
+      <Text style={[styles.message, { color: theme.colors.onSurfaceVariant }]}>
+        {message}
+      </Text>
+
+      <View style={styles.actions}>
+        {showCancel && (
+          <TouchableOpacity
+            style={[
+              styles.button,
+              {
+                backgroundColor: theme.dark
+                  ? "rgba(255,255,255,0.12)"
+                  : "rgba(0,0,0,0.06)",
+              },
+            ]}
+            onPress={onCancel}
+            activeOpacity={0.7}
+          >
+            <Text
+              style={[styles.buttonText, { color: theme.colors.onSurface }]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.8}
+            >
+              {cancelText}
+            </Text>
+          </TouchableOpacity>
+        )}
+        {onConfirm && (
+          <TouchableOpacity
+            style={[styles.button, { backgroundColor: typeConfig.color }]}
+            onPress={() => {
+              onConfirm();
+              onCancel();
+            }}
+            activeOpacity={0.8}
+          >
+            <Text
+              style={[styles.buttonText, { color: typeConfig.onColor }]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.8}
+            >
+              {confirmText}
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </>
+  );
 
   return (
     <Portal>
@@ -145,7 +193,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           <Animated.View
             style={[
               StyleSheet.absoluteFill,
-              { opacity: opacityAnim, backgroundColor: "rgba(0,0,0,0.4)" },
+              { opacity: anim, backgroundColor: "rgba(0,0,0,0.4)" },
             ]}
           >
             <BlurView
@@ -158,86 +206,34 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           </Animated.View>
         </Pressable>
 
-        <Animated.View
-          style={[
-            styles.dialogContainer,
-            {
-              backgroundColor: theme.colors.surface,
-              borderColor: theme.colors.surfaceVariant,
-              opacity: opacityAnim,
-            },
-          ]}
-        >
-          <View
+        {glassAvailable ? (
+          // La opacidad se anima en el contenido: aplicada al GlassView o a sus padres rompe el efecto
+          <Animated.View
+            style={[styles.dialogWrapper, { transform: [{ scale }] }]}
+            accessibilityViewIsModal
+          >
+            <GlassView style={styles.dialog} glassEffectStyle="regular">
+              <Animated.View style={{ opacity: anim }}>{content}</Animated.View>
+            </GlassView>
+          </Animated.View>
+        ) : (
+          <Animated.View
             style={[
-              styles.iconContainer,
+              styles.dialogWrapper,
+              styles.dialog,
+              styles.dialogSolid,
               {
-                backgroundColor: iconConfig.bgColor,
-                borderColor: iconConfig.color,
+                backgroundColor: theme.colors.surface,
+                borderColor: theme.colors.outlineVariant,
+                opacity: anim,
+                transform: [{ scale }],
               },
             ]}
+            accessibilityViewIsModal
           >
-            <Ionicons
-              name={iconConfig.name}
-              size={40}
-              color={iconConfig.color}
-            />
-          </View>
-
-          <Text
-            variant="titleLarge"
-            style={[styles.title, { color: theme.colors.onSurface }]}
-          >
-            {title}
-          </Text>
-
-          <Text
-            variant="bodyMedium"
-            style={[styles.message, { color: theme.colors.onSurfaceVariant }]}
-          >
-            {message}
-          </Text>
-
-          <View style={styles.actions}>
-            {showCancel && (
-              <TouchableOpacity
-                style={[
-                  styles.cancelButton,
-                  { borderColor: theme.colors.surfaceVariant },
-                ]}
-                onPress={onCancel}
-                activeOpacity={0.7}
-              >
-                <Text
-                  variant="labelLarge"
-                  style={{
-                    color: theme.colors.onSurfaceVariant,
-                    fontWeight: "600",
-                  }}
-                >
-                  {cancelText}
-                </Text>
-              </TouchableOpacity>
-            )}
-            {onConfirm && (
-              <TouchableOpacity
-                style={[styles.confirmButton, getConfirmButtonStyle()]}
-                onPress={() => {
-                  onConfirm();
-                  onCancel();
-                }}
-                activeOpacity={0.7}
-              >
-                <Text
-                  variant="labelLarge"
-                  style={{ color: getConfirmTextColor(), fontWeight: "700" }}
-                >
-                  {confirmText}
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </Animated.View>
+            {content}
+          </Animated.View>
+        )}
       </View>
     </Portal>
   );
@@ -253,60 +249,57 @@ const styles = StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFill,
   },
-  dialogContainer: {
-    width: "88%",
-    maxWidth: 360,
-    borderRadius: 24,
-    padding: 28,
-    paddingTop: 32,
-    alignItems: "center",
-    borderWidth: 1,
+  dialogWrapper: {
+    width: "86%",
+    maxWidth: 340,
+  },
+  dialog: {
+    borderRadius: 34,
+    padding: 22,
+  },
+  dialogSolid: {
+    borderWidth: StyleSheet.hairlineWidth,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
+    shadowOpacity: 0.2,
+    shadowRadius: 24,
     elevation: 24,
   },
-  iconContainer: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+  iconChip: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 20,
-    borderWidth: 2,
+    marginBottom: 14,
   },
   title: {
-    fontWeight: "700",
-    textAlign: "center",
-    marginBottom: 10,
-    letterSpacing: -0.3,
+    fontFamily: "Archivo-Bold",
+    fontSize: 19,
+    lineHeight: 24,
+    letterSpacing: -0.2,
+    marginBottom: 6,
   },
   message: {
-    textAlign: "center",
-    marginBottom: 28,
-    lineHeight: 22,
-    paddingHorizontal: 8,
+    fontFamily: "Archivo-Regular",
+    fontSize: 15,
+    lineHeight: 21,
+    marginBottom: 22,
   },
   actions: {
     flexDirection: "row",
-    gap: 12,
-    width: "100%",
+    gap: 10,
   },
-  cancelButton: {
+  button: {
     flex: 1,
+    height: 50,
+    borderRadius: 25,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 14,
-    borderRadius: 14,
-    borderWidth: 1,
+    paddingHorizontal: 10,
   },
-  confirmButton: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 14,
-    borderRadius: 14,
-    borderWidth: 1.5,
+  buttonText: {
+    fontFamily: "Archivo-SemiBold",
+    fontSize: 15,
   },
 });
