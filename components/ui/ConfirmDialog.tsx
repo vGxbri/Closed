@@ -123,7 +123,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     outputRange: [0.94, 1],
   });
 
-  const content = (
+  const body = (
     <>
       <View
         style={[styles.iconChip, { backgroundColor: `${typeConfig.color}1F` }]}
@@ -138,52 +138,70 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       <Text style={[styles.message, { color: theme.colors.onSurfaceVariant }]}>
         {message}
       </Text>
-
-      <View style={styles.actions}>
-        {showCancel && (
-          <TouchableOpacity
-            style={[
-              styles.button,
-              {
-                backgroundColor: theme.dark
-                  ? "rgba(255,255,255,0.12)"
-                  : "rgba(0,0,0,0.06)",
-              },
-            ]}
-            onPress={onCancel}
-            activeOpacity={0.7}
-          >
-            <Text
-              style={[styles.buttonText, { color: theme.colors.onSurface }]}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.8}
-            >
-              {cancelText}
-            </Text>
-          </TouchableOpacity>
-        )}
-        {onConfirm && (
-          <TouchableOpacity
-            style={[styles.button, { backgroundColor: typeConfig.color }]}
-            onPress={() => {
-              onConfirm();
-              onCancel();
-            }}
-            activeOpacity={0.8}
-          >
-            <Text
-              style={[styles.buttonText, { color: typeConfig.onColor }]}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.8}
-            >
-              {confirmText}
-            </Text>
-          </TouchableOpacity>
-        )}
-      </View>
     </>
+  );
+
+  const neutralFill = theme.dark
+    ? "rgba(255,255,255,0.12)"
+    : "rgba(0,0,0,0.06)";
+
+  const renderButton = (
+    label: string,
+    onPress: () => void,
+    fill: string,
+    textColor: string,
+  ) => {
+    const text = (
+      <Text
+        style={[styles.buttonText, { color: textColor }]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.8}
+      >
+        {label}
+      </Text>
+    );
+
+    if (glassAvailable) {
+      return (
+        <GlassView style={styles.button} tintColor={fill} isInteractive>
+          <Pressable
+            onPress={onPress}
+            accessibilityRole="button"
+            style={styles.buttonContent}
+          >
+            {text}
+          </Pressable>
+        </GlassView>
+      );
+    }
+
+    return (
+      <TouchableOpacity
+        style={[styles.button, styles.buttonContent, { backgroundColor: fill }]}
+        onPress={onPress}
+        activeOpacity={0.75}
+      >
+        {text}
+      </TouchableOpacity>
+    );
+  };
+
+  const actions = (
+    <View style={styles.actions}>
+      {showCancel &&
+        renderButton(cancelText, onCancel, neutralFill, theme.colors.onSurface)}
+      {onConfirm &&
+        renderButton(
+          confirmText,
+          () => {
+            onConfirm();
+            onCancel();
+          },
+          typeConfig.color,
+          typeConfig.onColor,
+        )}
+    </View>
   );
 
   return (
@@ -207,13 +225,15 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         </Pressable>
 
         {glassAvailable ? (
-          // La opacidad se anima en el contenido: aplicada al GlassView o a sus padres rompe el efecto
+          // La opacidad solo se anima en el texto: aplicada a un GlassView o a sus padres rompe el
+          // efecto, y tanto el panel como los botones son cristal
           <Animated.View
             style={[styles.dialogWrapper, { transform: [{ scale }] }]}
             accessibilityViewIsModal
           >
             <GlassView style={styles.dialog} glassEffectStyle="regular">
-              <Animated.View style={{ opacity: anim }}>{content}</Animated.View>
+              <Animated.View style={{ opacity: anim }}>{body}</Animated.View>
+              {actions}
             </GlassView>
           </Animated.View>
         ) : (
@@ -231,7 +251,8 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             ]}
             accessibilityViewIsModal
           >
-            {content}
+            {body}
+            {actions}
           </Animated.View>
         )}
       </View>
@@ -294,6 +315,9 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 50,
     borderRadius: 25,
+  },
+  buttonContent: {
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 10,
