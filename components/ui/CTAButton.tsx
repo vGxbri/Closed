@@ -1,11 +1,18 @@
 /**
  * Botón CTA
  * Llamada a la acción destacada con icono, título y descripción opcional.
+ * En iOS el botón estándar es una cápsula: cristal tintado en iOS 26+, color sólido en el resto.
  */
 
 import { Ionicons } from "@expo/vector-icons";
+import {
+  GlassView,
+  isGlassEffectAPIAvailable,
+  isLiquidGlassAvailable,
+} from "expo-glass-effect";
 import React from "react";
 import {
+  Platform,
   Pressable,
   StyleProp,
   StyleSheet,
@@ -30,6 +37,8 @@ interface CTAButtonProps {
   style?: StyleProp<ViewStyle>;
 }
 
+const glassAvailable = isLiquidGlassAvailable() && isGlassEffectAPIAvailable();
+
 export const CTAButton: React.FC<CTAButtonProps> = ({
   title,
   description,
@@ -51,6 +60,70 @@ export const CTAButton: React.FC<CTAButtonProps> = ({
 
   const isCardVariant = !!description;
   const isInteractable = !disabled && !loading;
+
+  if (Platform.OS === "ios" && !isCardVariant) {
+    const capsuleTextColor = disabled
+      ? theme.colors.onSurfaceVariant
+      : txtColor;
+
+    const content = (
+      <>
+        <Text
+          style={[styles.titleCapsule, { color: capsuleTextColor }]}
+          numberOfLines={1}
+        >
+          {loading && loadingText ? loadingText : title}
+        </Text>
+        <Ionicons
+          name={loading ? "refresh" : iconName}
+          size={18}
+          color={capsuleTextColor}
+        />
+      </>
+    );
+
+    return (
+      <View style={[styles.container, style]}>
+        {glassAvailable ? (
+          // Deshabilitado pierde el tinte en vez de la opacidad: una opacidad parcial estropea el cristal
+          <GlassView
+            style={styles.capsule}
+            tintColor={disabled ? undefined : bgColor}
+            isInteractive
+          >
+            <Pressable
+              onPress={onPress}
+              disabled={!isInteractable}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !isInteractable, busy: loading }}
+              style={styles.capsuleContent}
+            >
+              {content}
+            </Pressable>
+          </GlassView>
+        ) : (
+          <Pressable
+            onPress={onPress}
+            disabled={!isInteractable}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: !isInteractable, busy: loading }}
+            style={({ pressed }) => [
+              styles.capsule,
+              styles.capsuleContent,
+              {
+                backgroundColor: disabled
+                  ? theme.colors.surfaceVariant
+                  : bgColor,
+                opacity: !isInteractable ? 0.6 : pressed ? 0.9 : 1,
+              },
+            ]}
+          >
+            {content}
+          </Pressable>
+        )}
+      </View>
+    );
+  }
 
   return (
     <Pressable
@@ -121,6 +194,22 @@ export const CTAButton: React.FC<CTAButtonProps> = ({
 const styles = StyleSheet.create({
   container: {
     width: "100%",
+  },
+  capsule: {
+    height: 52,
+    borderRadius: 26,
+  },
+  capsuleContent: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingHorizontal: 20,
+  },
+  titleCapsule: {
+    fontFamily: "Archivo-SemiBold",
+    fontSize: 17,
   },
   standardVariant: {
     paddingVertical: 14,
