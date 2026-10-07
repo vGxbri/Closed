@@ -22,6 +22,7 @@ import {
 } from "react-native-paper";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import { KeyboardDismissButton } from "@/components/ui/KeyboardDismissButton";
 import { SnackbarProvider } from "@/components/ui/SnackbarContext";
 import { customColors, customColorsDark } from "@/constants/Colors";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
@@ -70,6 +71,7 @@ function RootLayoutNav({ paperTheme, navigationTheme, colorScheme }: any) {
             />
             <Stack.Screen name="join" options={{ gestureEnabled: true }} />
           </Stack>
+          <KeyboardDismissButton />
         </SnackbarProvider>
       </PaperProvider>
     </ThemeProvider>
