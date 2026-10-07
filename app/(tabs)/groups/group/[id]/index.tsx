@@ -28,6 +28,7 @@ import { Stack, useGlobalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
   Dimensions,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -1374,6 +1375,9 @@ export default function GroupDetailScreen() {
   const { id } = useGlobalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  // En iOS la barra nativa ya forma parte del área segura inferior.
+  const tabBarPadding =
+    Platform.OS === "ios" ? insets.bottom + 16 : 120 + insets.bottom;
   const theme = useTheme();
   const { showSnackbar } = useSnackbar();
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -1521,7 +1525,7 @@ export default function GroupDetailScreen() {
             style={styles.scrollView}
             contentContainerStyle={[
               styles.content,
-              { paddingBottom: 120 + insets.bottom },
+              { paddingBottom: tabBarPadding },
             ]}
             showsVerticalScrollIndicator={false}
           >
@@ -1652,7 +1656,7 @@ export default function GroupDetailScreen() {
             style={styles.scrollView}
             contentContainerStyle={[
               styles.content,
-              { paddingBottom: 120 + insets.bottom },
+              { paddingBottom: tabBarPadding },
             ]}
             showsVerticalScrollIndicator={false}
           >

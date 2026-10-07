@@ -5,7 +5,15 @@
 import { Ionicons } from "@expo/vector-icons";
 import { BottomTabBarProps } from "expo-router/js-tabs";
 import { Tabs } from "expo-router";
-import { ColorValue, Pressable, StyleSheet, View, ViewStyle } from "react-native";
+import { NativeTabs } from "expo-router/unstable-native-tabs";
+import {
+  ColorValue,
+  Platform,
+  Pressable,
+  StyleSheet,
+  View,
+  ViewStyle,
+} from "react-native";
 import SquircleView from "react-native-fast-squircle";
 import { useTheme } from "react-native-paper";
 import Animated, {
@@ -202,8 +210,54 @@ const styles = StyleSheet.create({
   },
 });
 
+// En iOS se usa la barra de pestañas del sistema (Liquid Glass en iOS 26+).
+// Las pantallas gestionan sus propios márgenes con el área segura.
+function NativeGroupTabs() {
+  const theme = useTheme();
+
+  return (
+    <NativeTabs tintColor={theme.colors.primary}>
+      <NativeTabs.Trigger
+        name="index"
+        accessibilityLabel="Feed"
+        disableAutomaticContentInsets
+      >
+        <NativeTabs.Trigger.Icon
+          sf={{ default: "house", selected: "house.fill" }}
+        />
+        <NativeTabs.Trigger.Label hidden>Feed</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger
+        name="messages"
+        accessibilityLabel="Mensajes"
+        disableAutomaticContentInsets
+      >
+        <NativeTabs.Trigger.Icon
+          sf={{
+            default: "bubble.left.and.bubble.right",
+            selected: "bubble.left.and.bubble.right.fill",
+          }}
+        />
+        <NativeTabs.Trigger.Label hidden>Mensajes</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger
+        name="profile"
+        accessibilityLabel="Perfil"
+        disableAutomaticContentInsets
+      >
+        <NativeTabs.Trigger.Icon
+          sf={{ default: "person", selected: "person.fill" }}
+        />
+        <NativeTabs.Trigger.Label hidden>Perfil</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
+    </NativeTabs>
+  );
+}
+
 export default function GroupTabLayout() {
   const theme = useTheme();
+
+  if (Platform.OS === "ios") return <NativeGroupTabs />;
 
   return (
     <Tabs

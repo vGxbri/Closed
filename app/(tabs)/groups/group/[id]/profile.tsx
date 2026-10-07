@@ -9,6 +9,7 @@ import { useGlobalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -391,7 +392,11 @@ export default function ProfileScreen() {
         <ScrollView
           contentContainerStyle={[
             styles.scrollContent,
-            { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 90 },
+            {
+              paddingTop: insets.top + 8,
+              // En iOS la barra nativa ya forma parte del área segura inferior.
+              paddingBottom: insets.bottom + (Platform.OS === "ios" ? 16 : 90),
+            },
           ]}
           showsVerticalScrollIndicator={false}
         >

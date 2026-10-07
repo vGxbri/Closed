@@ -182,8 +182,11 @@ export default function MessagesScreen() {
   const inputRef = useRef<TextInput>(null);
 
   const bottomMargin = insets.bottom > 0 ? insets.bottom + 12 : 36;
+  // En iOS la barra nativa ya forma parte del área segura inferior.
   const maxPadding =
-    bottomMargin + FLOATING_TAB_BAR_HEIGHT + FLOATING_TAB_BAR_EXTRA_MARGIN;
+    Platform.OS === "ios"
+      ? insets.bottom + 8
+      : bottomMargin + FLOATING_TAB_BAR_HEIGHT + FLOATING_TAB_BAR_EXTRA_MARGIN;
   const keyboard = useAnimatedKeyboard();
 
   const animatedKeyboardStyle = useAnimatedStyle(() => ({
