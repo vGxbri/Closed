@@ -4,9 +4,16 @@
  */
 import { Ionicons } from "@expo/vector-icons";
 import { BlurTargetView } from "expo-blur";
-import { useFocusEffect, useRouter } from "expo-router";
+import { Image } from "expo-image";
+import { Stack, useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import {
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from "react-native";
 import SquircleView from "react-native-fast-squircle";
 import { Text, useTheme } from "react-native-paper";
 import Animated, {
@@ -17,11 +24,22 @@ import Animated, {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { UserAvatar } from "@/components/ui/UserAvatar";
+import { MenuOption, OptionsMenu } from "@/components/ui/OptionsMenu";
+import {
+  getAvatarColor,
+  getInitials,
+  UserAvatar,
+} from "@/components/ui/UserAvatar";
 import { useAuth, useGroups } from "@/hooks";
+import { getOptimizedMediaUrl } from "@/lib/storage";
 import { GroupWithDetails } from "@/types/database";
 
 const CARD_GAP = 14;
+const COVER_HEIGHT = 124;
+const MAX_FACES = 4;
+
+// En iOS la cabecera es la nativa del sistema (Liquid Glass en iOS 26+).
+const isIOS = Platform.OS === "ios";
 
 interface SkeletonCardProps {
   index: number;
@@ -29,6 +47,8 @@ interface SkeletonCardProps {
 
 const SkeletonCard = React.memo<SkeletonCardProps>(({ index }) => {
   const theme = useTheme();
+  const barColor = theme.dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)";
+
   return (
     <Animated.View
       entering={FadeIn.duration(400).delay(index * 80)}
@@ -38,7 +58,7 @@ const SkeletonCard = React.memo<SkeletonCardProps>(({ index }) => {
         style={[
           styles.groupCard,
           {
-            backgroundColor: theme.colors.surfaceVariant,
+            backgroundColor: theme.colors.surface,
             borderColor: theme.colors.outlineVariant,
             borderWidth: 1,
           },
@@ -47,40 +67,54 @@ const SkeletonCard = React.memo<SkeletonCardProps>(({ index }) => {
       >
         <View
           style={[
-            styles.skeletonIcon,
-            {
-              backgroundColor: theme.dark
-                ? "rgba(255,255,255,0.06)"
-                : "rgba(0,0,0,0.06)",
-            },
+            styles.cover,
+            { backgroundColor: theme.colors.surfaceVariant },
           ]}
         />
-        <View
-          style={[
-            styles.skeletonTextLong,
-            {
-              backgroundColor: theme.dark
-                ? "rgba(255,255,255,0.08)"
-                : "rgba(0,0,0,0.06)",
-            },
-          ]}
-        />
-        <View
-          style={[
-            styles.skeletonTextShort,
-            {
-              backgroundColor: theme.dark
-                ? "rgba(255,255,255,0.05)"
-                : "rgba(0,0,0,0.04)",
-            },
-          ]}
-        />
+        <View style={styles.cardFooter}>
+          <View style={styles.groupInfo}>
+            <View
+              style={[styles.skeletonTextLong, { backgroundColor: barColor }]}
+            />
+            <View
+              style={[styles.skeletonTextShort, { backgroundColor: barColor }]}
+            />
+          </View>
+        </View>
       </SquircleView>
     </Animated.View>
   );
 });
 
 SkeletonCard.displayName = "SkeletonCard";
+
+interface GroupCoverProps {
+  uri: string | null;
+  name: string;
+}
+
+// Portada del grupo; sin imagen se muestra un color e iniciales derivados del nombre.
+const GroupCover = React.memo<GroupCoverProps>(({ uri, name }) => {
+  const [imageError, setImageError] = useState(false);
+  const hasImage = !!uri && uri.trim() !== "" && !imageError;
+
+  return (
+    <View style={[styles.cover, { backgroundColor: getAvatarColor(name) }]}>
+      <Text style={styles.coverInitials}>{getInitials(name)}</Text>
+      {hasImage && (
+        <Image
+          source={getOptimizedMediaUrl(uri, { width: 800 }) || uri}
+          style={StyleSheet.absoluteFill}
+          contentFit="cover"
+          transition={200}
+          onError={() => setImageError(true)}
+        />
+      )}
+    </View>
+  );
+});
+
+GroupCover.displayName = "GroupCover";
 
 interface GroupCardItemProps {
   group: GroupWithDetails;
@@ -91,6 +125,7 @@ interface GroupCardItemProps {
 const GroupCardItem = React.memo<GroupCardItemProps>(
   ({ group, index, onPress }) => {
     const theme = useTheme();
+    const faces = group.members.slice(0, MAX_FACES);
 
     return (
       <Animated.View
@@ -117,61 +152,69 @@ const GroupCardItem = React.memo<GroupCardItemProps>(
             ]}
             cornerSmoothing={1}
           >
-            <UserAvatar
-              uri={group.cover_image_url}
-              name={group.name}
-              size={44}
-              borderRadius={14}
-            />
+            <View>
+              <GroupCover uri={group.cover_image_url} name={group.name} />
 
-            <View style={styles.groupInfo}>
-              <Text
-                style={[styles.groupName, { color: theme.colors.onSurface }]}
-                numberOfLines={2}
-              >
-                {group.name}
-              </Text>
-
-              <View style={styles.groupMeta}>
-                <View style={styles.metaChip}>
-                  <Ionicons
-                    name="people"
-                    size={12}
-                    color={theme.colors.onSurfaceVariant}
-                  />
-                  <Text
-                    style={[
-                      styles.metaText,
-                      { color: theme.colors.onSurfaceVariant },
-                    ]}
-                  >
-                    {group.member_count}
-                  </Text>
-                </View>
-              </View>
-            </View>
-
-            {group.my_role && group.my_role !== "member" && (
-              <View
-                style={[
-                  styles.roleBadge,
-                  {
-                    backgroundColor: theme.dark
-                      ? "rgba(42,138,112,0.2)"
-                      : "rgba(42,138,112,0.1)",
-                  },
-                ]}
-              >
-                <Text
+              {group.my_role && group.my_role !== "member" && (
+                <View
                   style={[
-                    styles.roleBadgeText,
-                    { color: theme.colors.primary },
+                    styles.roleBadge,
+                    { backgroundColor: theme.colors.surface },
                   ]}
                 >
-                  {group.my_role === "owner" ? "Propietario" : "Administrador"}
+                  <Text
+                    style={[
+                      styles.roleBadgeText,
+                      { color: theme.colors.primary },
+                    ]}
+                  >
+                    {group.my_role === "owner"
+                      ? "Propietario"
+                      : "Administrador"}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.cardFooter}>
+              <View style={styles.groupInfo}>
+                <Text
+                  style={[styles.groupName, { color: theme.colors.onSurface }]}
+                  numberOfLines={1}
+                >
+                  {group.name}
+                </Text>
+                <Text
+                  style={[
+                    styles.metaText,
+                    { color: theme.colors.onSurfaceVariant },
+                  ]}
+                >
+                  {group.member_count} miembro
+                  {group.member_count !== 1 ? "s" : ""}
                 </Text>
               </View>
-            )}
+
+              <View style={styles.faces}>
+                {faces.map((member, i) => (
+                  <View
+                    key={member.id}
+                    style={[
+                      styles.face,
+                      { borderColor: theme.colors.surface },
+                      i > 0 && styles.faceOverlap,
+                    ]}
+                  >
+                    <UserAvatar
+                      uri={member.group_avatar_url ?? member.avatar_url}
+                      name={member.group_display_name ?? member.display_name}
+                      size={26}
+                      borderRadius={13}
+                    />
+                  </View>
+                ))}
+              </View>
+            </View>
           </SquircleView>
         </Pressable>
       </Animated.View>
@@ -195,6 +238,11 @@ export default function GroupsScreen() {
   );
 
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
+  const [menu, setMenu] = useState<{
+    visible: boolean;
+    title: string;
+    options: MenuOption[];
+  }>({ visible: false, title: "", options: [] });
 
   const handleGroupPress = useCallback(
     (groupId: string) => {
@@ -213,6 +261,38 @@ export default function GroupsScreen() {
     [router],
   );
 
+  const openAddMenu = () =>
+    setMenu({
+      visible: true,
+      title: "Añadir grupo",
+      options: [
+        { label: "Crear grupo", icon: "add", action: handleCreateGroup },
+        {
+          label: "Unirse con código",
+          icon: "qr-code-outline",
+          action: handleJoinGroup,
+        },
+      ],
+    });
+
+  const openMoreMenu = () =>
+    setMenu({
+      visible: true,
+      title: "Opciones",
+      options: [
+        {
+          label: "Cerrar sesión",
+          icon: "log-out-outline",
+          action: () => setShowSignOutDialog(true),
+          isDestructive: true,
+        },
+      ],
+    });
+
+  const subtitle = isLoading
+    ? "Cargando..."
+    : `${groups.length} grupo${groups.length !== 1 ? "s" : ""}`;
+
   const skeletonCards = useMemo(
     () =>
       Array.from({ length: 4 }).map((_, i) => (
@@ -225,100 +305,119 @@ export default function GroupsScreen() {
     <BlurTargetView ref={backgroundRef} style={{ flex: 1 }}>
       <SafeAreaView
         style={[styles.safeArea, { backgroundColor: theme.colors.background }]}
-        edges={["top", "left", "right"]}
+        edges={isIOS ? ["left", "right"] : ["top", "left", "right"]}
       >
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent,
+            isIOS && styles.scrollContentNativeHeader,
+          ]}
+          contentInsetAdjustmentBehavior={isIOS ? "automatic" : undefined}
           showsVerticalScrollIndicator={false}
           bounces={true}
         >
-          
-          <Animated.View
-            entering={FadeInUp.duration(500)}
-            style={styles.header}
-          >
-            <View>
-              <Text style={[styles.title, { color: theme.colors.primary }]}>
-                Tus Grupos
-              </Text>
-              <Text
+          {isIOS ? (
+            <Text
+              style={[
+                styles.subtitle,
+                styles.subtitleNativeHeader,
+                { color: theme.colors.onSurfaceVariant },
+              ]}
+            >
+              {subtitle}
+            </Text>
+          ) : (
+            <>
+              <Animated.View
+                entering={FadeInUp.duration(500)}
+                style={styles.header}
+              >
+                <View>
+                  <Text style={[styles.title, { color: theme.colors.primary }]}>
+                    Tus Grupos
+                  </Text>
+                  <Text
+                    style={[
+                      styles.subtitle,
+                      { color: theme.colors.onSurfaceVariant },
+                    ]}
+                  >
+                    {subtitle}
+                  </Text>
+                </View>
+
+                <View style={styles.headerActions}>
+                  <Pressable
+                    onPress={openAddMenu}
+                    accessibilityRole="button"
+                    accessibilityLabel="Añadir grupo"
+                    style={({ pressed }) => [
+                      {
+                        opacity: pressed ? 0.7 : 1,
+                        transform: [{ scale: pressed ? 0.92 : 1 }],
+                      },
+                    ]}
+                  >
+                    <SquircleView
+                      style={[
+                        styles.headerButton,
+                        {
+                          backgroundColor: theme.colors.surface,
+                          borderColor: theme.colors.outlineVariant,
+                          borderWidth: 1,
+                        },
+                      ]}
+                      cornerSmoothing={1}
+                    >
+                      <Ionicons
+                        name="add"
+                        size={22}
+                        color={theme.colors.onSurfaceVariant}
+                      />
+                    </SquircleView>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={openMoreMenu}
+                    accessibilityRole="button"
+                    accessibilityLabel="Más opciones"
+                    style={({ pressed }) => [
+                      {
+                        opacity: pressed ? 0.7 : 1,
+                        transform: [{ scale: pressed ? 0.92 : 1 }],
+                      },
+                    ]}
+                  >
+                    <SquircleView
+                      style={[
+                        styles.headerButton,
+                        {
+                          backgroundColor: theme.colors.surface,
+                          borderColor: theme.colors.outlineVariant,
+                          borderWidth: 1,
+                        },
+                      ]}
+                      cornerSmoothing={1}
+                    >
+                      <Ionicons
+                        name="ellipsis-horizontal"
+                        size={20}
+                        color={theme.colors.onSurfaceVariant}
+                      />
+                    </SquircleView>
+                  </Pressable>
+                </View>
+              </Animated.View>
+
+              <Animated.View
+                entering={FadeIn.duration(400).delay(100)}
                 style={[
-                  styles.subtitle,
-                  { color: theme.colors.onSurfaceVariant },
+                  styles.divider,
+                  { backgroundColor: theme.colors.outlineVariant },
                 ]}
-              >
-                {isLoading
-                  ? "Cargando..."
-                  : `${groups.length} grupo${groups.length !== 1 ? "s" : ""}`}
-              </Text>
-            </View>
-
-            <View style={styles.headerActions}>
-              <Pressable
-                onPress={handleJoinGroup}
-                style={({ pressed }) => [
-                  {
-                    opacity: pressed ? 0.7 : 1,
-                    transform: [{ scale: pressed ? 0.92 : 1 }],
-                  },
-                ]}
-              >
-                <SquircleView
-                  style={[
-                    styles.headerButton,
-                    {
-                      backgroundColor: theme.colors.surface,
-                      borderColor: theme.colors.outlineVariant,
-                      borderWidth: 1,
-                    },
-                  ]}
-                  cornerSmoothing={1}
-                >
-                  <Ionicons
-                    name="qr-code-outline"
-                    size={20}
-                    color={theme.colors.onSurfaceVariant}
-                  />
-                </SquircleView>
-              </Pressable>
-
-              <Pressable
-                onPress={() => setShowSignOutDialog(true)}
-                style={({ pressed }) => [
-                  {
-                    opacity: pressed ? 0.7 : 1,
-                    transform: [{ scale: pressed ? 0.92 : 1 }],
-                  },
-                ]}
-              >
-                <SquircleView
-                  style={[
-                    styles.headerButton,
-                    {
-                      backgroundColor: theme.colors.errorContainer,
-                      borderColor: theme.colors.outlineVariant,
-                      borderWidth: 1,
-                    },
-                  ]}
-                  cornerSmoothing={1}
-                >
-                  <Ionicons
-                    name="log-out-outline"
-                    size={20}
-                    color={theme.colors.onSurfaceVariant}
-                  />
-                </SquircleView>
-              </Pressable>
-            </View>
-          </Animated.View>
-
-          <Animated.View
-            entering={FadeIn.duration(400).delay(100)}
-            style={[
-              styles.divider,
-              { backgroundColor: theme.colors.outlineVariant },
-            ]}
-          />
+              />
+            </>
+          )}
 
           {isLoading && groups.length === 0 ? (
             <View style={styles.bentoGrid}>{skeletonCards}</View>
@@ -414,65 +513,73 @@ export default function GroupsScreen() {
                   onPress={() => handleGroupPress(group.id)}
                 />
               ))}
-
-              <Animated.View
-                entering={FadeInDown.duration(400).delay(
-                  100 + groups.length * 80,
-                )}
-                style={styles.bentoItem}
-              >
-                <Pressable
-                  onPress={handleCreateGroup}
-                  style={({ pressed }) => [
-                    {
-                      opacity: pressed ? 0.8 : 1,
-                      transform: [{ scale: pressed ? 0.97 : 1 }],
-                    },
-                  ]}
-                >
-                  <SquircleView
-                    style={[
-                      styles.groupCard,
-                      styles.createCard,
-                      {
-                        borderColor: theme.colors.outlineVariant,
-                        borderWidth: 2,
-                      },
-                    ]}
-                    cornerSmoothing={1}
-                  >
-                    <SquircleView
-                      style={[
-                        styles.createIconContainer,
-                        {
-                          backgroundColor: theme.dark
-                            ? "rgba(255,255,255,0.06)"
-                            : "rgba(0,0,0,0.04)",
-                        },
-                      ]}
-                      cornerSmoothing={1}
-                    >
-                      <Ionicons
-                        name="add"
-                        size={28}
-                        color={theme.colors.onSurfaceVariant}
-                      />
-                    </SquircleView>
-                    <Text
-                      style={[
-                        styles.createText,
-                        { color: theme.colors.onSurfaceVariant },
-                      ]}
-                    >
-                      Nuevo grupo
-                    </Text>
-                  </SquircleView>
-                </Pressable>
-              </Animated.View>
             </View>
           )}
         </ScrollView>
       </SafeAreaView>
+
+      {isIOS && (
+        <>
+          <Stack.Screen
+            options={{
+              headerShown: true,
+              headerTransparent: true,
+              headerStyle: { backgroundColor: "transparent" },
+              headerShadowVisible: false,
+            }}
+          />
+          <Stack.Title
+            large
+            style={{
+              fontFamily: "InstrumentSerif-Italic",
+              fontSize: 22,
+              color: theme.colors.primary,
+            }}
+            largeStyle={{
+              fontFamily: "InstrumentSerif-Italic",
+              fontSize: 38,
+              color: theme.colors.primary,
+            }}
+          >
+            Tus Grupos
+          </Stack.Title>
+          <Stack.Toolbar placement="right">
+            <Stack.Toolbar.Menu icon="plus" accessibilityLabel="Añadir grupo">
+              <Stack.Toolbar.MenuAction
+                icon="plus.circle"
+                onPress={handleCreateGroup}
+              >
+                Crear grupo
+              </Stack.Toolbar.MenuAction>
+              <Stack.Toolbar.MenuAction icon="qrcode" onPress={handleJoinGroup}>
+                Unirse con código
+              </Stack.Toolbar.MenuAction>
+            </Stack.Toolbar.Menu>
+            <Stack.Toolbar.Menu
+              icon="ellipsis"
+              accessibilityLabel="Más opciones"
+            >
+              <Stack.Toolbar.MenuAction
+                icon="rectangle.portrait.and.arrow.right"
+                destructive
+                onPress={() => setShowSignOutDialog(true)}
+              >
+                Cerrar sesión
+              </Stack.Toolbar.MenuAction>
+            </Stack.Toolbar.Menu>
+          </Stack.Toolbar>
+        </>
+      )}
+
+      {!isIOS && (
+        <OptionsMenu
+          visible={menu.visible}
+          title={menu.title}
+          options={menu.options}
+          onDismiss={() => setMenu((prev) => ({ ...prev, visible: false }))}
+          blurTarget={backgroundRef}
+        />
+      )}
 
       <ConfirmDialog
         visible={showSignOutDialog}
@@ -503,6 +610,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 16,
     paddingBottom: 120,
+  },
+  scrollContentNativeHeader: {
+    paddingTop: 0,
+  },
+  subtitleNativeHeader: {
+    marginTop: 0,
+    marginBottom: 16,
   },
 
   header: {
@@ -552,47 +666,56 @@ const styles = StyleSheet.create({
 
   groupCard: {
     borderRadius: 22,
-    padding: 16,
-    aspectRatio: 2.5,
-    justifyContent: "space-between",
+    overflow: "hidden",
   },
-  groupIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+  cover: {
+    height: COVER_HEIGHT,
     justifyContent: "center",
     alignItems: "center",
   },
+  coverInitials: {
+    fontFamily: "InstrumentSerif-Italic",
+    fontSize: 56,
+    color: "rgba(255,255,255,0.9)",
+  },
+  cardFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
   groupInfo: {
     flex: 1,
-    justifyContent: "flex-end",
   },
   groupName: {
     fontFamily: "Archivo-Bold",
-    fontSize: 15,
-    lineHeight: 20,
-    marginBottom: 6,
-  },
-  groupMeta: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  metaChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
+    fontSize: 16,
+    lineHeight: 21,
+    marginBottom: 2,
   },
   metaText: {
     fontFamily: "Archivo-Medium",
     fontSize: 12,
   },
+  faces: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  face: {
+    borderRadius: 15,
+    borderWidth: 2,
+  },
+  faceOverlap: {
+    marginLeft: -9,
+  },
   roleBadge: {
     position: "absolute",
-    top: 14,
-    right: 14,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    top: 12,
+    right: 12,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
     borderRadius: 8,
   },
   roleBadgeText: {
@@ -600,26 +723,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 0.5,
     textTransform: "uppercase",
-  },
-
-  createCard: {
-    borderStyle: "dashed",
-    backgroundColor: "transparent",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  createIconContainer: {
-    width: 52,
-    height: 52,
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  createText: {
-    fontFamily: "Archivo-Medium",
-    fontSize: 13,
-    letterSpacing: 0.3,
   },
 
   emptyContainer: {
@@ -667,25 +770,15 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
 
-  skeletonIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-  },
   skeletonTextLong: {
     height: 14,
     borderRadius: 7,
-    width: "70%",
-    position: "absolute",
-    bottom: 34,
-    left: 16,
+    width: "60%",
+    marginBottom: 8,
   },
   skeletonTextShort: {
-    height: 12,
+    height: 11,
     borderRadius: 6,
-    width: "45%",
-    position: "absolute",
-    bottom: 16,
-    left: 16,
+    width: "35%",
   },
 });
