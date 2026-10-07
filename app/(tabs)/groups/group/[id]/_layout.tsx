@@ -3,11 +3,6 @@
  * Barra inferior con inicio, mensajes y perfil del grupo privado.
  */
 import { Ionicons } from "@expo/vector-icons";
-import {
-  GlassView,
-  isGlassEffectAPIAvailable,
-  isLiquidGlassAvailable,
-} from "expo-glass-effect";
 import { BottomTabBarProps } from "expo-router/js-tabs";
 import { Tabs } from "expo-router";
 import { ColorValue, Pressable, StyleSheet, View, ViewStyle } from "react-native";
@@ -19,9 +14,6 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
-
-// Liquid Glass solo existe en iOS 26+; en el resto se usa la barra opaca.
-const glassAvailable = isLiquidGlassAvailable() && isGlassEffectAPIAvailable();
 
 type AnimatedIconProps = {
   focused: boolean;
@@ -84,57 +76,9 @@ function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
 
   const isMessagesScreen = currentRoute.name === "messages";
 
-  const tabItems = state.routes.map((route, index) => {
-    const { options } = descriptors[route.key];
-
-    if (!options.tabBarIcon) return null;
-
-    const isFocused = state.index === index;
-    const color = theme.colors.onSurface;
-
-    const onPress = () => {
-      const event = navigation.emit({
-        type: "tabPress",
-        target: route.key,
-        canPreventDefault: true,
-      });
-      if (!isFocused && !event.defaultPrevented) {
-        navigation.navigate(route.name);
-      }
-    };
-
-    const onLongPress = () => {
-      navigation.emit({
-        type: "tabLongPress",
-        target: route.key,
-      });
-    };
-
-    const icon = options.tabBarIcon?.({
-      focused: isFocused,
-      color,
-      size: 24,
-    });
-
-    return (
-      <Pressable
-        key={route.key}
-        accessibilityRole="button"
-        accessibilityState={isFocused ? { selected: true } : {}}
-        accessibilityLabel={options.tabBarAccessibilityLabel}
-        onPress={onPress}
-        onLongPress={onLongPress}
-        style={styles.tabItem}
-      >
-        {icon}
-      </Pressable>
-    );
-  });
-
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
-      {/* Con cristal no hay degradado: taparía el contenido que debe verse a través */}
-      {!isMessagesScreen && !glassAvailable && (
+      {!isMessagesScreen && (
         <View
           style={{
             position: "absolute",
@@ -170,29 +114,63 @@ function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
         </View>
       )}
 
-      {glassAvailable ? (
-        <GlassView
-          style={[styles.tabBarContainer, { bottom: bottomMargin }]}
-          glassEffectStyle="regular"
-          isInteractive
-        >
-          {tabItems}
-        </GlassView>
-      ) : (
-        <SquircleView
-          style={[
-            styles.tabBarContainer,
-            styles.tabBarSolid,
-            {
-              bottom: bottomMargin,
-              backgroundColor: theme.colors.surface,
-            },
-          ]}
-          cornerSmoothing={1}
-        >
-          {tabItems}
-        </SquircleView>
-      )}
+      <SquircleView
+        style={[
+          styles.tabBarContainer,
+          {
+            bottom: bottomMargin,
+            backgroundColor: theme.colors.surface,
+          },
+        ]}
+        cornerSmoothing={1}
+      >
+        {state.routes.map((route, index) => {
+          const { options } = descriptors[route.key];
+
+          if (!options.tabBarIcon) return null;
+
+          const isFocused = state.index === index;
+          const color = theme.colors.onSurface;
+
+          const onPress = () => {
+            const event = navigation.emit({
+              type: "tabPress",
+              target: route.key,
+              canPreventDefault: true,
+            });
+            if (!isFocused && !event.defaultPrevented) {
+              navigation.navigate(route.name);
+            }
+          };
+
+          const onLongPress = () => {
+            navigation.emit({
+              type: "tabLongPress",
+              target: route.key,
+            });
+          };
+
+          const icon = options.tabBarIcon?.({
+            focused: isFocused,
+            color,
+            size: 24,
+          });
+
+          return (
+            <Pressable
+              key={route.key}
+              accessibilityRole="button"
+              accessibilityState={isFocused ? { selected: true } : {}}
+              accessibilityLabel={options.tabBarAccessibilityLabel}
+              onPress={onPress}
+              onLongPress={onLongPress}
+              style={styles.tabItem}
+            >
+              {icon}
+            </Pressable>
+          );
+        })}
+      </SquircleView>
     </View>
   );
 }
@@ -208,8 +186,6 @@ const styles = StyleSheet.create({
     borderRadius: 32,
     alignItems: "center",
     justifyContent: "space-evenly",
-  },
-  tabBarSolid: {
     elevation: 10,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 8 },

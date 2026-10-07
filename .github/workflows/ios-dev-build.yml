@@ -11,6 +11,11 @@ on:
       - app.json
       - pnpm-lock.yaml
 
+# Una sola compilación por rama: si llega otra, se cancela la anterior.
+concurrency:
+  group: ios-dev-build-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: macos-latest
