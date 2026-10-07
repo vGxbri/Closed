@@ -27,8 +27,6 @@ const triggerHaptic = () => {
   impactAsync(ImpactFeedbackStyle.Rigid);
 };
 
-const AnimatedExpoImage = Animated.createAnimatedComponent(ExpoImage);
-
 const ParallaxCarouselItemComponent = <ItemT extends ParallaxCarouselItem>({
   item,
   index,
@@ -75,8 +73,9 @@ const ParallaxCarouselItemComponent = <ItemT extends ParallaxCarouselItem>({
         ]}
       >
         {item.image && (
-          <AnimatedExpoImage
-            source={item.image}
+          // El parallax se anima en un contenedor y no en la imagen: en iOS, expo-image
+          // recarga la imagen cada vez que cambian sus props, o sea, en cada frame.
+          <Animated.View
             style={[
               {
                 width: containerWidth * 1.4,
@@ -84,9 +83,14 @@ const ParallaxCarouselItemComponent = <ItemT extends ParallaxCarouselItem>({
               },
               imageAnimatedStyle,
             ]}
-            contentFit="cover"
-            cachePolicy="memory-disk"
-          />
+          >
+            <ExpoImage
+              source={item.image}
+              style={styles.image}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+            />
+          </Animated.View>
         )}
       </View>
       {renderItem({ item, index })}
@@ -156,10 +160,11 @@ const ParallaxCarousel = <ItemT extends ParallaxCarouselItem>({
         decelerationRate="fast"
         contentContainerStyle={styles.flatListContent}
         renderItem={stableRenderItem}
-        removeClippedSubviews={true}
-        maxToRenderPerBatch={3}
-        windowSize={3}
-        initialNumToRender={2}
+        // Con pocas páginas se montan todas: así las imágenes no se decodifican a mitad del gesto
+        removeClippedSubviews={false}
+        initialNumToRender={data.length}
+        maxToRenderPerBatch={data.length}
+        windowSize={data.length * 2 + 1}
       />
     </View>
   );
@@ -179,6 +184,10 @@ const styles = StyleSheet.create({
   itemContainer: {
     justifyContent: "center",
     alignItems: "center",
+  },
+  image: {
+    width: "100%",
+    height: "100%",
   },
   imageContainer: {
     overflow: "hidden",
