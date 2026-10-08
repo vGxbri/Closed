@@ -5,7 +5,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { BlurTargetView } from "expo-blur";
 import * as Haptics from "expo-haptics";
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import {
   Keyboard,
@@ -151,7 +151,6 @@ export default function CreateExpenseScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ headerShown: false }} />
       <BlurTargetView
         ref={backgroundRef}
         style={[styles.container, { backgroundColor: theme.colors.background }]}

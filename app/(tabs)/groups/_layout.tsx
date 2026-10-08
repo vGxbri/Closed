@@ -20,6 +20,8 @@ export default function GroupsStackLayout() {
         contentStyle: { backgroundColor: theme.colors.background },
       }}
     >
+      {/* En los modales la cabecera se fija aquí: ocultarla desde la propia pantalla
+          hace que iOS la remonte una y otra vez */}
       <Stack.Screen
         name="index"
         options={{ headerShown: false, gestureEnabled: false }}
@@ -27,28 +29,19 @@ export default function GroupsStackLayout() {
       <Stack.Screen name="group/[id]" options={{ headerShown: false }} />
       <Stack.Screen
         name="group/widgets"
-        options={{ title: "Explorar Widgets", presentation: "modal" }}
+        options={{ headerShown: false, presentation: "modal" }}
       />
-      <Stack.Screen
-        name="group/gallery"
-        options={{ headerShown: false }}
-      />
+      <Stack.Screen name="group/gallery" options={{ headerShown: false }} />
       <Stack.Screen
         name="group/sharedExpenses"
         options={{ headerShown: false }}
       />
-      <Stack.Screen
-        name="group/awards"
-        options={{ headerShown: false }}
-      />
+      <Stack.Screen name="group/awards" options={{ headerShown: false }} />
       <Stack.Screen
         name="group/createExpense"
-        options={{ title: "Nuevo Gasto", presentation: "modal" }}
+        options={{ headerShown: false, presentation: "modal" }}
       />
-      <Stack.Screen
-        name="group/flashback"
-        options={{ headerShown: false }}
-      />
+      <Stack.Screen name="group/flashback" options={{ headerShown: false }} />
       <Stack.Screen
         name="group/flashbackCamera"
         options={{ headerShown: false, animation: "fade" }}
