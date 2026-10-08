@@ -14,6 +14,7 @@ import {
 import React from "react";
 import {
   Animated,
+  Platform,
   Easing,
   Pressable,
   StyleSheet,
@@ -21,6 +22,7 @@ import {
   View,
 } from "react-native";
 import { Portal, Text, useTheme } from "react-native-paper";
+import { FullWindowOverlay } from "react-native-screens";
 
 export type DialogType = "success" | "error" | "warning" | "info" | "confirm";
 
@@ -38,6 +40,10 @@ interface ConfirmDialogProps {
 }
 
 const glassAvailable = isLiquidGlassAvailable() && isGlassEffectAPIAvailable();
+
+// En iOS se pinta sobre toda la ventana: el Portal queda por debajo de las pantallas modales nativas
+// y el diálogo no se vería al abrirlo desde una de ellas
+const Host = Platform.OS === "ios" ? FullWindowOverlay : Portal;
 
 export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   visible,
@@ -205,7 +211,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   );
 
   return (
-    <Portal>
+    <Host>
       <View style={styles.container}>
         <Pressable style={styles.backdrop} onPress={onCancel}>
           <Animated.View
@@ -256,7 +262,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           </Animated.View>
         )}
       </View>
-    </Portal>
+    </Host>
   );
 };
 

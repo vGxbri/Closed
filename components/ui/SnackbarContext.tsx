@@ -8,11 +8,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { GlassView, isGlassEffectAPIAvailable, isLiquidGlassAvailable } from 'expo-glass-effect';
 import { useSegments } from 'expo-router';
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, Animated, Pressable, StyleSheet, View } from 'react-native';
+import { AccessibilityInfo, Animated, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { FullWindowOverlay } from 'react-native-screens';
 
 const HEADER_HEIGHT = 56;
+
+// En iOS el aviso se pinta sobre toda la ventana: si no, queda por debajo de las pantallas modales nativas
+const Host = Platform.OS === 'ios' ? FullWindowOverlay : React.Fragment;
 
 // Los errores se quedan más tiempo: hay que leerlos y entender qué corregir
 const DURATION_MS = 3000;
@@ -145,6 +149,7 @@ export const SnackbarProvider: React.FC<SnackbarProviderProps> = ({ children }) 
     <SnackbarContext.Provider value={{ showSnackbar }}>
       {children}
       {visible && (
+        <Host>
         <Animated.View
           pointerEvents="box-none"
           style={[
@@ -177,6 +182,7 @@ export const SnackbarProvider: React.FC<SnackbarProviderProps> = ({ children }) 
             )}
           </Pressable>
         </Animated.View>
+        </Host>
       )}
     </SnackbarContext.Provider>
   );

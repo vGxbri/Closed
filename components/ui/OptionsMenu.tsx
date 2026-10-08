@@ -5,7 +5,7 @@
 
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
-import { StyleSheet, TouchableOpacity, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { Text, useTheme } from "react-native-paper";
 import { BottomSheetModal } from "./BottomSheetModal";
 
@@ -38,6 +38,11 @@ export const OptionsMenu: React.FC<OptionsMenuProps> = ({
     setTimeout(() => option.action(), 300);
   };
 
+  // Relleno neutro que funciona tanto sobre la hoja opaca como sobre la de cristal
+  const neutralFill = theme.dark
+    ? "rgba(255,255,255,0.08)"
+    : "rgba(0,0,0,0.05)";
+
   return (
     <BottomSheetModal
       visible={visible}
@@ -46,140 +51,112 @@ export const OptionsMenu: React.FC<OptionsMenuProps> = ({
       contentStyle={styles.sheetContent}
     >
       <Text
-        variant="titleMedium"
+        accessibilityRole="header"
         style={[styles.title, { color: theme.colors.onSurface }]}
       >
         {title}
       </Text>
 
-      <View style={styles.optionsContainer}>
-        {options.map((option, index) => (
-          <TouchableOpacity
-            key={`${option.label}-${index}`}
-            style={[
-              styles.optionRow,
-              {
-                backgroundColor: option.isDestructive
-                  ? `${theme.colors.error}10`
-                  : theme.colors.surfaceVariant + "40",
-                borderColor: option.isDestructive
-                  ? `${theme.colors.error}30`
-                  : theme.colors.outlineVariant,
-              },
-            ]}
-            onPress={() => handleOptionPress(option)}
-            activeOpacity={0.7}
-          >
-            {option.icon && (
-              <View
-                style={[
-                  styles.iconContainer,
-                  {
-                    backgroundColor: option.isDestructive
-                      ? `${theme.colors.error}20`
-                      : theme.colors.primaryContainer,
-                  },
+      {/* Las opciones van agrupadas en un bloque con separadores, como las listas de iOS */}
+      <View style={[styles.group, { backgroundColor: neutralFill }]}>
+        {options.map((option, index) => {
+          const color = option.isDestructive
+            ? theme.colors.error
+            : theme.colors.onSurface;
+
+          return (
+            <React.Fragment key={`${option.label}-${index}`}>
+              {index > 0 && (
+                <View
+                  style={[
+                    styles.separator,
+                    { backgroundColor: theme.colors.outlineVariant },
+                    !option.icon && styles.separatorNoIcon,
+                  ]}
+                />
+              )}
+              <Pressable
+                onPress={() => handleOptionPress(option)}
+                accessibilityRole="button"
+                style={({ pressed }) => [
+                  styles.optionRow,
+                  { opacity: pressed ? 0.55 : 1 },
                 ]}
               >
-                <Ionicons
-                  name={option.icon}
-                  size={20}
-                  color={
-                    option.isDestructive
-                      ? theme.colors.error
-                      : theme.colors.onSurface
-                  }
-                />
-              </View>
-            )}
-            <Text
-              variant="bodyLarge"
-              style={[
-                styles.optionLabel,
-                {
-                  color: option.isDestructive
-                    ? theme.colors.error
-                    : theme.colors.onSurface,
-                  marginLeft: option.icon ? 0 : 4,
-                },
-              ]}
-            >
-              {option.label}
-            </Text>
-            <Ionicons
-              name="chevron-forward"
-              size={18}
-              color={
-                option.isDestructive
-                  ? theme.colors.error
-                  : theme.colors.onSurfaceVariant
-              }
-            />
-          </TouchableOpacity>
-        ))}
+                {option.icon && (
+                  <Ionicons name={option.icon} size={21} color={color} />
+                )}
+                <Text style={[styles.optionLabel, { color }]} numberOfLines={1}>
+                  {option.label}
+                </Text>
+              </Pressable>
+            </React.Fragment>
+          );
+        })}
       </View>
 
-      <TouchableOpacity
-        style={[
-          styles.cancelButton,
-          { borderColor: theme.colors.outlineVariant },
-        ]}
+      <Pressable
         onPress={onDismiss}
-        activeOpacity={0.7}
+        accessibilityRole="button"
+        style={({ pressed }) => [
+          styles.cancelButton,
+          { backgroundColor: neutralFill, opacity: pressed ? 0.7 : 1 },
+        ]}
       >
-        <Text
-          variant="labelLarge"
-          style={{
-            color: theme.colors.onSurfaceVariant,
-            fontWeight: "600",
-          }}
-        >
+        <Text style={[styles.cancelText, { color: theme.colors.onSurface }]}>
           Cancelar
         </Text>
-      </TouchableOpacity>
+      </Pressable>
     </BottomSheetModal>
   );
 };
 
 const styles = StyleSheet.create({
   sheetContent: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingBottom: 34,
   },
   title: {
-    textAlign: "center",
-    marginBottom: 20,
-    fontWeight: "700",
+    fontFamily: "Archivo-Bold",
+    fontSize: 20,
+    lineHeight: 25,
+    paddingHorizontal: 6,
+    paddingTop: 4,
+    marginBottom: 14,
   },
-  optionsContainer: {
-    gap: 10,
-    marginBottom: 16,
+  group: {
+    borderRadius: 22,
+    overflow: "hidden",
+    marginBottom: 12,
   },
   optionRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 14,
-    borderWidth: 1,
-    gap: 12,
-  },
-  iconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    justifyContent: "center",
-    alignItems: "center",
+    gap: 14,
+    minHeight: 56,
+    paddingHorizontal: 18,
   },
   optionLabel: {
     flex: 1,
-    fontWeight: "600",
+    fontFamily: "Archivo-SemiBold",
+    fontSize: 16,
+  },
+  // El separador nace tras el icono
+  separator: {
+    height: StyleSheet.hairlineWidth,
+    marginLeft: 53,
+  },
+  separatorNoIcon: {
+    marginLeft: 18,
   },
   cancelButton: {
+    height: 50,
+    borderRadius: 25,
     alignItems: "center",
-    paddingVertical: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-    marginTop: 4,
+    justifyContent: "center",
+  },
+  cancelText: {
+    fontFamily: "Archivo-SemiBold",
+    fontSize: 15,
   },
 });

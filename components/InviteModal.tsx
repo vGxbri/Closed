@@ -5,20 +5,24 @@
 
 import { Ionicons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
-import React, { useMemo } from "react";
+import * as Haptics from "expo-haptics";
+import React, { useEffect, useMemo, useState } from "react";
+import {
+  AccessibilityInfo,
+  Pressable,
+  Share,
+  StyleSheet,
+  View,
+} from "react-native";
+import SquircleView from "react-native-fast-squircle";
+import { Text, useTheme } from "react-native-paper";
+
+import { CTAButton } from "@/components/ui/CTAButton";
 import {
   getGroupInviteUrl,
   getInviteShareMessage,
   normalizeInviteCode,
 } from "@/lib/inviteLink";
-import {
-  Share,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import { Button, Surface, Text, useTheme } from "react-native-paper";
-import { useSnackbar } from "@/components/ui/SnackbarContext";
 import { BottomSheetModal } from "./ui/BottomSheetModal";
 
 interface InviteModalProps {
@@ -35,7 +39,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({
   groupName,
 }) => {
   const theme = useTheme();
-  const { showSnackbar } = useSnackbar();
+  const [copied, setCopied] = useState(false);
 
   const inviteCodeNormalized = useMemo(
     () => normalizeInviteCode(inviteCode) ?? inviteCode,
@@ -46,9 +50,18 @@ export const InviteModal: React.FC<InviteModalProps> = ({
     [inviteCodeNormalized],
   );
 
+  // La confirmación de copiado vuelve a su estado normal al cabo de un momento
+  useEffect(() => {
+    if (!copied) return;
+    const timer = setTimeout(() => setCopied(false), 2000);
+    return () => clearTimeout(timer);
+  }, [copied]);
+
   const handleCopyCode = async () => {
     await Clipboard.setStringAsync(inviteCodeNormalized);
-    showSnackbar("Código copiado al portapapeles", "success");
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    AccessibilityInfo.announceForAccessibility("Código copiado");
+    setCopied(true);
   };
 
   const handleShare = async () => {
@@ -58,123 +71,151 @@ export const InviteModal: React.FC<InviteModalProps> = ({
         title: `Únete a ${groupName} en Closed`,
         url: appLink,
       });
-    } catch {
-    }
+    } catch {}
   };
+
+  const characters = inviteCodeNormalized.split("");
+  // El código se muestra partido en dos mitades, igual que en la pantalla donde se escribe
+  const half = Math.ceil(characters.length / 2);
+  const boxFill = theme.dark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.06)";
+  const hintColor = copied
+    ? theme.colors.primary
+    : theme.colors.onSurfaceVariant;
 
   return (
     <BottomSheetModal
       visible={visible}
       onDismiss={onClose}
-      contentStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}
+      contentStyle={styles.sheetContent}
     >
-      <View style={styles.header}>
-        <View style={{ width: 40 }} />
-        <Text variant="titleLarge" style={{ fontWeight: "700" }}>
-          Invitar al grupo
+      <View
+        accessible
+        accessibilityRole="header"
+        accessibilityLabel={`Invita a gente a ${groupName}`}
+      >
+        <Text style={[styles.titleLead, { color: theme.colors.onSurface }]}>
+          Invita a gente a
         </Text>
-        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-          <Ionicons
-            name="close"
-            size={24}
-            color={theme.colors.onSurfaceVariant}
-          />
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.content}>
         <Text
-          variant="bodyMedium"
-          style={{
-            textAlign: "center",
-            color: theme.colors.onSurfaceVariant,
-            marginBottom: 16,
-          }}
+          style={[styles.titleGroup, { color: theme.colors.primary }]}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.6}
         >
-          Comparte este código para que se unan al grupo
+          {groupName}
         </Text>
-
-        <TouchableOpacity onPress={handleCopyCode} activeOpacity={0.7}>
-          <Surface
-            style={[
-              styles.codeContainer,
-              {
-                backgroundColor: theme.colors.primaryContainer,
-                borderColor: theme.colors.primary,
-                borderWidth: 2,
-                borderStyle: "dashed",
-              },
-            ]}
-            elevation={0}
-          >
-            <Text
-              variant="displayMedium"
-              style={{
-                fontWeight: "800",
-                color: theme.colors.onSurface,
-                letterSpacing: 4,
-              }}
-            >
-              {inviteCodeNormalized}
-            </Text>
-            <View style={styles.tapToCopy}>
-              <Ionicons
-                name="copy-outline"
-                size={14}
-                color={theme.colors.onPrimaryContainer}
-              />
-              <Text
-                variant="labelSmall"
-                style={{
-                  color: theme.colors.onPrimaryContainer,
-                  marginLeft: 4,
-                }}
-              >
-                Toca para copiar
-              </Text>
-            </View>
-          </Surface>
-        </TouchableOpacity>
-
-        <Button
-          mode="contained"
-          onPress={handleShare}
-          icon="share-variant"
-          style={{ borderRadius: 12, marginTop: 4 }}
-          contentStyle={{ paddingVertical: 6 }}
-        >
-          Compartir invitación
-        </Button>
       </View>
+
+      <Text style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }]}>
+        Pásales este código o comparte la invitación para que se unan.
+      </Text>
+
+      <Pressable
+        onPress={handleCopyCode}
+        accessibilityRole="button"
+        accessibilityLabel={`Código ${characters.join(" ")}`}
+        accessibilityHint="Copia el código"
+        style={({ pressed }) => [
+          styles.codeBlock,
+          { transform: [{ scale: pressed ? 0.98 : 1 }] },
+        ]}
+      >
+        <View style={styles.codeRow}>
+          {characters.map((character, index) => (
+            <SquircleView
+              key={index}
+              style={[
+                styles.codeBox,
+                index === half - 1 && styles.codeBoxBeforeGap,
+                { backgroundColor: boxFill },
+              ]}
+              cornerSmoothing={1}
+            >
+              <Text
+                maxFontSizeMultiplier={1.2}
+                style={[styles.codeChar, { color: theme.colors.onSurface }]}
+              >
+                {character}
+              </Text>
+            </SquircleView>
+          ))}
+        </View>
+
+        <View style={styles.copyHint}>
+          <Ionicons
+            name={copied ? "checkmark-circle" : "copy-outline"}
+            size={15}
+            color={hintColor}
+          />
+          <Text style={[styles.copyHintText, { color: hintColor }]}>
+            {copied ? "Código copiado" : "Toca para copiar"}
+          </Text>
+        </View>
+      </Pressable>
+
+      <CTAButton
+        title="Compartir invitación"
+        iconName="share-outline"
+        onPress={handleShare}
+      />
     </BottomSheetModal>
   );
 };
 
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+  sheetContent: {
+    paddingHorizontal: 22,
+    paddingBottom: 34,
+  },
+  titleLead: {
+    fontFamily: "Archivo-Bold",
+    fontSize: 20,
+    lineHeight: 25,
+    marginTop: 4,
+  },
+  titleGroup: {
+    fontFamily: "InstrumentSerif-Italic",
+    fontSize: 34,
+    lineHeight: 40,
+    letterSpacing: 0.5,
+  },
+  subtitle: {
+    fontFamily: "Archivo-Regular",
+    fontSize: 15,
+    lineHeight: 21,
+    marginTop: 6,
+  },
+  codeBlock: {
+    marginTop: 22,
     marginBottom: 24,
   },
-  closeButton: {
-    padding: 8,
-    marginRight: -8,
+  codeRow: {
+    flexDirection: "row",
+    gap: 8,
   },
-  content: {
-    gap: 16,
-  },
-  codeContainer: {
-    padding: 24,
-    borderRadius: 20,
+  codeBox: {
+    flex: 1,
+    aspectRatio: 0.8,
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 8,
   },
-  tapToCopy: {
+  codeBoxBeforeGap: {
+    marginRight: 10,
+  },
+  codeChar: {
+    fontFamily: "Archivo-Bold",
+    fontSize: 28,
+  },
+  copyHint: {
     flexDirection: "row",
     alignItems: "center",
-    opacity: 0.6,
-    marginTop: 8,
+    justifyContent: "center",
+    gap: 6,
+    marginTop: 12,
+  },
+  copyHintText: {
+    fontFamily: "Archivo-SemiBold",
+    fontSize: 13,
   },
 });

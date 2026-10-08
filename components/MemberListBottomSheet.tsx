@@ -3,25 +3,19 @@
  * Bottom sheet con el roster del grupo, roles y avatares.
  */
 
-import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useRef } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Text, useTheme } from "react-native-paper";
-import Animated, { useSharedValue } from "react-native-reanimated";
-import SquircleView from "react-native-fast-squircle";
-import { MemberAvatar } from "./MemberAvatar";
+import { useSharedValue } from "react-native-reanimated";
+import { getMemberDisplayName } from "../lib/memberProfile";
 import { GroupMemberView } from "../types/database";
+import { MemberAvatar } from "./MemberAvatar";
 import { BottomSheetModal } from "./ui/BottomSheetModal";
 
-const getRoleConfig = (role: string) => {
-  switch (role) {
-    case "owner":
-      return { label: "Propietario", icon: "shield" as const };
-    case "admin":
-      return { label: "Admin", icon: "shield-half" as const };
-    default:
-      return { label: "Miembro", icon: "person" as const };
-  }
+// Solo los roles con permisos llevan etiqueta; "miembro" es lo normal y no hace falta decirlo
+const ROLE_LABELS: Record<string, string> = {
+  owner: "Propietario",
+  admin: "Admin",
 };
 
 interface MemberRowProps {
@@ -31,55 +25,40 @@ interface MemberRowProps {
 
 const MemberRow = React.memo<MemberRowProps>(({ member, isLast }) => {
   const theme = useTheme();
-  const roleConfig = getRoleConfig(member.role);
-  const isSpecialRole = member.role === "owner" || member.role === "admin";
+  const name = getMemberDisplayName(member);
+  const roleLabel = ROLE_LABELS[member.role];
 
   return (
-    <Animated.View
-      style={[
-        styles.memberRow,
-        !isLast && {
-          borderBottomWidth: StyleSheet.hairlineWidth,
-          borderBottomColor: theme.colors.outlineVariant,
-        },
-      ]}
+    <View
+      accessible
+      accessibilityLabel={roleLabel ? `${name}, ${roleLabel}` : name}
+      style={styles.memberRow}
     >
       <MemberAvatar user={member} size="md" />
-      <View style={styles.memberInfo}>
+      <View
+        style={[
+          styles.memberContent,
+          !isLast && {
+            borderBottomWidth: StyleSheet.hairlineWidth,
+            borderBottomColor: theme.colors.outlineVariant,
+          },
+        ]}
+      >
         <Text
-          style={[
-            styles.memberName,
-            { color: theme.colors.onSurface },
-          ]}
+          style={[styles.memberName, { color: theme.colors.onSurface }]}
           numberOfLines={1}
         >
-          {member.display_name}
+          {name}
         </Text>
-        <View style={styles.roleRow}>
-          <Ionicons
-            name={roleConfig.icon}
-            size={12}
-            color={
-              isSpecialRole
-                ? theme.colors.primary
-                : theme.colors.onSurfaceVariant
-            }
-          />
+        {roleLabel && (
           <Text
-            style={[
-              styles.roleText,
-              {
-                color: isSpecialRole
-                  ? theme.colors.primary
-                  : theme.colors.onSurfaceVariant,
-              },
-            ]}
+            style={[styles.roleText, { color: theme.colors.onSurfaceVariant }]}
           >
-            {roleConfig.label}
+            {roleLabel}
           </Text>
-        </View>
+        )}
       </View>
-    </Animated.View>
+    </View>
   );
 });
 
@@ -106,7 +85,7 @@ export const MemberListBottomSheet: React.FC<MemberListBottomSheetProps> = ({
   const sortedMembers = React.useMemo(() => {
     const roleOrder = { owner: 0, admin: 1, member: 2 };
     return [...members].sort(
-      (a, b) => (roleOrder[a.role] ?? 3) - (roleOrder[b.role] ?? 3)
+      (a, b) => (roleOrder[a.role] ?? 3) - (roleOrder[b.role] ?? 3),
     );
   }, [members]);
 
@@ -114,7 +93,7 @@ export const MemberListBottomSheet: React.FC<MemberListBottomSheetProps> = ({
     (event: { nativeEvent: { contentOffset: { y: number } } }) => {
       isScrolledToTop.value = event.nativeEvent.contentOffset.y <= 0;
     },
-    [isScrolledToTop]
+    [isScrolledToTop],
   );
 
   return (
@@ -124,54 +103,21 @@ export const MemberListBottomSheet: React.FC<MemberListBottomSheetProps> = ({
       isScrolledToTop={isScrolledToTop}
     >
       <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <SquircleView
-            style={[
-              styles.headerIconContainer,
-              {
-                backgroundColor: theme.dark
-                  ? "rgba(42,138,112,0.15)"
-                  : "rgba(42,138,112,0.08)",
-                borderColor: theme.colors.primary,
-                borderWidth: 1,
-              },
-            ]}
-            cornerSmoothing={1}
-          >
-            <Ionicons
-              name="people"
-              size={18}
-              color={theme.colors.primary}
-            />
-          </SquircleView>
-          <View>
-            <Text
-              style={[
-                styles.headerTitle,
-                { color: theme.colors.onSurface },
-              ]}
-            >
-              {title}
-            </Text>
-            <Text
-              style={[
-                styles.headerSubtitle,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
-            >
-              {members.length}{" "}
-              {members.length === 1 ? "persona" : "personas"}
-            </Text>
-          </View>
-        </View>
+        <Text
+          accessibilityRole="header"
+          style={[styles.headerTitle, { color: theme.colors.onSurface }]}
+        >
+          {title}
+        </Text>
+        <Text
+          style={[
+            styles.headerSubtitle,
+            { color: theme.colors.onSurfaceVariant },
+          ]}
+        >
+          {members.length} {members.length === 1 ? "persona" : "personas"}
+        </Text>
       </View>
-
-      <View
-        style={[
-          styles.divider,
-          { backgroundColor: theme.colors.outlineVariant },
-        ]}
-      />
 
       <ScrollView
         ref={scrollRef}
@@ -182,13 +128,24 @@ export const MemberListBottomSheet: React.FC<MemberListBottomSheetProps> = ({
         scrollEventThrottle={16}
         bounces={true}
       >
-        {sortedMembers.map((member, index) => (
-          <MemberRow
-            key={member.user_id}
-            member={member}
-            isLast={index === sortedMembers.length - 1}
-          />
-        ))}
+        <View
+          style={[
+            styles.group,
+            {
+              backgroundColor: theme.dark
+                ? "rgba(255,255,255,0.08)"
+                : "rgba(0,0,0,0.05)",
+            },
+          ]}
+        >
+          {sortedMembers.map((member, index) => (
+            <MemberRow
+              key={member.user_id}
+              member={member}
+              isLast={index === sortedMembers.length - 1}
+            />
+          ))}
+        </View>
       </ScrollView>
     </BottomSheetModal>
   );
@@ -196,73 +153,56 @@ export const MemberListBottomSheet: React.FC<MemberListBottomSheetProps> = ({
 
 const styles = StyleSheet.create({
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-  },
-  headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  headerIconContainer: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
+    paddingHorizontal: 22,
+    paddingTop: 4,
+    paddingBottom: 12,
   },
   headerTitle: {
     fontFamily: "Archivo-Bold",
-    fontSize: 18,
-    letterSpacing: 0.2,
+    fontSize: 20,
+    lineHeight: 25,
   },
   headerSubtitle: {
     fontFamily: "Archivo-Medium",
     fontSize: 13,
-    marginTop: 1,
-  },
-
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    marginHorizontal: 20,
+    marginTop: 2,
   },
 
   listContainer: {
     flexShrink: 1,
   },
   listContent: {
-    paddingHorizontal: 12,
-    paddingTop: 8,
+    paddingHorizontal: 16,
     paddingBottom: 34,
+  },
+  group: {
+    borderRadius: 22,
+    overflow: "hidden",
+    paddingLeft: 14,
   },
 
   memberRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 8,
+    gap: 14,
   },
-  memberInfo: {
+  // El separador nace tras el avatar, como en las listas de iOS
+  memberContent: {
     flex: 1,
-    marginLeft: 14,
-  },
-  memberName: {
-    fontFamily: "Archivo-SemiBold",
-    fontSize: 15,
-    letterSpacing: 0.1,
-  },
-  roleRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    marginTop: 3,
+    justifyContent: "space-between",
+    gap: 10,
+    minHeight: 66,
+    paddingRight: 16,
+  },
+  memberName: {
+    flexShrink: 1,
+    fontFamily: "Archivo-SemiBold",
+    fontSize: 16,
   },
   roleText: {
     fontFamily: "Archivo-Medium",
-    fontSize: 12,
-    letterSpacing: 0.2,
+    fontSize: 14,
   },
 });

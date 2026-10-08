@@ -1,19 +1,31 @@
 /**
  * Bottom sheet modal
  * Panel deslizable desde abajo con blur, gestos y cierre por arrastre.
+ * En iOS 26+ es una hoja flotante de Liquid Glass; en el resto, una superficie opaca pegada al borde.
  */
 
 import { BlurView } from "expo-blur";
+import {
+  GlassView,
+  isGlassEffectAPIAvailable,
+  isLiquidGlassAvailable,
+} from "expo-glass-effect";
 import React, { useCallback, useContext, useEffect, useState } from "react";
 import {
   Dimensions,
+  Platform,
   Pressable,
   StyleSheet,
   View,
   ViewStyle,
 } from "react-native";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import {
+  Gesture,
+  GestureDetector,
+  GestureHandlerRootView,
+} from "react-native-gesture-handler";
 import { Portal, useTheme } from "react-native-paper";
+import { FullWindowOverlay } from "react-native-screens";
 
 import { SnackbarContext } from "./SnackbarContext";
 import Animated, {
@@ -28,6 +40,8 @@ import Animated, {
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const DISMISS_THRESHOLD = 120;
+
+const glassAvailable = isLiquidGlassAvailable() && isGlassEffectAPIAvailable();
 
 export interface BottomSheetModalProps {
   visible: boolean;
@@ -92,18 +106,12 @@ export const BottomSheetModal: React.FC<BottomSheetModalProps> = ({
       const isAtTop = isScrolledToTop ? isScrolledToTop.value : true;
       if (isAtTop || event.translationY > 0) {
         translateY.value = Math.max(0, context.value + event.translationY);
-        const progress = Math.max(
-          0,
-          1 - translateY.value / SCREEN_HEIGHT
-        );
+        const progress = Math.max(0, 1 - translateY.value / SCREEN_HEIGHT);
         backdropOpacity.value = progress;
       }
     })
     .onEnd((event) => {
-      if (
-        translateY.value > DISMISS_THRESHOLD ||
-        event.velocityY > 800
-      ) {
+      if (translateY.value > DISMISS_THRESHOLD || event.velocityY > 800) {
         dismiss();
       } else {
         translateY.value = withSpring(0, {
@@ -119,7 +127,7 @@ export const BottomSheetModal: React.FC<BottomSheetModalProps> = ({
 
   const sheetStyle = useAnimatedStyle(() => {
     // El teclado desplaza la hoja solo cuando está abierta
-    const progress = 1 - (translateY.value / SCREEN_HEIGHT);
+    const progress = 1 - translateY.value / SCREEN_HEIGHT;
     return {
       transform: [
         { translateY: translateY.value },
@@ -134,51 +142,98 @@ export const BottomSheetModal: React.FC<BottomSheetModalProps> = ({
 
   if (!shouldRender) return null;
 
+  const content = (
+    <>
+      <View style={styles.handleArea}>
+        <View
+          style={[
+            styles.handleBar,
+            {
+              backgroundColor: theme.dark
+                ? "rgba(255,255,255,0.25)"
+                : "rgba(0,0,0,0.18)",
+            },
+          ]}
+        />
+      </View>
+
+      {children}
+    </>
+  );
+
   const sheet = (
     <View style={styles.container}>
-        <Pressable style={styles.backdrop} onPress={onDismiss}>
-          <Animated.View style={[StyleSheet.absoluteFill, backdropStyle]}>
-            <BlurView
-              intensity={60}
-              tint="dark"
-              style={StyleSheet.absoluteFill}
-              blurMethod={blurTarget ? "dimezisBlurView" : undefined}
-              blurTarget={blurTarget}
-            />
-          </Animated.View>
-        </Pressable>
+      <Pressable style={styles.backdrop} onPress={onDismiss}>
+        <Animated.View style={[StyleSheet.absoluteFill, backdropStyle]}>
+          <BlurView
+            intensity={60}
+            tint="dark"
+            style={StyleSheet.absoluteFill}
+            blurMethod={blurTarget ? "dimezisBlurView" : undefined}
+            blurTarget={blurTarget}
+          />
+        </Animated.View>
+      </Pressable>
 
-        <GestureDetector gesture={panGesture}>
-          <Animated.View
-            style={[
-              styles.sheetContainer,
-              {
-                backgroundColor: theme.colors.surface,
-                borderColor: theme.colors.outlineVariant,
-                maxHeight: maxHeight as any,
-              },
-              sheetStyle,
-              contentStyle,
-            ]}
-          >
-            <View style={styles.handleArea}>
+      <GestureDetector gesture={panGesture}>
+        {/* Solo se anima la posición: una opacidad parcial sobre el cristal estropea el efecto */}
+        <Animated.View
+          style={[
+            styles.sheetWrapper,
+            glassAvailable && styles.sheetWrapperFloating,
+            { maxHeight: maxHeight as any },
+            sheetStyle,
+          ]}
+        >
+          {glassAvailable ? (
+            <GlassView
+              style={[styles.sheet, styles.sheetFloating]}
+              glassEffectStyle="regular"
+            >
+              {/* Recorta el contenido desplazable a las esquinas de la hoja */}
               <View
                 style={[
-                  styles.handleBar,
-                  {
-                    backgroundColor: theme.dark
-                      ? "rgba(255,255,255,0.2)"
-                      : "rgba(0,0,0,0.15)",
-                  },
+                  styles.sheet,
+                  styles.sheetFloating,
+                  styles.sheetClip,
+                  contentStyle,
                 ]}
-              />
+              >
+                {content}
+              </View>
+            </GlassView>
+          ) : (
+            <View
+              style={[
+                styles.sheet,
+                styles.sheetAttached,
+                styles.sheetClip,
+                {
+                  backgroundColor: theme.colors.surface,
+                  borderColor: theme.colors.outlineVariant,
+                },
+                contentStyle,
+              ]}
+            >
+              {content}
             </View>
-
-            {children}
-          </Animated.View>
-        </GestureDetector>
-      </View>
+          )}
+        </Animated.View>
+      </GestureDetector>
+    </View>
   );
+
+  // En iOS la hoja se pinta sobre toda la ventana: el Portal queda por debajo de las pantallas
+  // modales nativas. Fuera del árbol principal los gestos necesitan su propia raíz.
+  if (Platform.OS === "ios") {
+    return (
+      <FullWindowOverlay>
+        <GestureHandlerRootView style={StyleSheet.absoluteFill}>
+          {sheet}
+        </GestureHandlerRootView>
+      </FullWindowOverlay>
+    );
+  }
 
   return (
     <Portal>
@@ -203,9 +258,22 @@ const styles = StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFill,
   },
-  sheetContainer: {
+  sheetWrapper: {
     width: "100%",
     maxWidth: 500,
+  },
+  // La hoja de cristal flota separada de los bordes, como las hojas de iOS 26
+  sheetWrapperFloating: {
+    paddingHorizontal: 8,
+    paddingBottom: 8,
+  },
+  sheet: {
+    flexShrink: 1,
+  },
+  sheetFloating: {
+    borderRadius: 40,
+  },
+  sheetAttached: {
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     borderWidth: 1,
@@ -215,6 +283,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.12,
     shadowRadius: 24,
     elevation: 24,
+  },
+  sheetClip: {
     overflow: "hidden",
   },
   handleArea: {
