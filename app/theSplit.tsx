@@ -9,9 +9,12 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useRef, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
-import SquircleView from "react-native-fast-squircle";
 import { Text, useTheme } from "react-native-paper";
-import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
+import Animated, {
+  FadeInDown,
+  FadeInUp,
+  useReducedMotion,
+} from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { GrainyGradient } from "@/components/premade/organisms/grainy-gradient";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -22,6 +25,7 @@ export default function TheSplit() {
   const theme = useTheme();
   const { signOut } = useAuth();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const reduceMotion = useReducedMotion();
 
   const backgroundRef = useRef(null);
 
@@ -47,6 +51,7 @@ export default function TheSplit() {
           }
           intensity={0.08}
           speed={1.5}
+          animated={!reduceMotion}
         />
       </Animated.View>
 
@@ -60,20 +65,29 @@ export default function TheSplit() {
               entering={FadeInUp.duration(150)}
               style={styles.header}
             >
-              <Text
-                style={[styles.welcomeText, { color: theme.colors.primary }]}
+              {/* Texto y logo se leen como un único encabezado */}
+              <View
+                accessible
+                accessibilityRole="header"
+                accessibilityLabel="Bienvenido a Closed"
+                style={styles.welcome}
               >
-                Bienvenido a
-              </Text>
-              <Image
-                source={
-                  theme.dark
-                    ? require("../assets/images/logo_full_light.png")
-                    : require("../assets/images/logo_full_dark.png")
-                }
-                style={styles.logo}
-                contentFit="contain"
-              />
+                <Text
+                  maxFontSizeMultiplier={1.4}
+                  style={[styles.welcomeText, { color: theme.colors.primary }]}
+                >
+                  Bienvenido a
+                </Text>
+                <Image
+                  source={
+                    theme.dark
+                      ? require("../assets/images/logo_full_light.png")
+                      : require("../assets/images/logo_full_dark.png")
+                  }
+                  style={styles.logo}
+                  contentFit="contain"
+                />
+              </View>
               <View
                 style={[
                   styles.divider,
@@ -113,27 +127,23 @@ export default function TheSplit() {
 
               <Pressable
                 onPress={() => setShowLogoutModal(true)}
+                accessibilityRole="button"
+                hitSlop={8}
                 style={({ pressed }) => [
-                  {
-                    opacity: pressed ? 0.8 : 1,
-                    transform: [{ scale: pressed ? 0.98 : 1 }],
-                    alignSelf: "center",
-                    marginTop: 8,
-                  },
+                  styles.logoutButton,
+                  { opacity: pressed ? 0.6 : 1 },
                 ]}
               >
-                <SquircleView style={styles.logoutButton} cornerSmoothing={1}>
-                  <Ionicons
-                    name="log-out"
-                    size={18}
-                    color={theme.colors.error}
-                  />
-                  <Text
-                    style={[styles.logoutText, { color: theme.colors.error }]}
-                  >
-                    Cerrar Sesión
-                  </Text>
-                </SquircleView>
+                <Ionicons
+                  name="log-out-outline"
+                  size={18}
+                  color={theme.colors.error}
+                />
+                <Text
+                  style={[styles.logoutText, { color: theme.colors.error }]}
+                >
+                  Cerrar sesión
+                </Text>
               </Pressable>
             </Animated.View>
           </View>
@@ -174,6 +184,9 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: "flex-start",
+  },
+  welcome: {
+    width: "100%",
   },
   welcomeText: {
     fontFamily: "InstrumentSerif-Italic",
@@ -234,18 +247,14 @@ const styles = StyleSheet.create({
   logoutButton: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    alignSelf: "center",
     gap: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    backgroundColor: "rgba(255, 59, 48, 0.3)",
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
+    marginTop: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
   },
   logoutText: {
     fontFamily: "Archivo-Bold",
-    fontSize: 14,
-    letterSpacing: 0.5,
+    fontSize: 15,
   },
 });

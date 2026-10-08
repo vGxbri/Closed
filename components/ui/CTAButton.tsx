@@ -125,6 +125,45 @@ export const CTAButton: React.FC<CTAButtonProps> = ({
     );
   }
 
+  // Variante con descripción en iOS 26+: tarjeta de cristal, tintada salvo en el estilo secundario
+  if (glassAvailable && isCardVariant) {
+    const isSecondary = bgColor === theme.colors.surfaceVariant;
+
+    return (
+      <View style={[styles.container, style]}>
+        <GlassView
+          style={styles.glassCard}
+          tintColor={isSecondary || disabled ? undefined : bgColor}
+          isInteractive
+        >
+          <Pressable
+            onPress={onPress}
+            disabled={!isInteractable}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: !isInteractable, busy: loading }}
+            style={styles.glassCardContent}
+          >
+            <View style={styles.textBlock}>
+              <Text style={[styles.titleCard, { color: txtColor }]}>
+                {loading && loadingText ? loadingText : title}
+              </Text>
+              {!loading && (
+                <Text style={[styles.description, { color: txtColor }]}>
+                  {description}
+                </Text>
+              )}
+            </View>
+            <Ionicons
+              name={loading ? "refresh" : iconName}
+              size={24}
+              color={txtColor}
+            />
+          </Pressable>
+        </GlassView>
+      </View>
+    );
+  }
+
   return (
     <Pressable
       onPress={onPress}
@@ -196,6 +235,16 @@ export const CTAButton: React.FC<CTAButtonProps> = ({
 const styles = StyleSheet.create({
   container: {
     width: "100%",
+  },
+  glassCard: {
+    borderRadius: 24,
+  },
+  glassCardContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 22,
+    paddingHorizontal: 24,
   },
   capsule: {
     height: 52,

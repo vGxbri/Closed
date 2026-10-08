@@ -2,21 +2,56 @@
  * Configuración de perfil de usuario
  * Pantalla inicial donde el usuario completa nombre y avatar antes de acceder a sus grupos.
  */
+import { Ionicons } from "@expo/vector-icons";
 import { decode } from "base64-arraybuffer";
+import { BlurTargetView } from "expo-blur";
+import {
+  GlassView,
+  isGlassEffectAPIAvailable,
+  isLiquidGlassAvailable,
+} from "expo-glass-effect";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { StyleSheet, TouchableOpacity, View } from "react-native";
-import { Avatar, Button, Surface, Text, TextInput, useTheme } from "react-native-paper";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { BlurTargetView } from "expo-blur";
-import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/lib/supabase";
+import {
+  ActivityIndicator,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TextInputProps,
+  View,
+} from "react-native";
+import { Text, TextInput, useTheme } from "react-native-paper";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
+
 import { ConfirmDialog, DialogType } from "@/components/ui/ConfirmDialog";
+import { CTAButton } from "@/components/ui/CTAButton";
+import { GroupedField, GroupedFields } from "@/components/ui/GroupedFields";
+import {
+  KEYBOARD_DISMISS_RIGHT,
+  KEYBOARD_DISMISS_SIZE,
+} from "@/components/ui/KeyboardDismissButton";
+import { StepTitle } from "@/components/ui/StepTitle";
+import { UserAvatar } from "@/components/ui/UserAvatar";
+import { useAuth } from "@/hooks/useAuth";
+import { useKeyboardHeight } from "@/hooks/useKeyboardHeight";
+import { supabase } from "@/lib/supabase";
+
+const AVATAR_SIZE = 132;
+
+// En iOS el campo va en una tarjeta agrupada y la insignia de la foto es de cristal (iOS 26+)
+const isIOS = Platform.OS === "ios";
+const glassAvailable = isLiquidGlassAvailable() && isGlassEffectAPIAvailable();
 
 export default function ProfileSetup() {
   const router = useRouter();
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
+  const keyboardHeight = useKeyboardHeight();
   const { user, updateProfile, isProfileLoading } = useAuth();
   const backgroundRef = React.useRef(null);
 
@@ -36,17 +71,21 @@ export default function ProfileSetup() {
     type: "info",
   });
 
-  const showDialog = (title: string, message: string, type: DialogType = "error") => {
+  const showDialog = (
+    title: string,
+    message: string,
+    type: DialogType = "error",
+  ) => {
     setDialogConfig({ visible: true, title, message, type });
   };
 
   const hideDialog = () => {
-    setDialogConfig(prev => ({ ...prev, visible: false }));
+    setDialogConfig((prev) => ({ ...prev, visible: false }));
   };
 
   const pickImage = async () => {
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.5,
@@ -85,7 +124,11 @@ export default function ProfileSetup() {
 
   const handleContinue = async () => {
     if (!displayName.trim()) {
-      showDialog("Nombre requerido", "Por favor, ingresa un nombre o apodo.", "warning");
+      showDialog(
+        "Nombre requerido",
+        "Por favor, ingresa un nombre o apodo.",
+        "warning",
+      );
       return;
     }
 
@@ -100,71 +143,167 @@ export default function ProfileSetup() {
     }
   };
 
+  const isBusy = isProfileLoading || isUploading;
+  const canContinue = !!displayName.trim() && !isBusy;
+
+  // Lo que comparten el campo de iOS y el de Android
+  const nameField = {
+    accessibilityLabel: "Nombre o apodo",
+    value: displayName,
+    onChangeText: setDisplayName,
+    autoCapitalize: "words",
+    autoComplete: "name",
+    textContentType: "name",
+    returnKeyType: "done",
+    onSubmitEditing: handleContinue,
+  } satisfies TextInputProps;
+
+  const badgeIcon = (
+    <Ionicons name="camera" size={20} color={theme.colors.onSurface} />
+  );
+
   return (
-    <BlurTargetView ref={backgroundRef} style={{ flex: 1 }}>
-      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <SafeAreaView style={styles.safeArea}>
-          <View style={styles.content}>
-            <View style={styles.header}>
-              <Text variant="displaySmall" style={[styles.title, { color: theme.colors.onSurface }]}>
-                ¡Hola!
-              </Text>
-              <Text variant="bodyLarge" style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }]}>
-                ¿Cómo quieres que te llamen?
-              </Text>
-            </View>
-
-            <View style={styles.avatarContainer}>
-              <TouchableOpacity onPress={pickImage}>
-                {image ? (
-                  <Avatar.Image size={120} source={{ uri: image }} />
-                ) : (
-                  <Surface 
-                    style={[styles.avatarPlaceholder, { backgroundColor: theme.colors.surfaceVariant }]} 
-                    elevation={2}
-                  >
-                    <Text variant="displayMedium" style={{ color: theme.colors.primary }}>
-                      {displayName.charAt(0).toUpperCase() || "?"}
-                    </Text>
-                  </Surface>
-                )}
-                <View style={[styles.editBadge, { backgroundColor: theme.colors.background, borderColor: theme.colors.outline }]}>
-                  <Text style={styles.editBadgeText}>✏️</Text>
-                </View>
-              </TouchableOpacity>
-              <Text variant="bodyMedium" style={[styles.photoHint, { color: theme.colors.primary }]}>
-                Toca para cambiar tu foto
-              </Text>
-            </View>
-
-            <TextInput
-              label="Nombre o Apodo"
-              value={displayName}
-              onChangeText={setDisplayName}
-              mode="outlined"
-              style={styles.input}
-              outlineColor={theme.colors.outline}
-              activeOutlineColor={theme.colors.primary}
-              textColor={theme.colors.onSurface}
-              placeholder="Ej: Gabri"
-              placeholderTextColor={theme.colors.onSurfaceVariant}
-            />
-
-            <View style={styles.spacer} />
-
-            <Button
-              mode="contained"
-              onPress={handleContinue}
-              loading={isProfileLoading || isUploading}
-              disabled={isProfileLoading || isUploading || !displayName.trim()}
-              style={styles.button}
-              contentStyle={styles.buttonContent}
+    <BlurTargetView ref={backgroundRef} style={styles.container}>
+      <View
+        style={[styles.container, { backgroundColor: theme.colors.background }]}
+      >
+        <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
+          {/* El margen inferior se aplica aquí y no en SafeAreaView: el botón lo descuenta
+              al subir con el teclado y los dos valores deben coincidir */}
+          <View style={[styles.container, { marginBottom: insets.bottom }]}>
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.scrollContent}
             >
-              Continuar
-            </Button>
+              <StepTitle
+                main="¿Cómo te"
+                accent="llamas?"
+                subtitle="Elige el nombre y la foto con los que te verán en tus grupos."
+              />
+
+              <View style={styles.avatarSection}>
+                <Pressable
+                  onPress={pickImage}
+                  disabled={isUploading}
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    image ? "Cambiar foto de perfil" : "Elegir foto de perfil"
+                  }
+                  accessibilityState={{ busy: isUploading }}
+                  style={({ pressed }) => [
+                    styles.avatarPicker,
+                    { transform: [{ scale: pressed ? 0.97 : 1 }] },
+                  ]}
+                >
+                  {/* Sin foto, el avatar muestra la inicial del nombre según se escribe */}
+                  <UserAvatar
+                    uri={image}
+                    name={displayName.trim() || "?"}
+                    size={AVATAR_SIZE}
+                  />
+
+                  {isUploading && (
+                    <View style={styles.uploadingOverlay}>
+                      <ActivityIndicator color="#FFFFFF" />
+                    </View>
+                  )}
+
+                  {glassAvailable ? (
+                    <GlassView style={styles.badge}>{badgeIcon}</GlassView>
+                  ) : (
+                    <View
+                      style={[
+                        styles.badge,
+                        styles.badgeSolid,
+                        {
+                          backgroundColor: theme.colors.surface,
+                          borderColor: theme.colors.outlineVariant,
+                        },
+                      ]}
+                    >
+                      {badgeIcon}
+                    </View>
+                  )}
+                </Pressable>
+                <Text
+                  style={[
+                    styles.photoHint,
+                    { color: theme.colors.onSurfaceVariant },
+                  ]}
+                >
+                  {image
+                    ? "Toca para cambiar tu foto"
+                    : "Toca para añadir tu foto"}
+                </Text>
+              </View>
+
+              <View style={styles.form}>
+                {isIOS ? (
+                  <GroupedFields>
+                    <GroupedField
+                      icon="person"
+                      placeholder="Nombre o apodo"
+                      {...nameField}
+                    />
+                  </GroupedFields>
+                ) : (
+                  <TextInput
+                    label="Nombre o apodo"
+                    placeholder="Ej: Gabri"
+                    {...nameField}
+                    mode="outlined"
+                    style={styles.input}
+                    outlineStyle={{
+                      borderColor: theme.colors.outlineVariant,
+                      borderRadius: 20,
+                      borderWidth: 1,
+                    }}
+                    contentStyle={styles.inputContent}
+                  />
+                )}
+              </View>
+            </ScrollView>
+
+            {/* El botón se queda pegado encima del teclado; lo de arriba se desplaza si no cabe */}
+            <View
+              style={[
+                styles.footer,
+                {
+                  paddingBottom:
+                    12 + Math.max(0, keyboardHeight - insets.bottom),
+                },
+                // Con el teclado abierto, hueco a la derecha para el botón de ocultarlo
+                keyboardHeight > 0 && {
+                  paddingRight:
+                    KEYBOARD_DISMISS_RIGHT + KEYBOARD_DISMISS_SIZE + 10,
+                },
+              ]}
+            >
+              <CTAButton
+                title="Continuar"
+                loadingText={isUploading ? "Subiendo foto..." : "Guardando..."}
+                onPress={handleContinue}
+                disabled={!displayName.trim()}
+                loading={isBusy}
+                backgroundColor={
+                  canContinue
+                    ? theme.colors.primary
+                    : theme.colors.surfaceVariant
+                }
+                textColor={
+                  canContinue
+                    ? theme.colors.onPrimary
+                    : theme.colors.onSurfaceVariant
+                }
+                iconBorderColor={
+                  canContinue ? "rgba(255,255,255,0.3)" : theme.colors.outline
+                }
+              />
+            </View>
           </View>
         </SafeAreaView>
-        
+
         <ConfirmDialog
           visible={dialogConfig.visible}
           title={dialogConfig.title}
@@ -185,60 +324,55 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  safeArea: {
-    flex: 1,
+  scrollContent: {
+    paddingTop: 24,
+    paddingBottom: 16,
   },
-  content: {
-    flex: 1,
-    padding: 24,
-    justifyContent: "center",
-  },
-  header: {
-    marginBottom: 40,
+  avatarSection: {
     alignItems: "center",
+    marginTop: 26,
+    marginBottom: 28,
   },
-  title: {
-    fontFamily: "ClashDisplay-Bold",
-    marginBottom: 8,
+  avatarPicker: {
+    width: AVATAR_SIZE,
+    height: AVATAR_SIZE,
   },
-  subtitle: {},
-  avatarContainer: {
-    alignItems: "center",
-    marginBottom: 32,
-  },
-  avatarPlaceholder: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+  uploadingOverlay: {
+    ...StyleSheet.absoluteFill,
+    borderRadius: AVATAR_SIZE * 0.35,
+    backgroundColor: "rgba(0,0,0,0.4)",
     justifyContent: "center",
     alignItems: "center",
   },
-  editBadge: {
+  badge: {
     position: "absolute",
-    bottom: 0,
-    right: 0,
-    borderRadius: 12,
-    padding: 4,
-    borderWidth: 1,
+    right: -6,
+    bottom: -6,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  editBadgeText: {
-    fontSize: 12,
+  badgeSolid: {
+    borderWidth: StyleSheet.hairlineWidth,
   },
   photoHint: {
-    marginTop: 12,
+    marginTop: 16,
     fontFamily: "Archivo-Medium",
+    fontSize: 14,
+  },
+  form: {
+    paddingHorizontal: 24,
   },
   input: {
     backgroundColor: "transparent",
-    width: "100%",
   },
-  spacer: {
-    flex: 1,
+  inputContent: {
+    fontFamily: "Archivo-Medium",
   },
-  button: {
-    borderRadius: 100,
-  },
-  buttonContent: {
-    height: 56,
+  footer: {
+    paddingHorizontal: 24,
+    paddingTop: 12,
   },
 });
