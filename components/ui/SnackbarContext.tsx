@@ -8,11 +8,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { GlassView, isGlassEffectAPIAvailable, isLiquidGlassAvailable } from 'expo-glass-effect';
 import { useSegments } from 'expo-router';
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { Animated, Pressable, StyleSheet, View } from 'react-native';
+import { AccessibilityInfo, Animated, Pressable, StyleSheet, View } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const HEADER_HEIGHT = 56;
+
+// Los errores se quedan más tiempo: hay que leerlos y entender qué corregir
+const DURATION_MS = 3000;
+const ERROR_DURATION_MS = 5000;
 
 const glassAvailable = isLiquidGlassAvailable() && isGlassEffectAPIAvailable();
 // Con cristal no se puede animar la opacidad, así que el aviso entra desde fuera de la pantalla
@@ -83,6 +87,9 @@ export const SnackbarProvider: React.FC<SnackbarProviderProps> = ({ children }) 
     setType(snackType);
     setVisible(true);
 
+    // El aviso es visual y desaparece solo: el lector de pantalla lo lee en voz alta
+    AccessibilityInfo.announceForAccessibility(msg);
+
     Animated.parallel([
       Animated.spring(translateY, {
         toValue: 0,
@@ -99,7 +106,7 @@ export const SnackbarProvider: React.FC<SnackbarProviderProps> = ({ children }) 
 
     hideTimeoutRef.current = setTimeout(() => {
       hideSnackbar();
-    }, 3000);
+    }, snackType === 'error' ? ERROR_DURATION_MS : DURATION_MS);
   }, [translateY, opacity, hideSnackbar]);
 
   useEffect(() => {

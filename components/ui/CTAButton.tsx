@@ -129,6 +129,8 @@ export const CTAButton: React.FC<CTAButtonProps> = ({
     <Pressable
       onPress={onPress}
       disabled={!isInteractable}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: !isInteractable, busy: loading }}
       style={({ pressed }) => [
         styles.container,
         style,
