@@ -96,6 +96,19 @@ export const galleryService = {
     return data.media_url;
   },
 
+  async getLatestImages(groupId: string, limit: number): Promise<string[]> {
+    const { data, error } = await supabase
+      .from('gallery_images')
+      .select('media_url')
+      .eq('group_id', groupId)
+      .eq('media_type', 'image')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error || !data) return [];
+    return data.map((image) => image.media_url);
+  },
+
   async getImageCount(groupId: string): Promise<number> {
     const { count, error } = await supabase
       .from('gallery_images')

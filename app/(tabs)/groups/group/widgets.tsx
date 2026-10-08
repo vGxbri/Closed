@@ -4,28 +4,32 @@
  */
 import { Ionicons } from "@expo/vector-icons";
 import { BlurTargetView } from "expo-blur";
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import SquircleView from "react-native-fast-squircle";
 import { ActivityIndicator, Text, useTheme } from "react-native-paper";
 import Animated, {
   FadeIn,
   FadeInDown,
-  FadeInUp,
-  Layout,
+  LinearTransition,
 } from "react-native-reanimated";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
+import { CircleButton } from "@/components/ui/CircleButton";
 import { ConfirmDialog, DialogType } from "@/components/ui/ConfirmDialog";
-import { CustomHeader } from "@/components/ui/CustomHeader";
+import { CTAButton } from "@/components/ui/CTAButton";
 import { useSnackbar } from "@/components/ui/SnackbarContext";
+import { StatusView } from "@/components/ui/StatusView";
+import { StepTitle } from "@/components/ui/StepTitle";
+import {
+  getWidgetTone,
+  useWidgetTone,
+  WidgetWatermark,
+} from "@/components/widgets/visuals";
 import { useGroup } from "@/hooks";
 import { widgetsService } from "@/services/widgets.service";
 import { Widget } from "@/types/database";
@@ -38,119 +42,99 @@ interface WidgetCatalogCardProps {
   index: number;
 }
 
+// Misma idea que las tarjetas del inicio del grupo: el icono del widget, en su color, de fondo
 const WidgetCatalogCard = React.memo<WidgetCatalogCardProps>(
   ({ widget, isActive, isToggling, onToggle, index }) => {
     const theme = useTheme();
+    const tone = getWidgetTone(widget.name);
+    // Los hooks no admiten llamadas condicionales: se pide una paleta siempre y se usa solo si hay tono
+    const tonePalette = useWidgetTone(tone ?? "green");
+    const accent = tone ? tonePalette.accent : theme.colors.primary;
+
+    const actionColor = isActive
+      ? theme.colors.onSurface
+      : theme.colors.onPrimary;
 
     return (
       <Animated.View
         entering={FadeInDown.duration(350).delay(80 + index * 60)}
-        layout={Layout.springify()}
+        layout={LinearTransition.springify()}
       >
         <SquircleView
           style={[
-            styles.widgetCard,
+            styles.card,
             {
               backgroundColor: theme.colors.surface,
-              borderColor: isActive
-                ? theme.colors.primary
-                : theme.colors.outlineVariant,
-              borderWidth: isActive ? 1.5 : 1,
+              borderColor: theme.colors.outlineVariant,
             },
           ]}
           cornerSmoothing={1}
         >
-          <View style={styles.widgetCardContent}>
-            <SquircleView
-              style={[
-                styles.widgetIconContainer,
-                {
-                  backgroundColor: theme.colors.surfaceVariant,
-                  borderColor: theme.colors.outlineVariant,
-                  borderWidth: 1,
-                },
-              ]}
-              cornerSmoothing={1}
-            >
-              <Ionicons
-                name={
-                  (widget.icon as keyof typeof Ionicons.glyphMap) ||
-                  "grid-outline"
-                }
-                size={22}
-                color="#FFFFFF"
-              />
-            </SquircleView>
+          <WidgetWatermark
+            icon={
+              (widget.icon as keyof typeof Ionicons.glyphMap) || "grid-outline"
+            }
+            color={accent}
+            size={116}
+            style={styles.cardWatermark}
+          />
 
-            <View style={styles.widgetInfo}>
+          <View>
+            <Text
+              style={[styles.cardName, { color: theme.colors.onSurface }]}
+              numberOfLines={1}
+            >
+              {widget.name}
+            </Text>
+            {!!widget.subtitle && (
               <Text
-                style={[styles.widgetName, { color: theme.colors.onSurface }]}
+                style={[
+                  styles.cardSubtitle,
+                  { color: theme.colors.onSurfaceVariant },
+                ]}
                 numberOfLines={1}
               >
-                {widget.name}
+                {widget.subtitle}
               </Text>
-              {widget.subtitle && (
-                <Text
-                  style={[
-                    styles.widgetSubtitle,
-                    { color: theme.colors.onSurfaceVariant },
-                  ]}
-                  numberOfLines={1}
-                >
-                  {widget.subtitle}
-                </Text>
-              )}
-            </View>
-
-            <TouchableOpacity
-              onPress={onToggle}
-              disabled={isToggling}
-              activeOpacity={0.7}
-              style={[
-                styles.toggleButton,
-                {
-                  backgroundColor: isActive
-                    ? theme.colors.errorContainer
-                    : theme.colors.primaryContainer,
-                  borderColor: isActive
-                    ? theme.colors.error
-                    : theme.colors.primary,
-                  borderWidth: 1,
-                },
-              ]}
-            >
-              {isToggling ? (
-                <ActivityIndicator
-                  size={14}
-                  color={isActive ? theme.colors.error : theme.colors.primary}
-                />
-              ) : (
-                <>
-                  <Ionicons
-                    name={isActive ? "remove" : "add"}
-                    size={16}
-                    color={
-                      isActive
-                        ? theme.colors.error
-                        : theme.colors.onSurfaceVariant
-                    }
-                  />
-                  <Text
-                    style={[
-                      styles.toggleText,
-                      {
-                        color: isActive
-                          ? theme.colors.error
-                          : theme.colors.onSurfaceVariant,
-                      },
-                    ]}
-                  >
-                    {isActive ? "Quitar" : "Añadir"}
-                  </Text>
-                </>
-              )}
-            </TouchableOpacity>
+            )}
           </View>
+
+          <Pressable
+            onPress={onToggle}
+            disabled={isToggling}
+            accessibilityRole="button"
+            accessibilityLabel={
+              isActive ? `Quitar ${widget.name}` : `Añadir ${widget.name}`
+            }
+            accessibilityState={{ busy: isToggling }}
+            hitSlop={8}
+            style={({ pressed }) => [
+              styles.action,
+              {
+                backgroundColor: isActive
+                  ? theme.dark
+                    ? "rgba(255,255,255,0.1)"
+                    : "rgba(0,0,0,0.06)"
+                  : theme.colors.primary,
+                opacity: pressed ? 0.7 : 1,
+              },
+            ]}
+          >
+            {isToggling ? (
+              <ActivityIndicator size={14} color={actionColor} />
+            ) : (
+              <>
+                <Ionicons
+                  name={isActive ? "remove" : "add"}
+                  size={16}
+                  color={actionColor}
+                />
+                <Text style={[styles.actionText, { color: actionColor }]}>
+                  {isActive ? "Quitar" : "Añadir"}
+                </Text>
+              </>
+            )}
+          </Pressable>
         </SquircleView>
       </Animated.View>
     );
@@ -163,22 +147,56 @@ const SkeletonCard = React.memo<{ index: number }>(({ index }) => {
   const theme = useTheme();
   return (
     <Animated.View entering={FadeIn.duration(400).delay(index * 80)}>
-      <SquircleView
+      <View
         style={[
-          styles.widgetCard,
-          {
-            backgroundColor: theme.colors.surfaceVariant,
-            borderColor: theme.colors.onSurfaceVariant,
-            borderWidth: 1,
-            height: 76,
-          },
+          styles.card,
+          styles.skeletonCard,
+          { backgroundColor: theme.colors.surfaceVariant },
         ]}
-        cornerSmoothing={1}
       />
     </Animated.View>
   );
 });
 SkeletonCard.displayName = "SkeletonCard";
+
+interface SectionProps {
+  title: string;
+  count: number;
+  delay: number;
+  children: React.ReactNode;
+}
+
+function Section({ title, count, delay, children }: SectionProps) {
+  const theme = useTheme();
+
+  return (
+    <Animated.View
+      entering={FadeInDown.duration(400).delay(delay)}
+      style={styles.section}
+    >
+      <View
+        accessible
+        accessibilityRole="header"
+        accessibilityLabel={`${title}, ${count}`}
+        style={styles.sectionHeader}
+      >
+        <Text style={[styles.sectionTitle, { color: theme.colors.onSurface }]}>
+          {title}
+        </Text>
+        <Text
+          style={[
+            styles.sectionCount,
+            { color: theme.colors.onSurfaceVariant },
+          ]}
+        >
+          {count}
+        </Text>
+      </View>
+
+      <View style={styles.widgetList}>{children}</View>
+    </Animated.View>
+  );
+}
 
 export default function ExploreWidgetsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -318,154 +336,64 @@ export default function ExploreWidgetsScreen() {
 
   if (!isGroupLoading && (!group || !canManageWidgets)) {
     return (
-      <>
-        <Stack.Screen options={{ headerShown: false }} />
-        <View
-          style={[
-            styles.centerContainer,
-            { backgroundColor: theme.colors.background },
-          ]}
-        >
-          <SquircleView
-            style={[
-              styles.lockIconContainer,
-              { backgroundColor: theme.colors.surfaceVariant },
-            ]}
-            cornerSmoothing={1}
-          >
-            <Ionicons
-              name="lock-closed-outline"
-              size={36}
-              color={theme.colors.onSurfaceVariant}
-            />
-          </SquircleView>
-          <Text style={[styles.lockTitle, { color: theme.colors.onSurface }]}>
-            Sin acceso
-          </Text>
-          <Text
-            style={[
-              styles.lockSubtitle,
-              { color: theme.colors.onSurfaceVariant },
-            ]}
-          >
-            Solo los administradores pueden gestionar widgets.
-          </Text>
-          <Pressable
-            onPress={() => router.back()}
-            style={({ pressed }) => [
-              {
-                opacity: pressed ? 0.9 : 1,
-                transform: [{ scale: pressed ? 0.97 : 1 }],
-              },
-            ]}
-          >
-            <SquircleView
-              style={[
-                styles.lockButton,
-                { backgroundColor: theme.colors.primary },
-              ]}
-              cornerSmoothing={1}
-            >
-              <Text
-                style={[
-                  styles.lockButtonText,
-                  { color: theme.colors.onPrimary },
-                ]}
-              >
-                Volver
-              </Text>
-            </SquircleView>
-          </Pressable>
-        </View>
-      </>
+      <StatusView
+        icon="lock-closed"
+        color={theme.colors.onSurfaceVariant}
+        title="Sin acceso"
+        message="Solo los administradores pueden gestionar widgets."
+        onClose={() => router.back()}
+      >
+        <CTAButton
+          title="Volver"
+          iconName="arrow-back"
+          onPress={() => router.back()}
+        />
+      </StatusView>
     );
   }
 
   return (
     <>
-      <Stack.Screen options={{ headerShown: false }} />
-
       <BlurTargetView
         ref={backgroundRef}
         style={[styles.container, { backgroundColor: theme.colors.background }]}
       >
-        <CustomHeader title="" showBackButton={true} />
+        <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
+          <View style={styles.topBar}>
+            <CircleButton
+              icon="close"
+              label="Cerrar"
+              onPress={() => router.back()}
+            />
+          </View>
 
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={[
-            styles.content,
-            { paddingBottom: 120 + insets.bottom },
-          ]}
-          showsVerticalScrollIndicator={false}
-        >
-          <Animated.View
-            entering={FadeInUp.duration(500)}
-            style={styles.titleBlock}
-          >
-            <Text style={[styles.screenTitle, { color: theme.colors.primary }]}>
-              Widgets
-            </Text>
-            <Text
-              style={[
-                styles.screenSubtitle,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
-            >
-              Personaliza tu grupo añadiendo o quitando widgets
-            </Text>
-          </Animated.View>
-
-          <Animated.View
-            entering={FadeIn.duration(400).delay(50)}
-            style={[
-              styles.divider,
-              { backgroundColor: theme.colors.outlineVariant },
+          <ScrollView
+            contentContainerStyle={[
+              styles.content,
+              { paddingBottom: 24 + insets.bottom },
             ]}
-          />
+            showsVerticalScrollIndicator={false}
+          >
+            <StepTitle
+              main="Explora los"
+              accent="widgets"
+              subtitle="Añade o quita widgets para organizar el grupo a vuestra manera."
+            />
 
-          {isLoading ? (
-            <View style={styles.skeletonContainer}>
-              {[0, 1, 2, 3, 4].map((i) => (
-                <SkeletonCard key={i} index={i} />
-              ))}
-            </View>
-          ) : (
-            <>
-              {activeWidgets.length > 0 && (
-                <Animated.View
-                  entering={FadeInDown.duration(400).delay(80)}
-                  style={styles.section}
-                >
-                  <View style={styles.sectionHeader}>
-                    <SquircleView
-                      style={[
-                        styles.sectionIconContainer,
-                        {
-                          backgroundColor: theme.colors.surfaceVariant,
-                          borderColor: theme.colors.outlineVariant,
-                          borderWidth: 1,
-                        },
-                      ]}
-                      cornerSmoothing={1}
-                    >
-                      <Ionicons
-                        name="checkmark-circle"
-                        size={16}
-                        color="#FFFFFF"
-                      />
-                    </SquircleView>
-                    <Text
-                      style={[
-                        styles.sectionTitle,
-                        { color: theme.colors.onSurface },
-                      ]}
-                    >
-                      Activos ({activeWidgets.length})
-                    </Text>
-                  </View>
-
-                  <View style={styles.widgetList}>
+            {isLoading ? (
+              <View style={[styles.section, styles.widgetList]}>
+                {[0, 1, 2, 3].map((i) => (
+                  <SkeletonCard key={i} index={i} />
+                ))}
+              </View>
+            ) : (
+              <>
+                {activeWidgets.length > 0 && (
+                  <Section
+                    title="Activos"
+                    count={activeWidgets.length}
+                    delay={80}
+                  >
                     {activeWidgets.map((widget, index) => (
                       <WidgetCatalogCard
                         key={widget.id}
@@ -476,42 +404,15 @@ export default function ExploreWidgetsScreen() {
                         index={index}
                       />
                     ))}
-                  </View>
-                </Animated.View>
-              )}
+                  </Section>
+                )}
 
-              {availableWidgets.length > 0 && (
-                <Animated.View
-                  entering={FadeInDown.duration(400).delay(
-                    activeWidgets.length > 0 ? 160 : 80,
-                  )}
-                  style={styles.section}
-                >
-                  <View style={styles.sectionHeader}>
-                    <SquircleView
-                      style={[
-                        styles.sectionIconContainer,
-                        {
-                          backgroundColor: theme.colors.surfaceVariant,
-                          borderColor: theme.colors.outlineVariant,
-                          borderWidth: 1,
-                        },
-                      ]}
-                      cornerSmoothing={1}
-                    >
-                      <Ionicons name="grid-outline" size={16} color="#FFFFFF" />
-                    </SquircleView>
-                    <Text
-                      style={[
-                        styles.sectionTitle,
-                        { color: theme.colors.onSurface },
-                      ]}
-                    >
-                      Disponibles ({availableWidgets.length})
-                    </Text>
-                  </View>
-
-                  <View style={styles.widgetList}>
+                {availableWidgets.length > 0 && (
+                  <Section
+                    title="Disponibles"
+                    count={availableWidgets.length}
+                    delay={activeWidgets.length > 0 ? 160 : 80}
+                  >
                     {availableWidgets.map((widget, index) => (
                       <WidgetCatalogCard
                         key={widget.id}
@@ -522,63 +423,12 @@ export default function ExploreWidgetsScreen() {
                         index={index + activeWidgets.length}
                       />
                     ))}
-                  </View>
-                </Animated.View>
-              )}
-
-              {availableWidgets.length === 0 && activeWidgets.length > 0 && (
-                <Animated.View entering={FadeInDown.duration(400).delay(200)}>
-                  <SquircleView
-                    style={[
-                      styles.infoCard,
-                      {
-                        backgroundColor: theme.dark
-                          ? "rgba(42,138,112,0.15)"
-                          : "rgba(42,138,112,0.08)",
-                        borderColor: theme.colors.onSurfaceVariant,
-                        borderWidth: 1.5,
-                      },
-                    ]}
-                    cornerSmoothing={1}
-                  >
-                    <SquircleView
-                      style={[
-                        styles.infoIconContainer,
-                        {
-                          backgroundColor: theme.colors.surfaceVariant,
-                          borderColor: theme.colors.outlineVariant,
-                          borderWidth: 1,
-                        },
-                      ]}
-                      cornerSmoothing={1}
-                    >
-                      <Ionicons name="sparkles" size={16} color="#FFFFFF" />
-                    </SquircleView>
-                    <View style={styles.infoTextBlock}>
-                      <Text
-                        style={[
-                          styles.infoTitle,
-                          { color: theme.colors.onSurface },
-                        ]}
-                      >
-                        ¡Todo activado!
-                      </Text>
-                      <Text
-                        style={[
-                          styles.infoDescription,
-                          { color: theme.colors.onSurfaceVariant },
-                        ]}
-                      >
-                        Tienes todos los widgets disponibles activos en tu
-                        grupo. Volveremos con más pronto.
-                      </Text>
-                    </View>
-                  </SquircleView>
-                </Animated.View>
-              )}
-            </>
-          )}
-        </ScrollView>
+                  </Section>
+                )}
+              </>
+            )}
+          </ScrollView>
+        </SafeAreaView>
       </BlurTargetView>
 
       <ConfirmDialog
@@ -601,178 +451,79 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  scrollView: {
-    flex: 1,
+  topBar: {
+    flexDirection: "row",
+    paddingHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 8,
   },
   content: {
-    paddingHorizontal: 24,
     paddingTop: 0,
   },
 
-  titleBlock: {
-    marginTop: 4,
-    marginBottom: 4,
-  },
-  screenTitle: {
-    fontFamily: "InstrumentSerif-Italic",
-    fontSize: 38,
-    letterSpacing: 0.5,
-    lineHeight: 44,
-  },
-  screenSubtitle: {
-    fontFamily: "Archivo-Medium",
-    fontSize: 14,
-    letterSpacing: 0.3,
-    marginTop: 2,
-  },
-
-  divider: {
-    height: 1,
-    marginTop: 16,
-    marginBottom: 24,
-  },
-
   section: {
-    marginBottom: 28,
+    paddingHorizontal: 24,
+    marginTop: 18,
   },
   sectionHeader: {
     flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 14,
-    gap: 10,
-  },
-  sectionIconContainer: {
-    width: 28,
-    height: 28,
-    borderRadius: 9,
-    justifyContent: "center",
-    alignItems: "center",
+    alignItems: "baseline",
+    gap: 8,
+    marginBottom: 12,
   },
   sectionTitle: {
     fontFamily: "Archivo-Bold",
-    fontSize: 16,
-    letterSpacing: 0.3,
+    fontSize: 17,
   },
-
-  widgetList: {
-    gap: 10,
-  },
-
-  widgetCard: {
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  widgetCardContent: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  widgetIconContainer: {
-    width: 46,
-    height: 46,
-    borderRadius: 15,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  widgetInfo: {
-    flex: 1,
-    marginLeft: 14,
-    marginRight: 12,
-  },
-  widgetName: {
-    fontFamily: "Archivo-Bold",
-    fontSize: 15,
-  },
-  widgetSubtitle: {
-    fontFamily: "Archivo-Medium",
-    fontSize: 12,
-    marginTop: 2,
-    letterSpacing: 0.1,
-  },
-
-  toggleButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 12,
-    minWidth: 80,
-    justifyContent: "center",
-  },
-  toggleText: {
+  sectionCount: {
     fontFamily: "Archivo-SemiBold",
+    fontSize: 15,
+  },
+  widgetList: {
+    gap: 12,
+  },
+
+  card: {
+    borderRadius: 24,
+    borderWidth: 1,
+    padding: 16,
+    minHeight: 112,
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: 14,
+    overflow: "hidden",
+  },
+  // En una tarjeta apaisada el icono se centra en vertical a la derecha
+  cardWatermark: {
+    top: -4,
+    right: -14,
+  },
+  skeletonCard: {
+    borderWidth: 0,
+  },
+  cardName: {
+    fontFamily: "Archivo-Bold",
+    fontSize: 18,
+    lineHeight: 23,
+  },
+  cardSubtitle: {
+    fontFamily: "Archivo-Medium",
     fontSize: 13,
-    letterSpacing: 0.2,
+    lineHeight: 18,
+    marginTop: 2,
   },
-
-  skeletonContainer: {
-    gap: 10,
-  },
-
-  infoCard: {
+  action: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 16,
-    borderRadius: 22,
-  },
-  infoIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
     justifyContent: "center",
-    alignItems: "center",
+    gap: 5,
+    height: 34,
+    minWidth: 96,
+    paddingHorizontal: 14,
+    borderRadius: 17,
   },
-  infoTextBlock: {
-    flex: 1,
-    marginLeft: 14,
-  },
-  infoTitle: {
-    fontFamily: "Archivo-Bold",
-    fontSize: 13,
-  },
-  infoDescription: {
-    fontFamily: "Archivo-Medium",
-    fontSize: 12,
-    marginTop: 2,
-    lineHeight: 17,
-    letterSpacing: 0.1,
-  },
-
-  centerContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 40,
-  },
-  lockIconContainer: {
-    width: 72,
-    height: 72,
-    borderRadius: 22,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  lockTitle: {
-    fontFamily: "Archivo-Bold",
-    fontSize: 20,
-    marginBottom: 8,
-  },
-  lockSubtitle: {
-    fontFamily: "Archivo-Medium",
+  actionText: {
+    fontFamily: "Archivo-SemiBold",
     fontSize: 14,
-    textAlign: "center",
-    lineHeight: 20,
-    marginBottom: 28,
-  },
-  lockButton: {
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 14,
-  },
-  lockButtonText: {
-    fontFamily: "Archivo-Bold",
-    fontSize: 15,
-    letterSpacing: 0.3,
   },
 });
