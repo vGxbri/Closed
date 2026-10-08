@@ -10,24 +10,37 @@ import {
 } from "@react-native-google-signin/google-signin";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
+  TextInput as NativeTextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import SquircleView from "react-native-fast-squircle";
 import { Text, TextInput, useTheme } from "react-native-paper";
-import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
+import Animated, {
+  FadeInDown,
+  FadeInUp,
+  useReducedMotion,
+} from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { GrainyGradient } from "@/components/premade/organisms/grainy-gradient";
 import { useSnackbar } from "@/components/ui/SnackbarContext";
 import { useAuth } from "@/hooks";
 import { supabase } from "@/lib/supabase";
+
+// Amplía la zona táctil de los enlaces de texto hasta el mínimo recomendado
+const LINK_HIT_SLOP = { top: 12, bottom: 12, left: 8, right: 8 };
+
+// Los iconos de la izquierda son adorno: el lector de pantalla los salta
+const DECORATIVE_ICON = {
+  accessible: false,
+  accessibilityElementsHidden: true,
+  importantForAccessibility: "no-hide-descendants",
+} as const;
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -49,6 +62,9 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  const passwordRef = useRef<NativeTextInput>(null);
+  const reduceMotion = useReducedMotion();
 
   React.useEffect(() => {
     try {
@@ -142,6 +158,11 @@ export default function LoginScreen() {
 
   const isFormValid = email.trim().length > 0 && password.length > 0;
 
+  // En claro, el verde terciario no llega al contraste mínimo sobre el fondo
+  const linkColor = theme.dark
+    ? theme.colors.tertiary
+    : theme.colors.onPrimaryContainer;
+
   return (
     <View
       style={[styles.container, { backgroundColor: theme.colors.background }]}
@@ -158,18 +179,17 @@ export default function LoginScreen() {
           }
           intensity={0.08}
           speed={1.5}
+          animated={!reduceMotion}
         />
       </Animated.View>
 
       <SafeAreaView style={styles.safeArea} edges={["left", "right"]}>
-        <KeyboardAvoidingView
-          style={styles.keyboardView}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-        >
+        <View style={styles.keyboardView}>
           <ScrollView
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
             keyboardShouldPersistTaps="handled"
+            automaticallyAdjustKeyboardInsets
             showsVerticalScrollIndicator={false}
             bounces={false}
             overScrollMode="never"
@@ -179,6 +199,8 @@ export default function LoginScreen() {
               style={styles.header}
             >
               <SquircleView
+                accessibilityElementsHidden
+                importantForAccessibility="no-hide-descendants"
                 style={[
                   styles.logoContainer,
                   {
@@ -199,7 +221,11 @@ export default function LoginScreen() {
                   contentFit="contain"
                 />
               </SquircleView>
-              <Text style={[styles.title, { color: theme.colors.primary }]}>
+              <Text
+                accessibilityRole="header"
+                maxFontSizeMultiplier={1.4}
+                style={[styles.title, { color: theme.colors.primary }]}
+              >
                 ¡Hola de nuevo!
               </Text>
               <View
@@ -224,13 +250,21 @@ export default function LoginScreen() {
             >
               <TextInput
                 label="Correo electrónico"
+                accessibilityLabel="Correo electrónico"
                 placeholder="tu@email.com"
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
                 autoCapitalize="none"
+                autoCorrect={false}
+                spellCheck={false}
+                autoComplete="email"
+                textContentType="username"
+                returnKeyType="next"
+                submitBehavior="submit"
+                onSubmitEditing={() => passwordRef.current?.focus()}
                 mode="outlined"
-                left={<TextInput.Icon icon="email-outline" />}
+                left={<TextInput.Icon icon="email-outline" {...DECORATIVE_ICON} />}
                 style={styles.input}
                 outlineStyle={{
                   borderColor: theme.colors.outlineVariant,
@@ -241,17 +275,29 @@ export default function LoginScreen() {
               />
 
               <TextInput
+                ref={passwordRef}
                 label="Contraseña"
+                accessibilityLabel="Contraseña"
                 placeholder="••••••••"
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="current-password"
+                textContentType="password"
+                returnKeyType="go"
+                onSubmitEditing={handleLogin}
                 mode="outlined"
-                left={<TextInput.Icon icon="lock-outline" />}
+                left={<TextInput.Icon icon="lock-outline" {...DECORATIVE_ICON} />}
                 right={
                   <TextInput.Icon
                     icon={showPassword ? "eye-off-outline" : "eye-outline"}
                     onPress={() => setShowPassword(!showPassword)}
+                    forceTextInputFocus={false}
+                    accessibilityLabel={
+                      showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
+                    }
                   />
                 }
                 style={styles.input}
@@ -298,6 +344,9 @@ export default function LoginScreen() {
               <Pressable
                 onPress={handleGoogleLogin}
                 disabled={loading}
+                accessibilityRole="button"
+                accessibilityLabel="Continuar con Google"
+                accessibilityState={{ disabled: loading, busy: loading }}
                 style={({ pressed }) => [
                   styles.socialButtonContainer,
                   {
@@ -343,19 +392,18 @@ export default function LoginScreen() {
               <Text style={{ color: theme.colors.onSurfaceVariant }}>
                 ¿No tienes cuenta?
               </Text>
-              <TouchableOpacity onPress={() => router.push("/auth/register")}>
-                <Text
-                  style={[
-                    styles.registerLink,
-                    { color: theme.colors.tertiary },
-                  ]}
-                >
+              <TouchableOpacity
+                onPress={() => router.push("/auth/register")}
+                accessibilityRole="link"
+                hitSlop={LINK_HIT_SLOP}
+              >
+                <Text style={[styles.registerLink, { color: linkColor }]}>
                   Regístrate
                 </Text>
               </TouchableOpacity>
             </Animated.View>
           </ScrollView>
-        </KeyboardAvoidingView>
+        </View>
       </SafeAreaView>
     </View>
   );

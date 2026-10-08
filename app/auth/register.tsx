@@ -8,19 +8,34 @@ import { useSnackbar } from "@/components/ui/SnackbarContext";
 import { useAuth } from "@/hooks";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
   StyleSheet,
+  TextInput as NativeTextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import SquircleView from "react-native-fast-squircle";
 import { HelperText, Text, TextInput, useTheme } from "react-native-paper";
-import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
+import Animated, {
+  FadeInDown,
+  FadeInUp,
+  useReducedMotion,
+} from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
+
+const MIN_PASSWORD_LENGTH = 6;
+
+// Amplía la zona táctil de los enlaces de texto hasta el mínimo recomendado
+const LINK_HIT_SLOP = { top: 12, bottom: 12, left: 8, right: 8 };
+
+// Los iconos de la izquierda son adorno: el lector de pantalla los salta
+const DECORATIVE_ICON = {
+  accessible: false,
+  accessibilityElementsHidden: true,
+  importantForAccessibility: "no-hide-descendants",
+} as const;
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -36,6 +51,11 @@ export default function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  const emailRef = useRef<NativeTextInput>(null);
+  const passwordRef = useRef<NativeTextInput>(null);
+  const confirmPasswordRef = useRef<NativeTextInput>(null);
+  const reduceMotion = useReducedMotion();
+
   const handleRegister = async () => {
     if (!displayName.trim() || !email.trim() || !password || !confirmPassword) {
       showSnackbar("Por favor completa todos los campos", "error");
@@ -47,8 +67,11 @@ export default function RegisterScreen() {
       return;
     }
 
-    if (password.length < 6) {
-      showSnackbar("La contraseña debe tener al menos 6 caracteres", "error");
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      showSnackbar(
+        `La contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres`,
+        "error",
+      );
       return;
     }
 
@@ -90,11 +113,16 @@ export default function RegisterScreen() {
   const isFormValid =
     displayName.trim() &&
     email.trim() &&
-    password.length >= 6 &&
+    password.length >= MIN_PASSWORD_LENGTH &&
     password === confirmPassword;
 
   const passwordsDoNotMatch = confirmPassword && password !== confirmPassword;
-  const passwordTooShort = password && password.length < 6;
+  const passwordTooShort = password && password.length < MIN_PASSWORD_LENGTH;
+
+  // En claro, el verde terciario no llega al contraste mínimo sobre el fondo
+  const linkColor = theme.dark
+    ? theme.colors.tertiary
+    : theme.colors.onPrimaryContainer;
 
   return (
     <View
@@ -112,18 +140,17 @@ export default function RegisterScreen() {
           }
           intensity={0.08}
           speed={1.5}
+          animated={!reduceMotion}
         />
       </Animated.View>
 
       <SafeAreaView style={styles.safeArea} edges={["left", "right"]}>
-        <KeyboardAvoidingView
-          style={styles.keyboardView}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-        >
+        <View style={styles.keyboardView}>
           <ScrollView
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
             keyboardShouldPersistTaps="handled"
+            automaticallyAdjustKeyboardInsets
             showsVerticalScrollIndicator={false}
             bounces={false}
             overScrollMode="never"
@@ -133,6 +160,8 @@ export default function RegisterScreen() {
               style={styles.header}
             >
               <SquircleView
+                accessibilityElementsHidden
+                importantForAccessibility="no-hide-descendants"
                 style={[
                   styles.logoContainer,
                   {
@@ -153,7 +182,11 @@ export default function RegisterScreen() {
                   contentFit="contain"
                 />
               </SquircleView>
-              <Text style={[styles.title, { color: theme.colors.primary }]}>
+              <Text
+                accessibilityRole="header"
+                maxFontSizeMultiplier={1.4}
+                style={[styles.title, { color: theme.colors.primary }]}
+              >
                 Crear Cuenta
               </Text>
               <View
@@ -178,11 +211,18 @@ export default function RegisterScreen() {
             >
               <TextInput
                 label="Nombre de usuario"
+                accessibilityLabel="Nombre de usuario"
                 placeholder="Tu nombre"
                 value={displayName}
                 onChangeText={setDisplayName}
+                autoCapitalize="words"
+                autoComplete="name"
+                textContentType="name"
+                returnKeyType="next"
+                submitBehavior="submit"
+                onSubmitEditing={() => emailRef.current?.focus()}
                 mode="outlined"
-                left={<TextInput.Icon icon="account-outline" />}
+                left={<TextInput.Icon icon="account-outline" {...DECORATIVE_ICON} />}
                 style={styles.input}
                 outlineStyle={{
                   borderColor: theme.colors.outlineVariant,
@@ -193,14 +233,23 @@ export default function RegisterScreen() {
               />
 
               <TextInput
+                ref={emailRef}
                 label="Correo electrónico"
+                accessibilityLabel="Correo electrónico"
                 placeholder="tu@email.com"
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
                 autoCapitalize="none"
+                autoCorrect={false}
+                spellCheck={false}
+                autoComplete="email"
+                textContentType="username"
+                returnKeyType="next"
+                submitBehavior="submit"
+                onSubmitEditing={() => passwordRef.current?.focus()}
                 mode="outlined"
-                left={<TextInput.Icon icon="email-outline" />}
+                left={<TextInput.Icon icon="email-outline" {...DECORATIVE_ICON} />}
                 style={styles.input}
                 outlineStyle={{
                   borderColor: theme.colors.outlineVariant,
@@ -212,17 +261,36 @@ export default function RegisterScreen() {
 
               <View>
                 <TextInput
+                  ref={passwordRef}
                   label="Contraseña"
+                  accessibilityLabel="Contraseña"
+                  accessibilityHint={`Mínimo ${MIN_PASSWORD_LENGTH} caracteres`}
                   placeholder="••••••••"
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete="new-password"
+                  textContentType="newPassword"
+                  passwordRules={`minlength: ${MIN_PASSWORD_LENGTH};`}
+                  returnKeyType="next"
+                  submitBehavior="submit"
+                  onSubmitEditing={() => confirmPasswordRef.current?.focus()}
                   mode="outlined"
-                  left={<TextInput.Icon icon="lock-outline" />}
+                  left={
+                    <TextInput.Icon icon="lock-outline" {...DECORATIVE_ICON} />
+                  }
                   right={
                     <TextInput.Icon
                       icon={showPassword ? "eye-off-outline" : "eye-outline"}
                       onPress={() => setShowPassword(!showPassword)}
+                      forceTextInputFocus={false}
+                      accessibilityLabel={
+                        showPassword
+                          ? "Ocultar contraseña"
+                          : "Mostrar contraseña"
+                      }
                     />
                   }
                   error={!!passwordTooShort}
@@ -234,22 +302,39 @@ export default function RegisterScreen() {
                   }}
                   contentStyle={styles.inputContent}
                 />
-                {passwordTooShort && (
-                  <HelperText type="error" visible style={styles.helperText}>
-                    Mínimo 6 caracteres
-                  </HelperText>
-                )}
+                {/* El requisito se ve siempre, no solo cuando ya hay un error */}
+                <HelperText
+                  type={passwordTooShort ? "error" : "info"}
+                  visible
+                  style={styles.helperText}
+                  accessibilityLiveRegion="polite"
+                >
+                  Mínimo {MIN_PASSWORD_LENGTH} caracteres
+                </HelperText>
               </View>
 
               <View>
                 <TextInput
+                  ref={confirmPasswordRef}
                   label="Confirmar contraseña"
+                  accessibilityLabel="Confirmar contraseña"
                   placeholder="••••••••"
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
                   secureTextEntry={!showConfirmPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete="new-password"
+                  textContentType="newPassword"
+                  returnKeyType="go"
+                  onSubmitEditing={handleRegister}
                   mode="outlined"
-                  left={<TextInput.Icon icon="lock-check-outline" />}
+                  left={
+                    <TextInput.Icon
+                      icon="lock-check-outline"
+                      {...DECORATIVE_ICON}
+                    />
+                  }
                   right={
                     <TextInput.Icon
                       icon={
@@ -257,6 +342,12 @@ export default function RegisterScreen() {
                       }
                       onPress={() =>
                         setShowConfirmPassword(!showConfirmPassword)
+                      }
+                      forceTextInputFocus={false}
+                      accessibilityLabel={
+                        showConfirmPassword
+                          ? "Ocultar contraseña"
+                          : "Mostrar contraseña"
                       }
                     />
                   }
@@ -270,7 +361,12 @@ export default function RegisterScreen() {
                   contentStyle={styles.inputContent}
                 />
                 {passwordsDoNotMatch && (
-                  <HelperText type="error" visible style={styles.helperText}>
+                  <HelperText
+                    type="error"
+                    visible
+                    style={styles.helperText}
+                    accessibilityLiveRegion="polite"
+                  >
                     Las contraseñas no coinciden
                   </HelperText>
                 )}
@@ -294,21 +390,18 @@ export default function RegisterScreen() {
               <Text style={{ color: theme.colors.onSurfaceVariant }}>
                 ¿Ya tienes cuenta?
               </Text>
-              <TouchableOpacity onPress={() => router.push("/auth/login")}>
-                <Text
-                  style={[
-                    styles.loginLink,
-                    {
-                      color: theme.colors.tertiary,
-                    },
-                  ]}
-                >
+              <TouchableOpacity
+                onPress={() => router.push("/auth/login")}
+                accessibilityRole="link"
+                hitSlop={LINK_HIT_SLOP}
+              >
+                <Text style={[styles.loginLink, { color: linkColor }]}>
                   Inicia sesión
                 </Text>
               </TouchableOpacity>
             </Animated.View>
           </ScrollView>
-        </KeyboardAvoidingView>
+        </View>
       </SafeAreaView>
     </View>
   );
