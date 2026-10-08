@@ -3,19 +3,27 @@
  * Permite entrar con email/contraseña o Google y redirige al flujo principal tras autenticarse.
  */
 import { CTAButton } from "@/components/ui/CTAButton";
+import { GroupedField, GroupedFields } from "@/components/ui/GroupedFields";
 import { Ionicons } from "@expo/vector-icons";
 import {
   GoogleSignin,
   statusCodes,
 } from "@react-native-google-signin/google-signin";
+import {
+  GlassView,
+  isGlassEffectAPIAvailable,
+  isLiquidGlassAvailable,
+} from "expo-glass-effect";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useRef, useState } from "react";
 import {
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   TextInput as NativeTextInput,
+  TextInputProps,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -31,6 +39,10 @@ import { GrainyGradient } from "@/components/premade/organisms/grainy-gradient";
 import { useSnackbar } from "@/components/ui/SnackbarContext";
 import { useAuth } from "@/hooks";
 import { supabase } from "@/lib/supabase";
+
+// En iOS los campos van en una tarjeta agrupada y el botón de Google es de cristal (iOS 26+)
+const isIOS = Platform.OS === "ios";
+const glassAvailable = isLiquidGlassAvailable() && isGlassEffectAPIAvailable();
 
 // Amplía la zona táctil de los enlaces de texto hasta el mínimo recomendado
 const LINK_HIT_SLOP = { top: 12, bottom: 12, left: 8, right: 8 };
@@ -73,8 +85,7 @@ export default function LoginScreen() {
         iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
         scopes: ["email", "profile"],
       });
-    } catch {
-    }
+    } catch {}
   }, []);
 
   const handleGoogleLogin = async () => {
@@ -157,6 +168,34 @@ export default function LoginScreen() {
   };
 
   const isFormValid = email.trim().length > 0 && password.length > 0;
+
+  // Lo que comparten los campos de iOS y los de Android
+  const emailField = {
+    accessibilityLabel: "Correo electrónico",
+    value: email,
+    onChangeText: setEmail,
+    keyboardType: "email-address",
+    autoCapitalize: "none",
+    autoCorrect: false,
+    spellCheck: false,
+    autoComplete: "email",
+    textContentType: "username",
+    returnKeyType: "next",
+    submitBehavior: "submit",
+    onSubmitEditing: () => passwordRef.current?.focus(),
+  } satisfies TextInputProps;
+
+  const passwordField = {
+    accessibilityLabel: "Contraseña",
+    value: password,
+    onChangeText: setPassword,
+    autoCapitalize: "none",
+    autoCorrect: false,
+    autoComplete: "current-password",
+    textContentType: "password",
+    returnKeyType: "go",
+    onSubmitEditing: handleLogin,
+  } satisfies TextInputProps;
 
   // En claro, el verde terciario no llega al contraste mínimo sobre el fondo
   const linkColor = theme.dark
@@ -248,66 +287,78 @@ export default function LoginScreen() {
               entering={FadeInDown.duration(600).delay(200)}
               style={styles.form}
             >
-              <TextInput
-                label="Correo electrónico"
-                accessibilityLabel="Correo electrónico"
-                placeholder="tu@email.com"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                spellCheck={false}
-                autoComplete="email"
-                textContentType="username"
-                returnKeyType="next"
-                submitBehavior="submit"
-                onSubmitEditing={() => passwordRef.current?.focus()}
-                mode="outlined"
-                left={<TextInput.Icon icon="email-outline" {...DECORATIVE_ICON} />}
-                style={styles.input}
-                outlineStyle={{
-                  borderColor: theme.colors.outlineVariant,
-                  borderRadius: 20,
-                  borderWidth: 1,
-                }}
-                contentStyle={styles.inputContent}
-              />
-
-              <TextInput
-                ref={passwordRef}
-                label="Contraseña"
-                accessibilityLabel="Contraseña"
-                placeholder="••••••••"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-                autoCapitalize="none"
-                autoCorrect={false}
-                autoComplete="current-password"
-                textContentType="password"
-                returnKeyType="go"
-                onSubmitEditing={handleLogin}
-                mode="outlined"
-                left={<TextInput.Icon icon="lock-outline" {...DECORATIVE_ICON} />}
-                right={
-                  <TextInput.Icon
-                    icon={showPassword ? "eye-off-outline" : "eye-outline"}
-                    onPress={() => setShowPassword(!showPassword)}
-                    forceTextInputFocus={false}
-                    accessibilityLabel={
-                      showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
-                    }
+              {isIOS ? (
+                <GroupedFields>
+                  <GroupedField
+                    icon="envelope"
+                    placeholder="Correo electrónico"
+                    {...emailField}
                   />
-                }
-                style={styles.input}
-                outlineStyle={{
-                  borderColor: theme.colors.outlineVariant,
-                  borderRadius: 20,
-                  borderWidth: 1,
-                }}
-                contentStyle={styles.inputContent}
-              />
+                  <GroupedField
+                    ref={passwordRef}
+                    icon="lock"
+                    placeholder="Contraseña"
+                    secure
+                    {...passwordField}
+                  />
+                </GroupedFields>
+              ) : (
+                <>
+                  <TextInput
+                    label="Correo electrónico"
+                    placeholder="tu@email.com"
+                    {...emailField}
+                    mode="outlined"
+                    left={
+                      <TextInput.Icon
+                        icon="email-outline"
+                        {...DECORATIVE_ICON}
+                      />
+                    }
+                    style={styles.input}
+                    outlineStyle={{
+                      borderColor: theme.colors.outlineVariant,
+                      borderRadius: 20,
+                      borderWidth: 1,
+                    }}
+                    contentStyle={styles.inputContent}
+                  />
+
+                  <TextInput
+                    ref={passwordRef}
+                    label="Contraseña"
+                    placeholder="••••••••"
+                    {...passwordField}
+                    secureTextEntry={!showPassword}
+                    mode="outlined"
+                    left={
+                      <TextInput.Icon
+                        icon="lock-outline"
+                        {...DECORATIVE_ICON}
+                      />
+                    }
+                    right={
+                      <TextInput.Icon
+                        icon={showPassword ? "eye-off-outline" : "eye-outline"}
+                        onPress={() => setShowPassword(!showPassword)}
+                        forceTextInputFocus={false}
+                        accessibilityLabel={
+                          showPassword
+                            ? "Ocultar contraseña"
+                            : "Mostrar contraseña"
+                        }
+                      />
+                    }
+                    style={styles.input}
+                    outlineStyle={{
+                      borderColor: theme.colors.outlineVariant,
+                      borderRadius: 20,
+                      borderWidth: 1,
+                    }}
+                    contentStyle={styles.inputContent}
+                  />
+                </>
+              )}
 
               <CTAButton
                 title="Iniciar Sesión"
@@ -341,31 +392,16 @@ export default function LoginScreen() {
                 />
               </View>
 
-              <Pressable
-                onPress={handleGoogleLogin}
-                disabled={loading}
-                accessibilityRole="button"
-                accessibilityLabel="Continuar con Google"
-                accessibilityState={{ disabled: loading, busy: loading }}
-                style={({ pressed }) => [
-                  styles.socialButtonContainer,
-                  {
-                    opacity: loading ? 0.6 : pressed ? 0.9 : 1,
-                  },
-                ]}
-              >
-                <SquircleView
-                  style={[
-                    styles.socialButton,
-                    {
-                      backgroundColor: theme.colors.surface,
-                      borderColor: "rgba(255,255,255,0.1)",
-                      borderWidth: 1,
-                    },
-                  ]}
-                  cornerSmoothing={1}
-                >
-                  <View style={styles.socialButtonContent}>
+              {isIOS && glassAvailable ? (
+                <GlassView style={styles.socialCapsule} isInteractive>
+                  <Pressable
+                    onPress={handleGoogleLogin}
+                    disabled={loading}
+                    accessibilityRole="button"
+                    accessibilityLabel="Continuar con Google"
+                    accessibilityState={{ disabled: loading, busy: loading }}
+                    style={styles.socialCapsuleContent}
+                  >
                     <Ionicons
                       name="logo-google"
                       size={20}
@@ -379,9 +415,51 @@ export default function LoginScreen() {
                     >
                       Google
                     </Text>
-                  </View>
-                </SquircleView>
-              </Pressable>
+                  </Pressable>
+                </GlassView>
+              ) : (
+                <Pressable
+                  onPress={handleGoogleLogin}
+                  disabled={loading}
+                  accessibilityRole="button"
+                  accessibilityLabel="Continuar con Google"
+                  accessibilityState={{ disabled: loading, busy: loading }}
+                  style={({ pressed }) => [
+                    styles.socialButtonContainer,
+                    {
+                      opacity: loading ? 0.6 : pressed ? 0.9 : 1,
+                    },
+                  ]}
+                >
+                  <SquircleView
+                    style={[
+                      styles.socialButton,
+                      {
+                        backgroundColor: theme.colors.surface,
+                        borderColor: "rgba(255,255,255,0.1)",
+                        borderWidth: 1,
+                      },
+                    ]}
+                    cornerSmoothing={1}
+                  >
+                    <View style={styles.socialButtonContent}>
+                      <Ionicons
+                        name="logo-google"
+                        size={20}
+                        color={theme.colors.onSurface}
+                      />
+                      <Text
+                        style={[
+                          styles.socialButtonText,
+                          { color: theme.colors.onSurface },
+                        ]}
+                      >
+                        Google
+                      </Text>
+                    </View>
+                  </SquircleView>
+                </Pressable>
+              )}
             </Animated.View>
 
             <Animated.View
@@ -518,6 +596,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     fontSize: 13,
     fontFamily: "Archivo-Medium",
+  },
+  socialCapsule: {
+    width: "100%",
+    height: 52,
+    borderRadius: 26,
+    marginBottom: 16,
+  },
+  socialCapsuleContent: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
   },
   socialButtonContainer: {
     width: "100%",

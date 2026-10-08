@@ -4,15 +4,18 @@
  */
 import { GrainyGradient } from "@/components/premade/organisms/grainy-gradient";
 import { CTAButton } from "@/components/ui/CTAButton";
+import { GroupedField, GroupedFields } from "@/components/ui/GroupedFields";
 import { useSnackbar } from "@/components/ui/SnackbarContext";
 import { useAuth } from "@/hooks";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import React, { useRef, useState } from "react";
 import {
+  Platform,
   ScrollView,
   StyleSheet,
   TextInput as NativeTextInput,
+  TextInputProps,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -26,6 +29,9 @@ import Animated, {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const MIN_PASSWORD_LENGTH = 6;
+
+// En iOS los campos van en una tarjeta agrupada
+const isIOS = Platform.OS === "ios";
 
 // Amplía la zona táctil de los enlaces de texto hasta el mínimo recomendado
 const LINK_HIT_SLOP = { top: 12, bottom: 12, left: 8, right: 8 };
@@ -119,6 +125,61 @@ export default function RegisterScreen() {
   const passwordsDoNotMatch = confirmPassword && password !== confirmPassword;
   const passwordTooShort = password && password.length < MIN_PASSWORD_LENGTH;
 
+  // Lo que comparten los campos de iOS y los de Android
+  const nameField = {
+    accessibilityLabel: "Nombre de usuario",
+    value: displayName,
+    onChangeText: setDisplayName,
+    autoCapitalize: "words",
+    autoComplete: "name",
+    textContentType: "name",
+    returnKeyType: "next",
+    submitBehavior: "submit",
+    onSubmitEditing: () => emailRef.current?.focus(),
+  } satisfies TextInputProps;
+
+  const emailField = {
+    accessibilityLabel: "Correo electrónico",
+    value: email,
+    onChangeText: setEmail,
+    keyboardType: "email-address",
+    autoCapitalize: "none",
+    autoCorrect: false,
+    spellCheck: false,
+    autoComplete: "email",
+    textContentType: "username",
+    returnKeyType: "next",
+    submitBehavior: "submit",
+    onSubmitEditing: () => passwordRef.current?.focus(),
+  } satisfies TextInputProps;
+
+  const passwordField = {
+    accessibilityLabel: "Contraseña",
+    accessibilityHint: `Mínimo ${MIN_PASSWORD_LENGTH} caracteres`,
+    value: password,
+    onChangeText: setPassword,
+    autoCapitalize: "none",
+    autoCorrect: false,
+    autoComplete: "new-password",
+    textContentType: "newPassword",
+    passwordRules: `minlength: ${MIN_PASSWORD_LENGTH};`,
+    returnKeyType: "next",
+    submitBehavior: "submit",
+    onSubmitEditing: () => confirmPasswordRef.current?.focus(),
+  } satisfies TextInputProps;
+
+  const confirmPasswordField = {
+    accessibilityLabel: "Confirmar contraseña",
+    value: confirmPassword,
+    onChangeText: setConfirmPassword,
+    autoCapitalize: "none",
+    autoCorrect: false,
+    autoComplete: "new-password",
+    textContentType: "newPassword",
+    returnKeyType: "go",
+    onSubmitEditing: handleRegister,
+  } satisfies TextInputProps;
+
   // En claro, el verde terciario no llega al contraste mínimo sobre el fondo
   const linkColor = theme.dark
     ? theme.colors.tertiary
@@ -209,168 +270,212 @@ export default function RegisterScreen() {
               entering={FadeInDown.duration(600).delay(200)}
               style={styles.form}
             >
-              <TextInput
-                label="Nombre de usuario"
-                accessibilityLabel="Nombre de usuario"
-                placeholder="Tu nombre"
-                value={displayName}
-                onChangeText={setDisplayName}
-                autoCapitalize="words"
-                autoComplete="name"
-                textContentType="name"
-                returnKeyType="next"
-                submitBehavior="submit"
-                onSubmitEditing={() => emailRef.current?.focus()}
-                mode="outlined"
-                left={<TextInput.Icon icon="account-outline" {...DECORATIVE_ICON} />}
-                style={styles.input}
-                outlineStyle={{
-                  borderColor: theme.colors.outlineVariant,
-                  borderRadius: 20,
-                  borderWidth: 1,
-                }}
-                contentStyle={styles.inputContent}
-              />
-
-              <TextInput
-                ref={emailRef}
-                label="Correo electrónico"
-                accessibilityLabel="Correo electrónico"
-                placeholder="tu@email.com"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                spellCheck={false}
-                autoComplete="email"
-                textContentType="username"
-                returnKeyType="next"
-                submitBehavior="submit"
-                onSubmitEditing={() => passwordRef.current?.focus()}
-                mode="outlined"
-                left={<TextInput.Icon icon="email-outline" {...DECORATIVE_ICON} />}
-                style={styles.input}
-                outlineStyle={{
-                  borderColor: theme.colors.outlineVariant,
-                  borderRadius: 20,
-                  borderWidth: 1,
-                }}
-                contentStyle={styles.inputContent}
-              />
-
-              <View>
-                <TextInput
-                  ref={passwordRef}
-                  label="Contraseña"
-                  accessibilityLabel="Contraseña"
-                  accessibilityHint={`Mínimo ${MIN_PASSWORD_LENGTH} caracteres`}
-                  placeholder="••••••••"
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  autoComplete="new-password"
-                  textContentType="newPassword"
-                  passwordRules={`minlength: ${MIN_PASSWORD_LENGTH};`}
-                  returnKeyType="next"
-                  submitBehavior="submit"
-                  onSubmitEditing={() => confirmPasswordRef.current?.focus()}
-                  mode="outlined"
-                  left={
-                    <TextInput.Icon icon="lock-outline" {...DECORATIVE_ICON} />
-                  }
-                  right={
-                    <TextInput.Icon
-                      icon={showPassword ? "eye-off-outline" : "eye-outline"}
-                      onPress={() => setShowPassword(!showPassword)}
-                      forceTextInputFocus={false}
-                      accessibilityLabel={
-                        showPassword
-                          ? "Ocultar contraseña"
-                          : "Mostrar contraseña"
-                      }
+              {isIOS ? (
+                <>
+                  <GroupedFields>
+                    <GroupedField
+                      icon="person"
+                      placeholder="Nombre de usuario"
+                      {...nameField}
                     />
-                  }
-                  error={!!passwordTooShort}
-                  style={styles.input}
-                  outlineStyle={{
-                    borderColor: theme.colors.outlineVariant,
-                    borderRadius: 20,
-                    borderWidth: 1,
-                  }}
-                  contentStyle={styles.inputContent}
-                />
-                {/* El requisito se ve siempre, no solo cuando ya hay un error */}
-                <HelperText
-                  type={passwordTooShort ? "error" : "info"}
-                  visible
-                  style={styles.helperText}
-                  accessibilityLiveRegion="polite"
-                >
-                  Mínimo {MIN_PASSWORD_LENGTH} caracteres
-                </HelperText>
-              </View>
+                    <GroupedField
+                      ref={emailRef}
+                      icon="envelope"
+                      placeholder="Correo electrónico"
+                      {...emailField}
+                    />
+                    <GroupedField
+                      ref={passwordRef}
+                      icon="lock"
+                      placeholder="Contraseña"
+                      secure
+                      error={!!passwordTooShort}
+                      {...passwordField}
+                    />
+                    <GroupedField
+                      ref={confirmPasswordRef}
+                      icon="checkmark.shield"
+                      placeholder="Confirmar contraseña"
+                      secure
+                      error={!!passwordsDoNotMatch}
+                      {...confirmPasswordField}
+                    />
+                  </GroupedFields>
 
-              <View>
-                <TextInput
-                  ref={confirmPasswordRef}
-                  label="Confirmar contraseña"
-                  accessibilityLabel="Confirmar contraseña"
-                  placeholder="••••••••"
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  secureTextEntry={!showConfirmPassword}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  autoComplete="new-password"
-                  textContentType="newPassword"
-                  returnKeyType="go"
-                  onSubmitEditing={handleRegister}
-                  mode="outlined"
-                  left={
-                    <TextInput.Icon
-                      icon="lock-check-outline"
-                      {...DECORATIVE_ICON}
-                    />
-                  }
-                  right={
-                    <TextInput.Icon
-                      icon={
-                        showConfirmPassword ? "eye-off-outline" : "eye-outline"
-                      }
-                      onPress={() =>
-                        setShowConfirmPassword(!showConfirmPassword)
-                      }
-                      forceTextInputFocus={false}
-                      accessibilityLabel={
-                        showConfirmPassword
-                          ? "Ocultar contraseña"
-                          : "Mostrar contraseña"
-                      }
-                    />
-                  }
-                  error={!!passwordsDoNotMatch}
-                  style={styles.input}
-                  outlineStyle={{
-                    borderColor: theme.colors.outlineVariant,
-                    borderRadius: 20,
-                    borderWidth: 1,
-                  }}
-                  contentStyle={styles.inputContent}
-                />
-                {passwordsDoNotMatch && (
-                  <HelperText
-                    type="error"
-                    visible
-                    style={styles.helperText}
+                  {/* Notas bajo la tarjeta, como los pies de sección de iOS */}
+                  <View
+                    style={styles.fieldNotes}
                     accessibilityLiveRegion="polite"
                   >
-                    Las contraseñas no coinciden
-                  </HelperText>
-                )}
-              </View>
+                    <Text
+                      style={[
+                        styles.fieldNote,
+                        {
+                          color: passwordTooShort
+                            ? theme.colors.error
+                            : theme.colors.onSurfaceVariant,
+                        },
+                      ]}
+                    >
+                      Mínimo {MIN_PASSWORD_LENGTH} caracteres
+                    </Text>
+                    {!!passwordsDoNotMatch && (
+                      <Text
+                        style={[
+                          styles.fieldNote,
+                          { color: theme.colors.error },
+                        ]}
+                      >
+                        Las contraseñas no coinciden
+                      </Text>
+                    )}
+                  </View>
+                </>
+              ) : (
+                <>
+                  <TextInput
+                    label="Nombre de usuario"
+                    placeholder="Tu nombre"
+                    {...nameField}
+                    mode="outlined"
+                    left={
+                      <TextInput.Icon
+                        icon="account-outline"
+                        {...DECORATIVE_ICON}
+                      />
+                    }
+                    style={styles.input}
+                    outlineStyle={{
+                      borderColor: theme.colors.outlineVariant,
+                      borderRadius: 20,
+                      borderWidth: 1,
+                    }}
+                    contentStyle={styles.inputContent}
+                  />
+
+                  <TextInput
+                    ref={emailRef}
+                    label="Correo electrónico"
+                    placeholder="tu@email.com"
+                    {...emailField}
+                    mode="outlined"
+                    left={
+                      <TextInput.Icon
+                        icon="email-outline"
+                        {...DECORATIVE_ICON}
+                      />
+                    }
+                    style={styles.input}
+                    outlineStyle={{
+                      borderColor: theme.colors.outlineVariant,
+                      borderRadius: 20,
+                      borderWidth: 1,
+                    }}
+                    contentStyle={styles.inputContent}
+                  />
+
+                  <View>
+                    <TextInput
+                      ref={passwordRef}
+                      label="Contraseña"
+                      placeholder="••••••••"
+                      {...passwordField}
+                      secureTextEntry={!showPassword}
+                      mode="outlined"
+                      left={
+                        <TextInput.Icon
+                          icon="lock-outline"
+                          {...DECORATIVE_ICON}
+                        />
+                      }
+                      right={
+                        <TextInput.Icon
+                          icon={
+                            showPassword ? "eye-off-outline" : "eye-outline"
+                          }
+                          onPress={() => setShowPassword(!showPassword)}
+                          forceTextInputFocus={false}
+                          accessibilityLabel={
+                            showPassword
+                              ? "Ocultar contraseña"
+                              : "Mostrar contraseña"
+                          }
+                        />
+                      }
+                      error={!!passwordTooShort}
+                      style={styles.input}
+                      outlineStyle={{
+                        borderColor: theme.colors.outlineVariant,
+                        borderRadius: 20,
+                        borderWidth: 1,
+                      }}
+                      contentStyle={styles.inputContent}
+                    />
+                    {/* El requisito se ve siempre, no solo cuando ya hay un error */}
+                    <HelperText
+                      type={passwordTooShort ? "error" : "info"}
+                      visible
+                      style={styles.helperText}
+                      accessibilityLiveRegion="polite"
+                    >
+                      Mínimo {MIN_PASSWORD_LENGTH} caracteres
+                    </HelperText>
+                  </View>
+
+                  <View>
+                    <TextInput
+                      ref={confirmPasswordRef}
+                      label="Confirmar contraseña"
+                      placeholder="••••••••"
+                      {...confirmPasswordField}
+                      secureTextEntry={!showConfirmPassword}
+                      mode="outlined"
+                      left={
+                        <TextInput.Icon
+                          icon="lock-check-outline"
+                          {...DECORATIVE_ICON}
+                        />
+                      }
+                      right={
+                        <TextInput.Icon
+                          icon={
+                            showConfirmPassword
+                              ? "eye-off-outline"
+                              : "eye-outline"
+                          }
+                          onPress={() =>
+                            setShowConfirmPassword(!showConfirmPassword)
+                          }
+                          forceTextInputFocus={false}
+                          accessibilityLabel={
+                            showConfirmPassword
+                              ? "Ocultar contraseña"
+                              : "Mostrar contraseña"
+                          }
+                        />
+                      }
+                      error={!!passwordsDoNotMatch}
+                      style={styles.input}
+                      outlineStyle={{
+                        borderColor: theme.colors.outlineVariant,
+                        borderRadius: 20,
+                        borderWidth: 1,
+                      }}
+                      contentStyle={styles.inputContent}
+                    />
+                    {passwordsDoNotMatch && (
+                      <HelperText
+                        type="error"
+                        visible
+                        style={styles.helperText}
+                        accessibilityLiveRegion="polite"
+                      >
+                        Las contraseñas no coinciden
+                      </HelperText>
+                    )}
+                  </View>
+                </>
+              )}
 
               <CTAButton
                 title="Crear Cuenta"
@@ -473,6 +578,16 @@ const styles = StyleSheet.create({
   },
   inputContent: {
     fontFamily: "Archivo-Medium",
+  },
+  fieldNotes: {
+    marginTop: 8,
+    paddingHorizontal: 18,
+    gap: 2,
+  },
+  fieldNote: {
+    fontFamily: "Archivo-Regular",
+    fontSize: 13,
+    lineHeight: 18,
   },
   helperText: {
     marginTop: -8,
