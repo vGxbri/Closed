@@ -4,7 +4,6 @@
  */
 import { Ionicons } from "@expo/vector-icons";
 import { BlurTargetView } from "expo-blur";
-import { Image } from "expo-image";
 import { Stack, useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
@@ -24,14 +23,10 @@ import Animated, {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { GroupCover } from "@/components/ui/GroupCover";
 import { MenuOption, OptionsMenu } from "@/components/ui/OptionsMenu";
-import {
-  getAvatarColor,
-  getInitials,
-  UserAvatar,
-} from "@/components/ui/UserAvatar";
+import { UserAvatar } from "@/components/ui/UserAvatar";
 import { useAuth, useGroups } from "@/hooks";
-import { getOptimizedMediaUrl } from "@/lib/storage";
 import { GroupWithDetails } from "@/types/database";
 
 const CARD_GAP = 14;
@@ -88,34 +83,6 @@ const SkeletonCard = React.memo<SkeletonCardProps>(({ index }) => {
 
 SkeletonCard.displayName = "SkeletonCard";
 
-interface GroupCoverProps {
-  uri: string | null;
-  name: string;
-}
-
-// Portada del grupo; sin imagen se muestra un color e iniciales derivados del nombre.
-const GroupCover = React.memo<GroupCoverProps>(({ uri, name }) => {
-  const [imageError, setImageError] = useState(false);
-  const hasImage = !!uri && uri.trim() !== "" && !imageError;
-
-  return (
-    <View style={[styles.cover, { backgroundColor: getAvatarColor(name) }]}>
-      <Text style={styles.coverInitials}>{getInitials(name)}</Text>
-      {hasImage && (
-        <Image
-          source={getOptimizedMediaUrl(uri, { width: 800 }) || uri}
-          style={StyleSheet.absoluteFill}
-          contentFit="cover"
-          transition={200}
-          onError={() => setImageError(true)}
-        />
-      )}
-    </View>
-  );
-});
-
-GroupCover.displayName = "GroupCover";
-
 interface GroupCardItemProps {
   group: GroupWithDetails;
   index: number;
@@ -153,7 +120,11 @@ const GroupCardItem = React.memo<GroupCardItemProps>(
             cornerSmoothing={1}
           >
             <View>
-              <GroupCover uri={group.cover_image_url} name={group.name} />
+              <GroupCover
+                uri={group.cover_image_url}
+                name={group.name}
+                style={styles.cover}
+              />
 
               {group.my_role && group.my_role !== "member" && (
                 <View
@@ -672,11 +643,6 @@ const styles = StyleSheet.create({
     height: COVER_HEIGHT,
     justifyContent: "center",
     alignItems: "center",
-  },
-  coverInitials: {
-    fontFamily: "InstrumentSerif-Italic",
-    fontSize: 56,
-    color: "rgba(255,255,255,0.9)",
   },
   cardFooter: {
     flexDirection: "row",

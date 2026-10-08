@@ -2,11 +2,14 @@
  * Creación de grupo privado
  * Flujo guiado por pasos para definir tipo, nombre, foto y crear un nuevo grupo en Closed.
  */
+import { CircleButton } from "@/components/ui/CircleButton";
 import { CTAButton } from "@/components/ui/CTAButton";
 import {
   KEYBOARD_DISMISS_RIGHT,
   KEYBOARD_DISMISS_SIZE,
 } from "@/components/ui/KeyboardDismissButton";
+import { StepTitle } from "@/components/ui/StepTitle";
+import { useKeyboardHeight } from "@/hooks/useKeyboardHeight";
 import { Ionicons } from "@expo/vector-icons";
 import {
   GlassView,
@@ -16,10 +19,9 @@ import {
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import {
   Dimensions,
-  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -73,119 +75,6 @@ const ITEMS = [
 ];
 
 const TOTAL_STEPS = 3;
-
-// Altura que el teclado ocupa en pantalla, animada a su mismo ritmo.
-// Solo iOS: KeyboardAvoidingView mide mal dentro de un modal y Android ya redimensiona la ventana.
-function useKeyboardHeight() {
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-
-  useEffect(() => {
-    if (Platform.OS !== "ios") return;
-
-    const subscription = Keyboard.addListener(
-      "keyboardWillChangeFrame",
-      (event) => {
-        Keyboard.scheduleLayoutAnimation(event);
-        setKeyboardHeight(
-          Math.max(
-            0,
-            Dimensions.get("window").height - event.endCoordinates.screenY,
-          ),
-        );
-      },
-    );
-
-    return () => subscription.remove();
-  }, []);
-
-  return keyboardHeight;
-}
-
-interface StepTitleProps {
-  main: string;
-  accent: string;
-  subtitle?: string;
-}
-
-function StepTitle({ main, accent, subtitle }: StepTitleProps) {
-  const theme = useTheme();
-
-  return (
-    <View style={styles.stepTitleBlock}>
-      <Text style={[styles.stepMainTitle, { color: theme.colors.onSurface }]}>
-        {main}
-      </Text>
-      <Text style={[styles.stepAccentTitle, { color: theme.colors.primary }]}>
-        {accent}
-      </Text>
-      <View
-        style={[
-          styles.titleDivider,
-          { borderBottomColor: theme.colors.outlineVariant },
-        ]}
-      />
-      {subtitle && (
-        <Text
-          style={[
-            styles.stepSubtitle,
-            { color: theme.colors.onSurfaceVariant },
-          ]}
-        >
-          {subtitle}
-        </Text>
-      )}
-    </View>
-  );
-}
-
-interface CircleButtonProps {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  onPress: () => void;
-  hidden?: boolean;
-}
-
-function CircleButton({ icon, label, onPress, hidden }: CircleButtonProps) {
-  const theme = useTheme();
-
-  // Se conserva el hueco para que la barra de progreso no cambie de ancho
-  if (hidden) return <View style={styles.circleButton} />;
-
-  const button = (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      hitSlop={6}
-      style={styles.circleButtonPressable}
-    >
-      <Ionicons name={icon} size={22} color={theme.colors.onSurface} />
-    </Pressable>
-  );
-
-  if (glassAvailable) {
-    return (
-      <GlassView style={styles.circleButton} isInteractive>
-        {button}
-      </GlassView>
-    );
-  }
-
-  return (
-    <View
-      style={[
-        styles.circleButton,
-        styles.circleButtonSolid,
-        {
-          backgroundColor: theme.colors.surface,
-          borderColor: theme.colors.outlineVariant,
-        },
-      ]}
-    >
-      {button}
-    </View>
-  );
-}
 
 export default function CreateGroupScreen() {
   const router = useRouter();
@@ -722,52 +611,11 @@ const styles = StyleSheet.create({
     height: 4,
     borderRadius: 2,
   },
-  circleButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-  },
-  circleButtonSolid: {
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  circleButtonPressable: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
   content: {
     flex: 1,
   },
   stepContainer: {
     flex: 1,
-  },
-
-  stepTitleBlock: {
-    marginTop: 12,
-    marginBottom: 10,
-    paddingHorizontal: 24,
-  },
-  stepMainTitle: {
-    fontFamily: "Archivo-Bold",
-    fontSize: 36,
-  },
-  stepAccentTitle: {
-    fontFamily: "InstrumentSerif-Italic",
-    fontSize: 42,
-    marginTop: -20,
-    letterSpacing: 2,
-    paddingVertical: 5,
-  },
-  titleDivider: {
-    borderBottomWidth: 1,
-    width: "90%",
-    marginTop: 5,
-  },
-  stepSubtitle: {
-    fontFamily: "Archivo-Regular",
-    fontSize: 15,
-    lineHeight: 21,
-    marginTop: 14,
   },
 
   logoContainer: {
