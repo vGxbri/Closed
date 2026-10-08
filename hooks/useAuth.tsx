@@ -22,6 +22,8 @@ interface AuthContextType {
   profile: Profile | null;
   isLoading: boolean;
   isProfileLoading: boolean;
+  /** La última consulta del perfil falló (sin conexión, servidor caído): no implica que no exista. */
+  profileError: boolean;
   isAuthenticated: boolean;
 
   signIn: (email: string, password: string) => Promise<void>;
@@ -47,6 +49,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isProfileLoading, setIsProfileLoading] = useState(false);
+  const [profileError, setProfileError] = useState(false);
 
   useEffect(() => {
     const {
@@ -72,6 +75,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const loadProfile = async (fallbackUser?: User | null) => {
     try {
       setIsProfileLoading(true);
+      setProfileError(false);
       let currentProfile = await authService.getCurrentProfile();
 
       const targetUser = fallbackUser ?? user;
@@ -87,6 +91,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       setProfile(currentProfile);
     } catch {
+      // Se conserva el perfil que hubiera: un fallo de red no significa que no exista
+      setProfileError(true);
     } finally {
       setIsProfileLoading(false);
     }
@@ -124,12 +130,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const signOut = async () => {
     try {
       await GoogleSignin.signOut();
-    } catch {
-    }
+    } catch {}
     await authService.signOut();
     setSession(null);
     setUser(null);
     setProfile(null);
+    setProfileError(false);
   };
 
   const updateProfile = async (updates: Partial<Profile>) => {
@@ -152,6 +158,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     profile,
     isLoading,
     isProfileLoading,
+    profileError,
     isAuthenticated: !!session,
     signIn,
     signUp,
