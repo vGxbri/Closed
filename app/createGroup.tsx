@@ -454,7 +454,7 @@ export default function CreateGroupScreen() {
             >
               <TextInput
                 placeholder="Nombre del grupo"
-                placeholderTextColor={theme.colors.outline}
+                placeholderTextColor={theme.colors.onSurfaceVariant}
                 value={name}
                 onChangeText={setName}
                 style={[styles.nameInput, { color: theme.colors.onSurface }]}
@@ -472,7 +472,7 @@ export default function CreateGroupScreen() {
               <TextInput
                 ref={descriptionRef}
                 placeholder="Descripción (opcional)"
-                placeholderTextColor={theme.colors.outline}
+                placeholderTextColor={theme.colors.onSurfaceVariant}
                 value={description}
                 onChangeText={setDescription}
                 style={[
