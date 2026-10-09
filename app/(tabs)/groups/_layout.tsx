@@ -31,6 +31,7 @@ export default function GroupsStackLayout() {
         name="group/widgets"
         options={{ headerShown: false, presentation: "modal" }}
       />
+      <Stack.Screen name="group/settings" options={{ headerShown: false }} />
       <Stack.Screen name="group/gallery" options={{ headerShown: false }} />
       <Stack.Screen
         name="group/sharedExpenses"
