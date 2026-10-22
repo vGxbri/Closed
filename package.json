@@ -11,6 +11,7 @@
     "lint": "expo lint"
   },
   "dependencies": {
+    "@blobatar/react-native": "^2.7.0",
     "@expo/dom-webview": "~57.0.1",
     "@expo/metro-runtime": "~57.0.16",
     "@expo/vector-icons": "^15.0.3",
@@ -21,6 +22,7 @@
     "@shopify/react-native-skia": "2.6.2",
     "@supabase/supabase-js": "^2.87.1",
     "base64-arraybuffer": "^1.0.2",
+    "blobatar": "^2.7.0",
     "expo": "^57.0.27",
     "expo-asset": "~57.0.19",
     "expo-audio": "~57.0.5",

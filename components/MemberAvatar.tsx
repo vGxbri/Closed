@@ -3,12 +3,12 @@
  * Muestra foto o iniciales y nombre de un perfil o miembro del grupo.
  */
 
-import React from 'react';
-import { StyleSheet, Text, View, ViewStyle } from 'react-native';
-import { getMemberAvatarUrl, getMemberDisplayName } from '../lib/memberProfile';
-import { GroupMemberView, Profile } from '../types/database';
-import { Colors } from '../constants/Colors';
-import { UserAvatar } from './ui/UserAvatar';
+import React from "react";
+import { StyleSheet, Text, View, ViewStyle } from "react-native";
+import { getMemberAvatarUrl, getMemberDisplayName } from "../lib/memberProfile";
+import { GroupMemberView, Profile } from "../types/database";
+import { Colors } from "../constants/Colors";
+import { getAvatarSeed, UserAvatar } from "./ui/UserAvatar";
 
 // Acepta perfil, miembro de grupo o filas con user_id (p. ej. SelectableMember)
 type UserLike =
@@ -30,34 +30,40 @@ type UserLike =
     };
 
 const getUserId = (user: UserLike): string =>
-  'user_id' in user ? user.user_id : user.id;
+  "user_id" in user ? user.user_id : user.id;
+
+const getGroupId = (user: UserLike): string | undefined =>
+  "group_id" in user ? user.group_id : undefined;
 
 interface MemberAvatarProps {
   user: UserLike;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: "sm" | "md" | "lg" | "xl";
+  /** Grupo del avatar; si falta, se toma de `user.group_id` cuando existe. */
+  groupId?: string;
   showName?: boolean;
   style?: ViewStyle;
 }
 
 const getUserName = (user: UserLike): string => {
-  if ('group_display_name' in user) {
+  if ("group_display_name" in user) {
     return getMemberDisplayName({
-      display_name: user.display_name || 'Usuario',
+      display_name: user.display_name || "Usuario",
       group_display_name: user.group_display_name,
     });
   }
-  return user.display_name || 'Usuario';
+  return user.display_name || "Usuario";
 };
 
 export const MemberAvatar: React.FC<MemberAvatarProps> = ({
   user,
-  size = 'md',
+  size = "md",
+  groupId,
   showName = false,
   style,
 }) => {
   const name = getUserName(user);
   const avatarUri =
-    'group_avatar_url' in user
+    "group_avatar_url" in user
       ? getMemberAvatarUrl({
           avatar_url: user.avatar_url,
           group_avatar_url: user.group_avatar_url,
@@ -69,6 +75,7 @@ export const MemberAvatar: React.FC<MemberAvatarProps> = ({
       <UserAvatar
         uri={avatarUri}
         name={name}
+        seed={getAvatarSeed(getUserId(user), groupId ?? getGroupId(user))}
         size={size}
       />
       {showName && (
@@ -83,17 +90,19 @@ export const MemberAvatar: React.FC<MemberAvatarProps> = ({
 interface MemberAvatarsRowProps {
   users: UserLike[];
   max?: number;
-  size?: 'sm' | 'md';
+  size?: "sm" | "md";
+  groupId?: string;
 }
 
 export const MemberAvatarsRow: React.FC<MemberAvatarsRowProps> = ({
   users,
   max = 5,
-  size = 'sm',
+  size = "sm",
+  groupId,
 }) => {
   const displayedUsers = users.slice(0, max);
   const remaining = users.length - max;
-  const sizeValue = size === 'sm' ? 32 : 40;
+  const sizeValue = size === "sm" ? 32 : 40;
 
   return (
     <View style={styles.row}>
@@ -105,7 +114,7 @@ export const MemberAvatarsRow: React.FC<MemberAvatarsRowProps> = ({
             zIndex: displayedUsers.length - index,
           }}
         >
-          <MemberAvatar user={user} size={size} />
+          <MemberAvatar user={user} size={size} groupId={groupId} />
         </View>
       ))}
       {remaining > 0 && (
@@ -129,29 +138,29 @@ export const MemberAvatarsRow: React.FC<MemberAvatarsRowProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   name: {
     marginTop: 4,
     fontSize: 12,
     color: Colors.textSecondary,
     maxWidth: 60,
-    textAlign: 'center',
+    textAlign: "center",
   },
   row: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   remainingBadge: {
     backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 2,
     borderColor: Colors.surface,
   },
   remainingText: {
     color: Colors.textOnPrimary,
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });
