@@ -33,7 +33,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CustomHeader } from "@/components/ui/CustomHeader";
 import { useSnackbar } from "@/components/ui/SnackbarContext";
-import { UserAvatar } from "@/components/ui/UserAvatar";
+import { getAvatarSeed, UserAvatar } from "@/components/ui/UserAvatar";
 import { useAuth, useGroup } from "@/hooks";
 import {
   buildCalendarMonthLayout,
@@ -366,6 +366,7 @@ const EventCard = React.memo<EventCardProps>(({ event, index, onPress }) => {
                         <UserAvatar
                           uri={p.user?.avatar_url}
                           name={p.user?.display_name || "?"}
+                          seed={getAvatarSeed(p.user_id, event.group_id)}
                           size={18}
                           borderRadius={6}
                         />

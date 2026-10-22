@@ -13,7 +13,7 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 import { GroupMemberView } from "../../types/database";
 import { DebtTransfer, formatCents } from "../../lib/sharedExpenses";
 import { getMemberAvatarUrl } from "@/lib/memberProfile";
-import { UserAvatar } from "./UserAvatar";
+import { getAvatarSeed, UserAvatar } from "./UserAvatar";
 
 interface SettlementCardProps {
   debt: DebtTransfer;
@@ -30,17 +30,17 @@ export const SettlementCard = React.memo<SettlementCardProps>(
     const fromMember = members.find((m) => m.user_id === debt.fromUserId);
     const toMember = members.find((m) => m.user_id === debt.toUserId);
 
-    const fromName = fromMember?.group_display_name || fromMember?.display_name || "?";
-    const toName = toMember?.group_display_name || toMember?.display_name || "?";
+    const fromName =
+      fromMember?.group_display_name || fromMember?.display_name || "?";
+    const toName =
+      toMember?.group_display_name || toMember?.display_name || "?";
 
     const handleSettle = useCallback(() => {
       onSettle(debt);
     }, [debt, onSettle]);
 
     return (
-      <Animated.View
-        entering={FadeInDown.duration(350).delay(80 + index * 50)}
-      >
+      <Animated.View entering={FadeInDown.duration(350).delay(80 + index * 50)}>
         <SquircleView
           style={[
             styles.card,
@@ -57,6 +57,7 @@ export const SettlementCard = React.memo<SettlementCardProps>(
               <UserAvatar
                 uri={fromMember ? getMemberAvatarUrl(fromMember) : null}
                 name={fromName}
+                seed={getAvatarSeed(debt.fromUserId, fromMember?.group_id)}
                 size="sm"
               />
               <Ionicons
@@ -67,6 +68,7 @@ export const SettlementCard = React.memo<SettlementCardProps>(
               <UserAvatar
                 uri={toMember ? getMemberAvatarUrl(toMember) : null}
                 name={toName}
+                seed={getAvatarSeed(debt.toUserId, toMember?.group_id)}
                 size="sm"
               />
             </View>
@@ -77,10 +79,12 @@ export const SettlementCard = React.memo<SettlementCardProps>(
                 numberOfLines={2}
               >
                 {fromName} debe pagar{"\n"}
-                <Text style={{ color: theme.colors.primary, fontWeight: "700" }}>
+                <Text
+                  style={{ color: theme.colors.primary, fontWeight: "700" }}
+                >
                   {formatCents(debt.amountCents)}
-                </Text>
-                {" "}a {toName}
+                </Text>{" "}
+                a {toName}
               </Text>
             </View>
 
@@ -105,7 +109,7 @@ export const SettlementCard = React.memo<SettlementCardProps>(
         </SquircleView>
       </Animated.View>
     );
-  }
+  },
 );
 
 SettlementCard.displayName = "SettlementCard";

@@ -25,7 +25,7 @@ import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Input } from "@/components/ui/Input";
 import { useSnackbar } from "@/components/ui/SnackbarContext";
-import { UserAvatar } from "@/components/ui/UserAvatar";
+import { getAvatarSeed, UserAvatar } from "@/components/ui/UserAvatar";
 import { useAuth, useGroup } from "@/hooks";
 import { getMemberAvatarUrl } from "@/lib/memberProfile";
 
@@ -415,6 +415,7 @@ export default function ProfileScreen() {
               <UserAvatar
                 uri={avatarUrl}
                 name={displayName}
+                seed={user ? getAvatarSeed(user.id, id) : undefined}
                 size={100}
                 borderRadius={32}
               />
@@ -898,6 +899,7 @@ export default function ProfileScreen() {
                         member.group_display_name ||
                         "Miembro"
                       }
+                      seed={getAvatarSeed(member.user_id, member.group_id)}
                       size={40}
                     />
                     <View style={{ flex: 1, marginLeft: 12 }}>

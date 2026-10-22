@@ -25,7 +25,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { GroupCover } from "@/components/ui/GroupCover";
 import { MenuOption, OptionsMenu } from "@/components/ui/OptionsMenu";
-import { UserAvatar } from "@/components/ui/UserAvatar";
+import { getAvatarSeed, UserAvatar } from "@/components/ui/UserAvatar";
 import { useAuth, useGroups } from "@/hooks";
 import { GroupWithDetails } from "@/types/database";
 
@@ -179,6 +179,7 @@ const GroupCardItem = React.memo<GroupCardItemProps>(
                     <UserAvatar
                       uri={member.group_avatar_url ?? member.avatar_url}
                       name={member.group_display_name ?? member.display_name}
+                      seed={getAvatarSeed(member.user_id, member.group_id)}
                       size={26}
                       borderRadius={13}
                     />

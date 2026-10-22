@@ -24,7 +24,7 @@ import { ConfirmDialog, DialogType } from "@/components/ui/ConfirmDialog";
 import { CustomHeader } from "@/components/ui/CustomHeader";
 import { MemberChecklist } from "@/components/ui/MemberChecklist";
 import { getMemberAvatarUrl, getMemberDisplayName } from "@/lib/memberProfile";
-import { UserAvatar } from "@/components/ui/UserAvatar";
+import { getAvatarSeed, UserAvatar } from "@/components/ui/UserAvatar";
 import { useAuth, useGroup } from "@/hooks";
 import { sharedExpensesService } from "@/services/sharedExpenses.service";
 import { GroupMemberView } from "@/types/database";
@@ -40,14 +40,14 @@ export default function CreateExpenseScreen() {
   const { group } = useGroup(id);
   const activeMembers: GroupMemberView[] = useMemo(
     () => (group?.members || []).filter((m) => m.is_active),
-    [group?.members]
+    [group?.members],
   );
 
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [paidBy, setPaidBy] = useState<string>(user?.id || "");
   const [selectedSplitIds, setSelectedSplitIds] = useState<Set<string>>(
-    () => new Set(activeMembers.map((m) => m.user_id))
+    () => new Set(activeMembers.map((m) => m.user_id)),
   );
   const [isSaving, setIsSaving] = useState(false);
 
@@ -166,7 +166,10 @@ export default function CreateExpenseScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <Animated.View entering={FadeIn.duration(500)} style={styles.titleBlock}>
+          <Animated.View
+            entering={FadeIn.duration(500)}
+            style={styles.titleBlock}
+          >
             <Text style={[styles.screenTitle, { color: theme.colors.primary }]}>
               Nuevo gasto
             </Text>
@@ -293,9 +296,7 @@ export default function CreateExpenseScreen() {
                   <Pressable
                     key={member.user_id}
                     onPress={() => setPaidBy(member.user_id)}
-                    style={({ pressed }) => [
-                      { opacity: pressed ? 0.85 : 1 },
-                    ]}
+                    style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1 }]}
                   >
                     <SquircleView
                       style={[
@@ -315,6 +316,7 @@ export default function CreateExpenseScreen() {
                       <UserAvatar
                         uri={getMemberAvatarUrl(member)}
                         name={name}
+                        seed={getAvatarSeed(member.user_id, member.group_id)}
                         size={28}
                       />
                       <Text

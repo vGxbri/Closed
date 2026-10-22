@@ -20,7 +20,7 @@ import Animated, {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useSnackbar } from "@/components/ui/SnackbarContext";
-import { UserAvatar } from "@/components/ui/UserAvatar";
+import { getAvatarSeed, UserAvatar } from "@/components/ui/UserAvatar";
 import { supabase } from "@/lib/supabase";
 import { flashbackService } from "@/services/flashback.service";
 import { Image } from "expo-image";
@@ -58,6 +58,7 @@ export default function FlashbackCameraScreen() {
   const [photoLimit, setPhotoLimit] = useState(36);
   const [activityFeed, setActivityFeed] = useState<
     {
+      user_id: string;
       user_name: string;
       avatar_url: string | null;
       taken_at: string;
@@ -388,6 +389,7 @@ export default function FlashbackCameraScreen() {
                       <UserAvatar
                         uri={item.avatar_url}
                         name={item.user_name}
+                        seed={getAvatarSeed(item.user_id, id)}
                         size={22}
                         borderRadius={7}
                       />

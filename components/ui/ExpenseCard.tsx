@@ -9,10 +9,13 @@ import SquircleView from "react-native-fast-squircle";
 import { Text, useTheme } from "react-native-paper";
 import Animated, { FadeInDown } from "react-native-reanimated";
 
-import { SharedExpenseWithDetails, GroupMemberView } from "../../types/database";
+import {
+  SharedExpenseWithDetails,
+  GroupMemberView,
+} from "../../types/database";
 import { formatCents } from "../../lib/sharedExpenses";
 import { getMemberAvatarUrl } from "@/lib/memberProfile";
-import { UserAvatar } from "./UserAvatar";
+import { getAvatarSeed, UserAvatar } from "./UserAvatar";
 
 interface ExpenseCardProps {
   expense: SharedExpenseWithDetails;
@@ -48,14 +51,15 @@ export const ExpenseCard = React.memo<ExpenseCardProps>(
     });
 
     return (
-      <Animated.View
-        entering={FadeInDown.duration(350).delay(80 + index * 50)}
-      >
+      <Animated.View entering={FadeInDown.duration(350).delay(80 + index * 50)}>
         <Pressable
           onLongPress={handleLongPress}
           delayLongPress={500}
           style={({ pressed }) => [
-            { opacity: pressed ? 0.92 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] },
+            {
+              opacity: pressed ? 0.92 : 1,
+              transform: [{ scale: pressed ? 0.98 : 1 }],
+            },
           ]}
         >
           <SquircleView
@@ -70,20 +74,32 @@ export const ExpenseCard = React.memo<ExpenseCardProps>(
             cornerSmoothing={1}
           >
             <View style={styles.cardContent}>
-              <UserAvatar uri={payerAvatar} name={payerName} size="sm" />
+              <UserAvatar
+                uri={payerAvatar}
+                name={payerName}
+                seed={getAvatarSeed(expense.paid_by, expense.group_id)}
+                size="sm"
+              />
 
               <View style={styles.textBlock}>
                 <Text
-                  style={[styles.description, { color: theme.colors.onSurface }]}
+                  style={[
+                    styles.description,
+                    { color: theme.colors.onSurface },
+                  ]}
                   numberOfLines={1}
                 >
                   {expense.description}
                 </Text>
                 <Text
-                  style={[styles.meta, { color: theme.colors.onSurfaceVariant }]}
+                  style={[
+                    styles.meta,
+                    { color: theme.colors.onSurfaceVariant },
+                  ]}
                   numberOfLines={1}
                 >
-                  {payerName} · {splitCount} persona{splitCount !== 1 ? "s" : ""} · {dateStr}
+                  {payerName} · {splitCount} persona
+                  {splitCount !== 1 ? "s" : ""} · {dateStr}
                 </Text>
               </View>
 
@@ -95,7 +111,7 @@ export const ExpenseCard = React.memo<ExpenseCardProps>(
         </Pressable>
       </Animated.View>
     );
-  }
+  },
 );
 
 ExpenseCard.displayName = "ExpenseCard";

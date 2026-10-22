@@ -12,7 +12,7 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 import { GroupMemberView } from "../../types/database";
 import { formatCents, MemberBalance } from "../../lib/sharedExpenses";
 import { getMemberAvatarUrl, getMemberDisplayName } from "@/lib/memberProfile";
-import { UserAvatar } from "./UserAvatar";
+import { getAvatarSeed, UserAvatar } from "./UserAvatar";
 
 interface MemberBalanceCardProps {
   member: GroupMemberView;
@@ -32,16 +32,10 @@ export const MemberBalanceCard = React.memo<MemberBalanceCardProps>(
         ? "#4CAF50"
         : "#F44336";
 
-    const statusText = isZero
-      ? "En paz"
-      : isPositive
-        ? "Le deben"
-        : "Debe";
+    const statusText = isZero ? "En paz" : isPositive ? "Le deben" : "Debe";
 
     return (
-      <Animated.View
-        entering={FadeInDown.duration(350).delay(80 + index * 50)}
-      >
+      <Animated.View entering={FadeInDown.duration(350).delay(80 + index * 50)}>
         <SquircleView
           style={[
             styles.card,
@@ -57,6 +51,7 @@ export const MemberBalanceCard = React.memo<MemberBalanceCardProps>(
             <UserAvatar
               uri={getMemberAvatarUrl(member)}
               name={getMemberDisplayName(member)}
+              seed={getAvatarSeed(member.user_id, member.group_id)}
               size="sm"
             />
 
@@ -80,7 +75,7 @@ export const MemberBalanceCard = React.memo<MemberBalanceCardProps>(
         </SquircleView>
       </Animated.View>
     );
-  }
+  },
 );
 
 MemberBalanceCard.displayName = "MemberBalanceCard";

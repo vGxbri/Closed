@@ -11,7 +11,7 @@ import { Text, useTheme } from "react-native-paper";
 
 import { GroupMemberView } from "../../types/database";
 import { getMemberAvatarUrl, getMemberDisplayName } from "@/lib/memberProfile";
-import { UserAvatar } from "./UserAvatar";
+import { getAvatarSeed, UserAvatar } from "./UserAvatar";
 
 interface MemberChecklistProps {
   members: GroupMemberView[];
@@ -36,7 +36,7 @@ export const MemberChecklist = React.memo<MemberChecklistProps>(
         })}
       </View>
     );
-  }
+  },
 );
 
 MemberChecklist.displayName = "MemberChecklist";
@@ -79,7 +79,9 @@ const MemberChecklistItem = React.memo<MemberChecklistItemProps>(
             style={[
               styles.checkbox,
               {
-                backgroundColor: isSelected ? theme.colors.primary : "transparent",
+                backgroundColor: isSelected
+                  ? theme.colors.primary
+                  : "transparent",
                 borderColor: isSelected
                   ? theme.colors.primary
                   : theme.colors.outline,
@@ -96,6 +98,7 @@ const MemberChecklistItem = React.memo<MemberChecklistItemProps>(
           <UserAvatar
             uri={getMemberAvatarUrl(member)}
             name={getMemberDisplayName(member)}
+            seed={getAvatarSeed(member.user_id, member.group_id)}
             size="sm"
           />
 
@@ -108,7 +111,7 @@ const MemberChecklistItem = React.memo<MemberChecklistItemProps>(
         </SquircleView>
       </Pressable>
     );
-  }
+  },
 );
 
 MemberChecklistItem.displayName = "MemberChecklistItem";
