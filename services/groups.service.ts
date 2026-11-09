@@ -361,6 +361,28 @@ export const groupsService = {
     if (error) throw error;
   },
 
+  /** Cuántos mensajes y fotos ha aportado un miembro al grupo. */
+  async getMemberActivity(groupId: string, userId: string): Promise<{ messages: number; photos: number }> {
+    const [messages, photos] = await Promise.all([
+      supabase
+        .from('messages')
+        .select('id', { count: 'exact', head: true })
+        .eq('group_id', groupId)
+        .eq('sender_id', userId)
+        .eq('is_deleted', false),
+      supabase
+        .from('gallery_images')
+        .select('id', { count: 'exact', head: true })
+        .eq('group_id', groupId)
+        .eq('uploaded_by', userId),
+    ]);
+
+    if (messages.error) throw messages.error;
+    if (photos.error) throw photos.error;
+
+    return { messages: messages.count ?? 0, photos: photos.count ?? 0 };
+  },
+
   async uploadMemberAvatar(groupId: string, uri: string): Promise<string> {
     const { decode } = await import('base64-arraybuffer');
     const FileSystem = await import('expo-file-system/legacy');
