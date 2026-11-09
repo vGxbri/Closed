@@ -1,3 +1,10 @@
-ignoredBuiltDependencies:
+# pnpm 11 (local)
+allowBuilds:
+  '@shopify/react-native-skia': true
+  unrs-resolver: false
+
+# pnpm 10 (GitHub Actions)
+onlyBuiltDependencies:
   - '@shopify/react-native-skia'
+ignoredBuiltDependencies:
   - unrs-resolver

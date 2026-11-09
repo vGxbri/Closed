@@ -69,10 +69,5 @@
     "eslint-config-expo": "~57.0.2",
     "typescript": "~6.0.3"
   },
-  "private": true,
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "@shopify/react-native-skia"
-    ]
-  }
+  "private": true
 }
