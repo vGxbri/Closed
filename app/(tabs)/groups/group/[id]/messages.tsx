@@ -3,9 +3,15 @@
  * Mensajes en tiempo real entre miembros del grupo.
  */
 import { Ionicons } from "@expo/vector-icons";
+import { BlurTargetView } from "expo-blur";
 import * as Clipboard from "expo-clipboard";
+import {
+  GlassView,
+  isGlassEffectAPIAvailable,
+  isLiquidGlassAvailable,
+} from "expo-glass-effect";
 import * as Haptics from "expo-haptics";
-import { Stack, useGlobalSearchParams } from "expo-router";
+import { useGlobalSearchParams, useRouter } from "expo-router";
 import React, {
   useCallback,
   useEffect,
@@ -14,31 +20,37 @@ import React, {
   useState,
 } from "react";
 import {
+  ActivityIndicator,
   FlatList,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   Platform,
   Pressable,
   StyleSheet,
   TextInput,
   View,
 } from "react-native";
-
 import SquircleView from "react-native-fast-squircle";
 import { Text, useTheme } from "react-native-paper";
 import Animated, {
   FadeIn,
-  FadeInDown,
-  FadeOut,
   useAnimatedKeyboard,
   useAnimatedStyle,
-  useSharedValue,
-  withSpring,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 
-import { MessageBubble } from "@/components/chat/MessageBubble";
-import { BottomSheetModal } from "@/components/ui/BottomSheetModal";
+import { ChatComposer, ComposerContext } from "@/components/chat/ChatComposer";
+import {
+  formatMessageTime,
+  MessageBubble,
+} from "@/components/chat/MessageBubble";
+import { MemberListBottomSheet } from "@/components/MemberListBottomSheet";
+import { CircleButton } from "@/components/ui/CircleButton";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { FloatingTopBar, TOP_BAR_HEIGHT } from "@/components/ui/FloatingTopBar";
+import { MenuOption, OptionsMenu } from "@/components/ui/OptionsMenu";
+import { useSnackbar } from "@/components/ui/SnackbarContext";
+import { UserAvatar } from "@/components/ui/UserAvatar";
 import { useAuth, useGroup } from "@/hooks";
 import {
   enrichMessagesWithReplies,
@@ -47,8 +59,17 @@ import {
 import { messagesService } from "@/services";
 import { MessageView } from "@/types/database";
 
+// Liquid Glass solo existe en iOS 26+; en el resto los controles son superficies opacas.
+const glassAvailable = isLiquidGlassAvailable() && isGlassEffectAPIAvailable();
+
 const FLOATING_TAB_BAR_HEIGHT = 64;
 const FLOATING_TAB_BAR_EXTRA_MARGIN = 16;
+
+const PAGE_SIZE = 50;
+// Mensajes seguidos del mismo autor se agrupan si no pasan más de estos minutos entre ellos
+const GROUP_GAP_MS = 5 * 60 * 1000;
+// A partir de este desplazamiento aparece el botón para volver al último mensaje
+const JUMP_BUTTON_OFFSET = 320;
 
 const formatDateSeparator = (dateStr: string): string => {
   const date = new Date(dateStr);
@@ -87,35 +108,35 @@ const isSameDay = (a: string, b: string): boolean => {
   );
 };
 
+const inSameGroup = (a: MessageView, b: MessageView | undefined): boolean =>
+  !!b &&
+  a.sender_id === b.sender_id &&
+  isSameDay(a.created_at, b.created_at) &&
+  Math.abs(
+    new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+  ) < GROUP_GAP_MS;
+
 const DateSeparator = React.memo(({ dateStr }: { dateStr: string }) => {
   const theme = useTheme();
   return (
     <View style={styles.dateSeparator}>
       <View
         style={[
-          styles.dateLine,
-          { backgroundColor: theme.colors.outlineVariant },
-        ]}
-      />
-      <SquircleView
-        style={[
           styles.dateBadge,
-          { backgroundColor: theme.colors.surfaceVariant },
+          {
+            backgroundColor: theme.dark
+              ? "rgba(255,255,255,0.08)"
+              : "rgba(0,0,0,0.05)",
+          },
         ]}
-        cornerSmoothing={1}
       >
         <Text
+          accessibilityRole="header"
           style={[styles.dateText, { color: theme.colors.onSurfaceVariant }]}
         >
           {formatDateSeparator(dateStr)}
         </Text>
-      </SquircleView>
-      <View
-        style={[
-          styles.dateLine,
-          { backgroundColor: theme.colors.outlineVariant },
-        ]}
-      />
+      </View>
     </View>
   );
 });
@@ -126,10 +147,7 @@ const MessageSkeleton = React.memo(({ index }: { index: number }) => {
   const isMine = index % 3 === 0;
   const width = [180, 220, 140, 260, 160][index % 5];
   return (
-    <Animated.View
-      entering={FadeIn.duration(400).delay(index * 60)}
-      style={[styles.skRow, isMine ? styles.skMine : styles.skTheirs]}
-    >
+    <View style={[styles.skRow, isMine ? styles.skMine : styles.skTheirs]}>
       {!isMine && (
         <View
           style={[
@@ -138,22 +156,85 @@ const MessageSkeleton = React.memo(({ index }: { index: number }) => {
           ]}
         />
       )}
-      <SquircleView
+      <View
         style={[
           styles.skBubble,
           { backgroundColor: theme.colors.surfaceVariant, width },
         ]}
-        cornerSmoothing={1}
       />
-    </Animated.View>
+    </View>
   );
 });
 MessageSkeleton.displayName = "MessageSkeleton";
 
+interface ChatTitleProps {
+  name: string;
+  coverUri: string | null | undefined;
+  memberCount: number;
+  onPress: () => void;
+}
+
+// Cápsula con el grupo en la barra superior; abre la lista de miembros
+function ChatTitle({ name, coverUri, memberCount, onPress }: ChatTitleProps) {
+  const theme = useTheme();
+  const members = memberCount === 1 ? "1 miembro" : `${memberCount} miembros`;
+
+  const content = (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${name}, ${members}`}
+      accessibilityHint="Muestra los miembros del grupo"
+      style={styles.titleContent}
+    >
+      <UserAvatar uri={coverUri} name={name} size={32} borderRadius={16} />
+      <View style={styles.titleText}>
+        <Text
+          style={[styles.titleName, { color: theme.colors.onSurface }]}
+          numberOfLines={1}
+        >
+          {name}
+        </Text>
+        <Text
+          style={[styles.titleMeta, { color: theme.colors.onSurfaceVariant }]}
+          numberOfLines={1}
+        >
+          {members}
+        </Text>
+      </View>
+    </Pressable>
+  );
+
+  if (glassAvailable) {
+    return (
+      <GlassView style={styles.title} isInteractive>
+        {content}
+      </GlassView>
+    );
+  }
+
+  return (
+    <View
+      style={[
+        styles.title,
+        styles.titleSolid,
+        {
+          backgroundColor: theme.colors.surface,
+          borderColor: theme.colors.outlineVariant,
+        },
+      ]}
+    >
+      {content}
+    </View>
+  );
+}
+
 export default function MessagesScreen() {
   const { id } = useGlobalSearchParams<{ id: string }>();
+  const router = useRouter();
   const { user, profile } = useAuth();
   const { group, isAdmin } = useGroup(id as string);
+  const { showSnackbar } = useSnackbar();
 
   const myMember = useMemo(
     () => group?.members.find((m) => m.user_id === user?.id) ?? null,
@@ -165,21 +246,32 @@ export default function MessagesScreen() {
   const [messages, setMessages] = useState<MessageView[]>([]);
   const [inputText, setInputText] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  const [isSending, setIsSending] = useState(false);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+
+  const [hasMore, setHasMore] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const loadingMoreRef = useRef(false);
 
   const [replyTo, setReplyTo] = useState<MessageView | null>(null);
   const [editingMessage, setEditingMessage] = useState<MessageView | null>(
     null,
   );
 
-  const [contextMessage, setContextMessage] = useState<MessageView | null>(
-    null,
-  );
+  // El mensaje del menú se conserva mientras la hoja se cierra, para que no se vacíe a media animación
+  const [menuMessage, setMenuMessage] = useState<MessageView | null>(null);
+  const [menuVisible, setMenuVisible] = useState(false);
 
   const [deleteTarget, setDeleteTarget] = useState<MessageView | null>(null);
+  const [showMembers, setShowMembers] = useState(false);
 
-  const flatListRef = useRef<FlatList>(null);
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
+  const [showJump, setShowJump] = useState(false);
+  const [composerHeight, setComposerHeight] = useState(50);
+
+  const flatListRef = useRef<FlatList<MessageView>>(null);
   const inputRef = useRef<TextInput>(null);
+  const backgroundRef = useRef(null);
+  const highlightTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const bottomMargin = insets.bottom > 0 ? insets.bottom + 12 : 36;
   // En iOS la barra nativa ya forma parte del área segura inferior.
@@ -193,13 +285,7 @@ export default function MessagesScreen() {
     paddingBottom: Math.max(maxPadding, keyboard.height.value + 8),
   }));
 
-  const sendScale = useSharedValue(1);
-  const hasText = inputText.trim().length > 0;
-  const sendAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: sendScale.value }],
-  }));
-
-  const topGradientHeight = insets.top + 72;
+  const topInset = insets.top + TOP_BAR_HEIGHT;
 
   const displayMessages = useMemo(
     () => enrichMessagesWithReplies(messages),
@@ -215,9 +301,15 @@ export default function MessagesScreen() {
 
     const load = async () => {
       try {
-        const data = await messagesService.getMessages(id as string);
-        if (mounted) setMessages(data);
+        const data = await messagesService.getMessages(id as string, PAGE_SIZE);
+        if (mounted) {
+          setMessages(data);
+          setHasMore(data.length === PAGE_SIZE);
+        }
       } catch {
+        if (mounted) {
+          showSnackbar("No se pudieron cargar los mensajes", "error");
+        }
       } finally {
         if (mounted) setIsLoading(false);
       }
@@ -257,31 +349,76 @@ export default function MessagesScreen() {
       mounted = false;
       msgSub.unsubscribe();
     };
-  }, [id]);
+  }, [id, showSnackbar]);
+
+  useEffect(
+    () => () => {
+      if (highlightTimer.current) clearTimeout(highlightTimer.current);
+    },
+    [],
+  );
+
+  // Mensajes más antiguos al llegar arriba del todo
+  const loadOlder = useCallback(async () => {
+    if (!id || !hasMore || loadingMoreRef.current) return;
+    const loaded = messages.filter(
+      (m) => !m.id.startsWith("optimistic-"),
+    ).length;
+    if (loaded === 0) return;
+
+    loadingMoreRef.current = true;
+    setIsLoadingMore(true);
+    try {
+      const older = await messagesService.getMessages(
+        id as string,
+        PAGE_SIZE,
+        loaded,
+      );
+      setHasMore(older.length === PAGE_SIZE);
+      setMessages((prev) => {
+        const known = new Set(prev.map((m) => m.id));
+        return enrichMessagesWithReplies([
+          ...prev,
+          ...older.filter((m) => !known.has(m.id)),
+        ]);
+      });
+    } catch {
+      showSnackbar("No se pudieron cargar más mensajes", "error");
+    } finally {
+      loadingMoreRef.current = false;
+      setIsLoadingMore(false);
+    }
+  }, [id, hasMore, messages, showSnackbar]);
+
+  const handleCancelEdit = useCallback(() => {
+    setEditingMessage(null);
+    setInputText("");
+  }, []);
 
   const handleSend = useCallback(async () => {
-    if (!inputText.trim() || isSending || !id || !user) return;
     const text = inputText.trim();
+    if (!text || !id || !user) return;
 
     if (editingMessage) {
+      if (text === editingMessage.content.trim()) {
+        handleCancelEdit();
+        return;
+      }
       try {
-        setIsSending(true);
+        setIsSavingEdit(true);
         await messagesService.editMessage(editingMessage.id, text);
         setEditingMessage(null);
         setInputText("");
       } catch {
+        showSnackbar("No se pudo editar el mensaje", "error");
       } finally {
-        setIsSending(false);
+        setIsSavingEdit(false);
       }
       return;
     }
 
     setInputText("");
-    setIsSending(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    sendScale.value = withSpring(0.8, { damping: 15 }, () => {
-      sendScale.value = withSpring(1, { damping: 10 });
-    });
 
     const replyingTo = replyTo;
     const replyToId =
@@ -314,6 +451,7 @@ export default function MessagesScreen() {
 
     setMessages((prev) => enrichMessagesWithReplies([optimisticMsg, ...prev]));
     setReplyTo(null);
+    flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
 
     try {
       const sent = await messagesService.sendMessage(
@@ -336,28 +474,27 @@ export default function MessagesScreen() {
         });
       }
     } catch {
+      // El texto vuelve al campo para poder reintentarlo
       setMessages((prev) => prev.filter((m) => m.id !== optimisticId));
       setInputText(text);
       if (replyingTo) setReplyTo(replyingTo);
-    } finally {
-      setIsSending(false);
+      showSnackbar("No se pudo enviar el mensaje", "error");
     }
   }, [
     inputText,
-    isSending,
     id,
     user,
     profile,
     myMember,
     editingMessage,
     replyTo,
-    sendScale,
+    handleCancelEdit,
+    showSnackbar,
   ]);
 
   const handleReply = useCallback((msg: MessageView) => {
     setReplyTo(msg);
     setEditingMessage(null);
-    setContextMessage(null);
     inputRef.current?.focus();
   }, []);
 
@@ -365,7 +502,6 @@ export default function MessagesScreen() {
     setEditingMessage(msg);
     setInputText(msg.content);
     setReplyTo(null);
-    setContextMessage(null);
     inputRef.current?.focus();
   }, []);
 
@@ -373,347 +509,333 @@ export default function MessagesScreen() {
     if (!deleteTarget) return;
     try {
       await messagesService.deleteMessage(deleteTarget.id, isAdmin);
-    } catch {}
+    } catch {
+      showSnackbar("No se pudo eliminar el mensaje", "error");
+    }
     setDeleteTarget(null);
-  }, [deleteTarget, isAdmin]);
+  }, [deleteTarget, isAdmin, showSnackbar]);
 
   const handleLongPress = useCallback((msg: MessageView) => {
-    setContextMessage(msg);
+    setMenuMessage(msg);
+    setMenuVisible(true);
   }, []);
 
-  const handleCancelReply = useCallback(() => {
-    setReplyTo(null);
-  }, []);
-  const handleCancelEdit = useCallback(() => {
-    setEditingMessage(null);
-    setInputText("");
-  }, []);
+  const handleCancelContext = useCallback(() => {
+    if (editingMessage) handleCancelEdit();
+    else setReplyTo(null);
+  }, [editingMessage, handleCancelEdit]);
+
+  // Desde la cita de una respuesta se salta al mensaje original y se destaca un momento
+  const handlePressQuote = useCallback(
+    (msg: MessageView) => {
+      const index = displayMessages.findIndex((m) => m.id === msg.reply_to_id);
+      if (index < 0) {
+        showSnackbar("El mensaje original es más antiguo", "info");
+        return;
+      }
+      flatListRef.current?.scrollToIndex({
+        index,
+        viewPosition: 0.5,
+        animated: true,
+      });
+      setHighlightedId(null);
+      if (highlightTimer.current) clearTimeout(highlightTimer.current);
+      highlightTimer.current = setTimeout(() => {
+        setHighlightedId(msg.reply_to_id);
+        highlightTimer.current = setTimeout(() => setHighlightedId(null), 1200);
+      }, 350);
+    },
+    [displayMessages, showSnackbar],
+  );
+
+  const handleScroll = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const far = e.nativeEvent.contentOffset.y > JUMP_BUTTON_OFFSET;
+      setShowJump((prev) => (prev === far ? prev : far));
+    },
+    [],
+  );
 
   const renderItem = useCallback(
     ({ item, index }: { item: MessageView; index: number }) => {
-      const isMine = item.sender_id === user?.id;
-      const prevMsg = displayMessages[index + 1];
-      const nextMsg = displayMessages[index - 1];
-      const isLastInGroup = !nextMsg || nextMsg.sender_id !== item.sender_id;
-      const isFirstInGroup = !prevMsg || prevMsg.sender_id !== item.sender_id;
+      // En lista invertida, el siguiente índice es el mensaje anterior en el tiempo
+      const olderMsg = displayMessages[index + 1];
+      const newerMsg = displayMessages[index - 1];
 
-      // Separador de fecha: en lista invertida, el anterior es más antiguo
       const showDate =
-        !prevMsg || !isSameDay(item.created_at, prevMsg.created_at);
+        !olderMsg || !isSameDay(item.created_at, olderMsg.created_at);
 
       return (
         <>
           <MessageBubble
             message={item}
-            isMine={isMine}
-            showAvatar={!isMine && isLastInGroup}
-            showName={!isMine && isFirstInGroup}
+            isMine={item.sender_id === user?.id}
+            isFirstInGroup={!inSameGroup(item, olderMsg)}
+            isLastInGroup={!inSameGroup(item, newerMsg)}
+            highlighted={item.id === highlightedId}
             onReply={handleReply}
             onLongPress={handleLongPress}
+            onPressQuote={handlePressQuote}
           />
           {showDate && <DateSeparator dateStr={item.created_at} />}
         </>
       );
     },
-    [user?.id, displayMessages, handleReply, handleLongPress],
+    [
+      user?.id,
+      displayMessages,
+      highlightedId,
+      handleReply,
+      handleLongPress,
+      handlePressQuote,
+    ],
   );
 
   const keyExtractor = useCallback((item: MessageView) => item.id, []);
 
-  const EmptyComponent = useMemo(() => {
-    if (isLoading) return null;
-    return (
-      <View style={styles.emptyContainer}>
-        <SquircleView
-          style={[
-            styles.emptyIconBg,
-            { backgroundColor: theme.colors.surfaceVariant },
-          ]}
-          cornerSmoothing={1}
-        >
-          <Ionicons
-            name="chatbubbles-outline"
-            size={36}
-            color={theme.colors.primary}
-          />
-        </SquircleView>
-        <Text style={[styles.emptyTitle, { color: theme.colors.onSurface }]}>
-          Sin mensajes aún
-        </Text>
-        <Text
-          style={[
-            styles.emptySubtitle,
-            { color: theme.colors.onSurfaceVariant },
-          ]}
-        >
-          ¡Escribe algo para empezar la conversación!
-        </Text>
-      </View>
-    );
-  }, [isLoading, theme]);
+  const composerContext: ComposerContext | null = editingMessage
+    ? { kind: "edit", text: editingMessage.content }
+    : replyTo
+      ? {
+          kind: "reply",
+          name: replyTo.sender_id === user?.id ? "ti" : replyTo.sender_name,
+          text: replyTo.is_deleted ? "Mensaje eliminado" : replyTo.content,
+        }
+      : null;
 
-  const SkeletonList = useMemo(
-    () => (
-      <View style={styles.skeletonContainer}>
-        {Array.from({ length: 8 }).map((_, i) => (
-          <MessageSkeleton key={i} index={i} />
-        ))}
-      </View>
-    ),
-    [],
-  );
+  const menuIsMine = menuMessage?.sender_id === user?.id;
+  const menuOptions: MenuOption[] = menuMessage
+    ? [
+        {
+          label: "Responder",
+          icon: "arrow-undo-outline",
+          action: () => handleReply(menuMessage),
+        },
+        {
+          label: "Copiar",
+          icon: "copy-outline",
+          action: () => {
+            Clipboard.setStringAsync(menuMessage.content);
+            showSnackbar("Mensaje copiado", "success");
+          },
+        },
+        ...(messagesService.canEdit(menuMessage, user?.id || "")
+          ? [
+              {
+                label: "Editar",
+                icon: "pencil-outline" as const,
+                action: () => handleStartEdit(menuMessage),
+              },
+            ]
+          : []),
+        ...(menuIsMine || isAdmin
+          ? [
+              {
+                label: "Eliminar",
+                icon: "trash-outline" as const,
+                isDestructive: true,
+                action: () => setDeleteTarget(menuMessage),
+              },
+            ]
+          : []),
+      ]
+    : [];
+
+  const neutralFill = theme.dark
+    ? "rgba(255,255,255,0.08)"
+    : "rgba(0,0,0,0.05)";
 
   return (
-    <View
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
-    >
-      <Stack.Screen options={{ headerShown: false }} />
-
-      <Animated.View style={[styles.keyboardView, animatedKeyboardStyle]}>
-        <View style={styles.listArea}>
-          {isLoading ? (
-            SkeletonList
-          ) : (
-            <FlatList
-              ref={flatListRef}
-              data={displayMessages}
-              renderItem={renderItem}
-              keyExtractor={keyExtractor}
-              inverted
-              contentContainerStyle={[
-                styles.listContent,
-                { paddingBottom: topGradientHeight },
-              ]}
-              showsVerticalScrollIndicator={false}
-              keyboardDismissMode="interactive"
-              keyboardShouldPersistTaps="handled"
-              ListEmptyComponent={EmptyComponent}
-              maxToRenderPerBatch={15}
-              windowSize={10}
-              removeClippedSubviews={Platform.OS === "android"}
-            />
-          )}
-
-          <View
-            style={[styles.topFade, { height: topGradientHeight }]}
-            pointerEvents="none"
-          >
-            <Svg width="100%" height="100%">
-              <Defs>
-                <LinearGradient
-                  id="messagesTopFade"
-                  x1="0"
-                  y1="0"
-                  x2="0"
-                  y2="1"
-                >
-                  <Stop
-                    offset="0"
-                    stopColor={theme.colors.background}
-                    stopOpacity="1"
-                  />
-                  <Stop
-                    offset="0.45"
-                    stopColor={theme.colors.background}
-                    stopOpacity="0.75"
-                  />
-                  <Stop
-                    offset="1"
-                    stopColor={theme.colors.background}
-                    stopOpacity="0"
-                  />
-                </LinearGradient>
-              </Defs>
-              <Rect width="100%" height="100%" fill="url(#messagesTopFade)" />
-            </Svg>
-          </View>
-        </View>
-
-        {(replyTo || editingMessage) && (
-          <Animated.View
-            entering={FadeInDown.duration(200)}
-            exiting={FadeOut.duration(150)}
-            style={[
-              styles.previewBar,
-              {
-                backgroundColor: theme.colors.surface,
-                borderTopColor: theme.colors.outlineVariant,
-              },
-            ]}
-          >
-            <View
-              style={[
-                styles.previewAccent,
-                {
-                  backgroundColor: editingMessage
-                    ? theme.colors.tertiary
-                    : theme.colors.primary,
-                },
-              ]}
-            />
-            <Ionicons
-              name={editingMessage ? "pencil" : "arrow-undo"}
-              size={16}
-              color={
-                editingMessage ? theme.colors.tertiary : theme.colors.primary
-              }
-              style={{ marginRight: 8 }}
-            />
-            <View style={styles.previewContent}>
-              <Text
-                style={[
-                  styles.previewLabel,
-                  {
-                    color: editingMessage
-                      ? theme.colors.tertiary
-                      : theme.colors.primary,
-                  },
-                ]}
-              >
-                {editingMessage ? "Editando" : replyTo?.sender_name}
-              </Text>
-              <Text
-                style={[
-                  styles.previewText,
-                  { color: theme.colors.onSurfaceVariant },
-                ]}
-                numberOfLines={1}
-              >
-                {editingMessage ? editingMessage.content : replyTo?.content}
-              </Text>
-            </View>
-            <Pressable
-              onPress={editingMessage ? handleCancelEdit : handleCancelReply}
-              hitSlop={12}
-              style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}
-            >
-              <Ionicons
-                name="close-circle"
-                size={22}
-                color={theme.colors.outline}
-              />
-            </Pressable>
-          </Animated.View>
-        )}
-
-        <View
-          style={[
-            styles.inputContainer,
-            { backgroundColor: theme.colors.background },
-          ]}
-        >
-          <View style={styles.inputRow}>
-            <SquircleView
-              style={[
-                styles.inputWrapper,
-                { backgroundColor: theme.colors.surfaceVariant },
-              ]}
-              cornerSmoothing={1}
-            >
-              <TextInput
-                ref={inputRef}
-                style={[styles.input, { color: theme.colors.onSurface }]}
-                placeholder="Mensaje..."
-                placeholderTextColor={theme.colors.outline}
-                value={inputText}
-                onChangeText={setInputText}
-                multiline
-                maxLength={2000}
-                textAlignVertical="center"
-              />
-            </SquircleView>
-
-            <Animated.View style={sendAnimatedStyle}>
-              <Pressable
-                onPress={handleSend}
-                disabled={!hasText || isSending}
-                style={({ pressed }) => [
-                  styles.sendButton,
-                  {
-                    backgroundColor: hasText
-                      ? theme.colors.primary
-                      : theme.colors.surfaceVariant,
-                    opacity: pressed ? 0.85 : 1,
-                    transform: [{ scale: pressed ? 0.92 : 1 }],
-                  },
-                ]}
-              >
-                <Ionicons
-                  name={editingMessage ? "checkmark" : "arrow-up"}
-                  size={20}
-                  color={
-                    hasText ? theme.colors.onPrimary : theme.colors.outline
-                  }
-                />
-              </Pressable>
-            </Animated.View>
-          </View>
-        </View>
-      </Animated.View>
-
-      <BottomSheetModal
-        visible={!!contextMessage}
-        onDismiss={() => setContextMessage(null)}
-        contentStyle={styles.contextSheet}
+    <>
+      <BlurTargetView
+        ref={backgroundRef}
+        style={[styles.container, { backgroundColor: theme.colors.background }]}
       >
-        {contextMessage && (
-          <View>
-            <View
-              style={{ marginBottom: 20, paddingHorizontal: 4 }}
-              pointerEvents="none"
-            >
-              <MessageBubble
-                message={contextMessage}
-                isMine={contextMessage.sender_id === user?.id}
-                showAvatar={contextMessage.sender_id !== user?.id}
-                showName={contextMessage.sender_id !== user?.id}
-                onReply={() => {}}
-                onLongPress={() => {}}
-              />
-            </View>
-
-            <ContextAction
-              icon="arrow-undo-outline"
-              label="Responder"
-              onPress={() => {
-                handleReply(contextMessage);
-              }}
-            />
-            <ContextAction
-              icon="copy-outline"
-              label="Copiar"
-              onPress={() => {
-                Clipboard.setStringAsync(contextMessage.content);
-                Haptics.notificationAsync(
-                  Haptics.NotificationFeedbackType.Success,
-                );
-                setContextMessage(null);
-              }}
-            />
-            {messagesService.canEdit(contextMessage, user?.id || "") && (
-              <ContextAction
-                icon="pencil-outline"
-                label="Editar"
-                onPress={() => {
-                  handleStartEdit(contextMessage);
+        <Animated.View style={[styles.container, animatedKeyboardStyle]}>
+          {/* Los elementos flotantes se colocan respecto a esta vista: una posición absoluta
+              ignora el relleno de su padre y acabarían bajo la barra de pestañas */}
+          <View style={styles.container}>
+            {isLoading ? (
+              <Animated.View
+                entering={FadeIn.duration(300)}
+                style={[
+                  styles.skeletonContainer,
+                  { paddingBottom: composerHeight + 12 },
+                ]}
+                accessibilityLabel="Cargando mensajes"
+              >
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <MessageSkeleton key={i} index={i} />
+                ))}
+              </Animated.View>
+            ) : displayMessages.length === 0 ? (
+              <View
+                style={[
+                  styles.emptyContainer,
+                  { paddingTop: topInset, paddingBottom: composerHeight },
+                ]}
+              >
+                <SquircleView
+                  style={[
+                    styles.emptyIconBg,
+                    { backgroundColor: `${theme.colors.primary}1F` },
+                  ]}
+                  cornerSmoothing={1}
+                >
+                  <Ionicons
+                    name="chatbubbles"
+                    size={34}
+                    color={theme.colors.primary}
+                  />
+                </SquircleView>
+                <Text
+                  style={[styles.emptyTitle, { color: theme.colors.onSurface }]}
+                >
+                  Aún no hay mensajes
+                </Text>
+                <Text
+                  style={[
+                    styles.emptySubtitle,
+                    { color: theme.colors.onSurfaceVariant },
+                  ]}
+                >
+                  Escribe el primero y empieza la conversación.
+                </Text>
+              </View>
+            ) : (
+              <FlatList
+                ref={flatListRef}
+                data={displayMessages}
+                renderItem={renderItem}
+                keyExtractor={keyExtractor}
+                inverted
+                // Lista invertida: el relleno superior queda abajo, bajo la barra de escritura
+                contentContainerStyle={[
+                  styles.listContent,
+                  {
+                    paddingTop: composerHeight + 12,
+                    paddingBottom: topInset + 8,
+                  },
+                ]}
+                showsVerticalScrollIndicator={false}
+                keyboardDismissMode="interactive"
+                keyboardShouldPersistTaps="handled"
+                onScroll={handleScroll}
+                scrollEventThrottle={64}
+                onEndReached={loadOlder}
+                onEndReachedThreshold={0.4}
+                onScrollToIndexFailed={({ index, averageItemLength }) => {
+                  flatListRef.current?.scrollToOffset({
+                    offset: index * averageItemLength,
+                    animated: true,
+                  });
                 }}
+                ListFooterComponent={
+                  isLoadingMore ? (
+                    <ActivityIndicator
+                      style={styles.loadingMore}
+                      color={theme.colors.onSurfaceVariant}
+                    />
+                  ) : null
+                }
+                maxToRenderPerBatch={15}
+                windowSize={10}
+                removeClippedSubviews={Platform.OS === "android"}
               />
             )}
-            {(contextMessage.sender_id === user?.id || isAdmin) &&
-              !contextMessage.is_deleted && (
-                <ContextAction
-                  icon="trash-outline"
-                  label="Eliminar"
-                  destructive
-                  onPress={() => {
-                    setDeleteTarget(contextMessage);
-                    setContextMessage(null);
-                  }}
+
+            {showJump && !isLoading && (
+              <View
+                style={[styles.jumpButton, { bottom: composerHeight + 12 }]}
+                pointerEvents="box-none"
+              >
+                <CircleButton
+                  icon="chevron-down"
+                  label="Ir al último mensaje"
+                  onPress={() =>
+                    flatListRef.current?.scrollToOffset({
+                      offset: 0,
+                      animated: true,
+                    })
+                  }
                 />
-              )}
+              </View>
+            )}
+
+            {/* La barra flota sobre la lista: los mensajes pasan por debajo del cristal */}
+            <View
+              style={styles.composer}
+              onLayout={(e) => setComposerHeight(e.nativeEvent.layout.height)}
+            >
+              <ChatComposer
+                ref={inputRef}
+                value={inputText}
+                onChangeText={setInputText}
+                onSend={handleSend}
+                busy={isSavingEdit}
+                context={composerContext}
+                onCancelContext={handleCancelContext}
+              />
+            </View>
           </View>
+        </Animated.View>
+
+        <FloatingTopBar
+          onBack={() => router.back()}
+          center={
+            group && (
+              <ChatTitle
+                name={group.name}
+                coverUri={group.cover_image_url}
+                memberCount={group.members.length}
+                onPress={() => setShowMembers(true)}
+              />
+            )
+          }
+        />
+
+        {group && (
+          <MemberListBottomSheet
+            visible={showMembers}
+            onDismiss={() => setShowMembers(false)}
+            members={group.members}
+          />
         )}
-      </BottomSheetModal>
+      </BlurTargetView>
+
+      <OptionsMenu
+        visible={menuVisible}
+        title={menuIsMine ? "Tu mensaje" : (menuMessage?.sender_name ?? "")}
+        header={
+          menuMessage && (
+            <View
+              style={[styles.menuPreview, { backgroundColor: neutralFill }]}
+            >
+              <Text
+                style={[
+                  styles.menuPreviewText,
+                  { color: theme.colors.onSurface },
+                ]}
+                numberOfLines={4}
+              >
+                {menuMessage.content}
+              </Text>
+              <Text
+                style={[
+                  styles.menuPreviewTime,
+                  { color: theme.colors.onSurfaceVariant },
+                ]}
+              >
+                {formatMessageTime(menuMessage.created_at)}
+                {menuMessage.is_edited ? " · editado" : ""}
+              </Text>
+            </View>
+          )
+        }
+        options={menuOptions}
+        onDismiss={() => setMenuVisible(false)}
+        blurTarget={backgroundRef}
+      />
 
       <ConfirmDialog
         visible={!!deleteTarget}
@@ -724,169 +846,111 @@ export default function MessagesScreen() {
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
         showCancel={true}
+        blurTargetRef={backgroundRef}
       />
-    </View>
+    </>
   );
 }
 
-const ContextAction = React.memo(
-  ({
-    icon,
-    label,
-    onPress,
-    destructive,
-  }: {
-    icon: string;
-    label: string;
-    onPress: () => void;
-    destructive?: boolean;
-  }) => {
-    const theme = useTheme();
-    const color = destructive ? theme.colors.error : theme.colors.onSurface;
-    return (
-      <Pressable
-        onPress={onPress}
-        style={({ pressed }) => [
-          styles.contextAction,
-          { opacity: pressed ? 0.7 : 1 },
-        ]}
-      >
-        <Ionicons name={icon as any} size={20} color={color} />
-        <Text style={[styles.contextActionLabel, { color }]}>{label}</Text>
-      </Pressable>
-    );
-  },
-);
-ContextAction.displayName = "ContextAction";
-
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  keyboardView: { flex: 1 },
-  headerSeparator: { height: StyleSheet.hairlineWidth, width: "100%" },
 
-  listArea: { flex: 1 },
-  topFade: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 2,
+  title: {
+    height: 44,
+    borderRadius: 22,
+    maxWidth: "100%",
   },
+  titleSolid: {
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  titleContent: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 9,
+    paddingLeft: 6,
+    paddingRight: 18,
+  },
+  titleText: { flexShrink: 1 },
+  titleName: { fontFamily: "Archivo-SemiBold", fontSize: 15, lineHeight: 18 },
+  titleMeta: { fontFamily: "Archivo-Regular", fontSize: 11.5, lineHeight: 14 },
+
   listContent: {
-    paddingHorizontal: 12,
-    paddingTop: 8,
-    paddingBottom: 4,
+    paddingHorizontal: 10,
     flexGrow: 1,
   },
+  loadingMore: { paddingVertical: 16 },
 
   dateSeparator: {
-    flexDirection: "row",
     alignItems: "center",
-    marginVertical: 16,
-    paddingHorizontal: 8,
+    marginTop: 18,
+    marginBottom: 8,
   },
-  dateLine: { flex: 1, height: StyleSheet.hairlineWidth },
   dateBadge: {
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     paddingVertical: 5,
     borderRadius: 12,
-    marginHorizontal: 10,
   },
-  dateText: { fontFamily: "Archivo-Medium", fontSize: 11, letterSpacing: 0.3 },
+  dateText: { fontFamily: "Archivo-Medium", fontSize: 12 },
 
-  previewBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderTopWidth: StyleSheet.hairlineWidth,
+  composer: {
+    position: "absolute",
+    left: 12,
+    right: 12,
+    bottom: 0,
   },
-  previewAccent: {
-    width: 3,
-    height: "100%",
-    borderRadius: 2,
-    marginRight: 4,
-    minHeight: 30,
+  jumpButton: {
+    position: "absolute",
+    right: 16,
   },
-  previewContent: { flex: 1, marginRight: 10 },
-  previewLabel: { fontFamily: "Archivo-Bold", fontSize: 12 },
-  previewText: { fontFamily: "Archivo-Medium", fontSize: 13, marginTop: 1 },
 
-  inputContainer: { paddingHorizontal: 12, paddingTop: 6, paddingBottom: 8 },
-  inputRow: { flexDirection: "row", alignItems: "flex-end", gap: 8 },
-  inputWrapper: {
+  emptyContainer: {
     flex: 1,
-    flexDirection: "row",
-    alignItems: "flex-end",
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 24,
-    minHeight: 44,
-  },
-  input: {
-    flex: 1,
-    fontFamily: "Archivo-Medium",
-    fontSize: 15,
-    lineHeight: 20,
-    maxHeight: 120,
-    paddingTop: Platform.OS === "ios" ? 4 : 2,
-    paddingBottom: Platform.OS === "ios" ? 4 : 2,
-  },
-  sendButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 2,
+    paddingHorizontal: 40,
   },
-
-  emptyContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
   emptyIconBg: {
-    width: 72,
-    height: 72,
-    borderRadius: 22,
+    width: 76,
+    height: 76,
+    borderRadius: 24,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 18,
   },
-  emptyTitle: { fontFamily: "Archivo-Bold", fontSize: 17, marginBottom: 6 },
+  emptyTitle: { fontFamily: "Archivo-Bold", fontSize: 20, marginBottom: 6 },
   emptySubtitle: {
-    fontFamily: "Archivo-Medium",
-    fontSize: 14,
+    fontFamily: "Archivo-Regular",
+    fontSize: 15,
     textAlign: "center",
-    lineHeight: 20,
-    paddingHorizontal: 32,
+    lineHeight: 21,
   },
 
   skeletonContainer: {
     flex: 1,
-    paddingHorizontal: 12,
-    paddingTop: 12,
+    paddingHorizontal: 16,
     flexDirection: "column-reverse",
-    justifyContent: "flex-start",
   },
-  skRow: { flexDirection: "row", marginVertical: 4 },
+  skRow: { flexDirection: "row", alignItems: "flex-end", marginVertical: 4 },
   skMine: { justifyContent: "flex-end" },
   skTheirs: { justifyContent: "flex-start" },
-  skAvatar: { width: 32, height: 32, borderRadius: 16, marginRight: 8 },
-  skBubble: { height: 36, borderRadius: 18 },
+  skAvatar: { width: 30, height: 30, borderRadius: 15, marginRight: 8 },
+  skBubble: { height: 40, borderRadius: 20 },
 
-  contextSheet: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingTop: 16,
-    paddingBottom: 32,
-    paddingHorizontal: 20,
+  menuPreview: {
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginBottom: 12,
   },
-
-  contextDivider: { height: StyleSheet.hairlineWidth, marginVertical: 12 },
-  contextAction: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 4,
+  menuPreviewText: {
+    fontFamily: "Archivo-Regular",
+    fontSize: 15,
+    lineHeight: 21,
   },
-  contextActionLabel: { fontFamily: "Archivo-Medium", fontSize: 16 },
+  menuPreviewTime: {
+    fontFamily: "Archivo-Regular",
+    fontSize: 12,
+    marginTop: 6,
+  },
 });

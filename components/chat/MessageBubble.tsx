@@ -1,358 +1,571 @@
 /**
  * Burbuja de mensaje
- * Renderiza cada mensaje del chat con avatar, hora y gestos de respuesta.
+ * Renderiza cada mensaje del chat agrupado por autor, con gesto de respuesta y cita del mensaje respondido.
  */
 
-import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
-import React, { useCallback } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
-import SquircleView from 'react-native-fast-squircle';
-import { Text, useTheme } from 'react-native-paper';
+import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
+import React, { useCallback, useEffect } from "react";
+import { Pressable, StyleSheet, View } from "react-native";
+import SquircleView from "react-native-fast-squircle";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import { Text, useTheme } from "react-native-paper";
 import Animated, {
-  FadeIn,
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
   runOnJS,
-} from 'react-native-reanimated';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
 
-import { UserAvatar } from '@/components/ui/UserAvatar';
-import { MessageView } from '@/types/database';
+import {
+  getAvatarHue,
+  getAvatarSeed,
+  UserAvatar,
+} from "@/components/ui/UserAvatar";
+import { MessageView } from "@/types/database";
 
-const formatTime = (dateStr: string): string => {
-  const d = new Date(dateStr);
-  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+export const formatMessageTime = (dateStr: string): string =>
+  new Date(dateStr).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+// El nombre toma el tono del blob del avatar: claro en modo oscuro y oscuro en modo claro, para que se lea
+const nameColorFromHue = (hue: number, dark: boolean): string =>
+  dark ? `hsl(${hue}, 70%, 72%)` : `hsl(${hue}, 60%, 36%)`;
+
+const isEmojiCodePoint = (code: number): boolean =>
+  (code >= 0x1f000 && code <= 0x1faff) ||
+  (code >= 0x2600 && code <= 0x27bf) ||
+  (code >= 0x2b00 && code <= 0x2bff) ||
+  code === 0x200d ||
+  code === 0xfe0f;
+
+// Mensajes de uno a tres emojis: se muestran grandes y sin burbuja
+const isEmojiOnly = (text: string): boolean => {
+  const compact = text.replace(/\s/g, "");
+  if (!compact) return false;
+  const points = Array.from(compact);
+  if (points.length > 12) return false;
+  if (!points.every((p) => isEmojiCodePoint(p.codePointAt(0) ?? 0))) {
+    return false;
+  }
+  // Los modificadores y uniones no cuentan como emoji aparte
+  const visible = points.filter((p) => {
+    const code = p.codePointAt(0) ?? 0;
+    return (
+      code !== 0x200d &&
+      code !== 0xfe0f &&
+      !(code >= 0x1f3fb && code <= 0x1f3ff)
+    );
+  });
+  const joiners = points.filter((p) => p.codePointAt(0) === 0x200d).length;
+  return visible.length - joiners <= 3;
 };
 
 interface MessageBubbleProps {
   message: MessageView;
   isMine: boolean;
-  showAvatar: boolean;
-  showName: boolean;
+  /** Primer mensaje seguido del mismo autor: lleva el nombre. */
+  isFirstInGroup: boolean;
+  /** Último mensaje seguido del mismo autor: lleva el avatar y la hora. */
+  isLastInGroup: boolean;
+  /** Destello breve al llegar al mensaje desde una cita. */
+  highlighted?: boolean;
   onReply: (message: MessageView) => void;
   onLongPress: (message: MessageView) => void;
+  onPressQuote?: (message: MessageView) => void;
 }
 
-const ReplyQuote = React.memo(({
-  senderName,
-  content,
-  isMine,
-}: {
-  senderName: string | null;
-  content: string | null;
-  isMine: boolean;
-}) => {
-  const theme = useTheme();
+const ReplyQuote = React.memo(
+  ({
+    senderName,
+    content,
+    isMine,
+    onPress,
+  }: {
+    senderName: string | null;
+    content: string | null;
+    isMine: boolean;
+    onPress?: () => void;
+  }) => {
+    const theme = useTheme();
 
-  const bgColor = isMine
-    ? 'rgba(255,255,255,0.15)'
-    : theme.dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+    const bgColor = isMine
+      ? "rgba(255,255,255,0.16)"
+      : theme.dark
+        ? "rgba(255,255,255,0.08)"
+        : "rgba(0,0,0,0.06)";
+    const barColor = isMine ? "rgba(255,255,255,0.7)" : theme.colors.primary;
+    const nameColor = isMine ? "rgba(255,255,255,0.95)" : theme.colors.primary;
+    const contentColor = isMine
+      ? "rgba(255,255,255,0.85)"
+      : theme.colors.onSurfaceVariant;
 
-  const barColor = isMine
-    ? 'rgba(255,255,255,0.6)'
-    : theme.colors.primary;
+    const preview = (content || "").trim() || "...";
+    const name = senderName || "Usuario";
 
-  const nameColor = isMine
-    ? 'rgba(255,255,255,0.95)'
-    : theme.colors.primary;
+    return (
+      <Pressable
+        onPress={onPress}
+        disabled={!onPress}
+        accessibilityRole="button"
+        accessibilityLabel={`En respuesta a ${name}: ${preview}`}
+        accessibilityHint="Va al mensaje original"
+        style={({ pressed }) => [
+          s.replyQuote,
+          { backgroundColor: bgColor, opacity: pressed ? 0.6 : 1 },
+        ]}
+      >
+        <View style={[s.replyBar, { backgroundColor: barColor }]} />
+        <View style={s.replyTextBlock}>
+          <Text style={[s.replyName, { color: nameColor }]} numberOfLines={1}>
+            {name}
+          </Text>
+          <Text
+            style={[s.replyContent, { color: contentColor }]}
+            numberOfLines={2}
+          >
+            {preview}
+          </Text>
+        </View>
+      </Pressable>
+    );
+  },
+);
 
-  const contentColor = isMine
-    ? 'rgba(255,255,255,0.85)'
-    : theme.colors.onSurface;
+ReplyQuote.displayName = "ReplyQuote";
 
-  const preview = (content || '').trim() || '...';
+// Recorrido a partir del cual soltar el dedo responde al mensaje
+const SWIPE_THRESHOLD = 56;
+// Pasado el umbral la burbuja ofrece resistencia en vez de pararse en seco
+const SWIPE_RESISTANCE = 0.2;
 
-  return (
-    <View style={[s.replyQuote, { backgroundColor: bgColor }]}>
-      <View style={[s.replyBar, { backgroundColor: barColor }]} />
-      <View style={s.replyTextBlock}>
-        <Text style={[s.replyName, { color: nameColor }]} numberOfLines={1}>
-          {senderName || 'Usuario'}
-        </Text>
-        <Text style={[s.replyContent, { color: contentColor }]} numberOfLines={2}>
-          {preview}
-        </Text>
-      </View>
-    </View>
-  );
-});
+const MessageBubble = React.memo(
+  ({
+    message,
+    isMine,
+    isFirstInGroup,
+    isLastInGroup,
+    highlighted = false,
+    onReply,
+    onLongPress,
+    onPressQuote,
+  }: MessageBubbleProps) => {
+    const theme = useTheme();
+    const translateX = useSharedValue(0);
+    const flash = useSharedValue(0);
 
-ReplyQuote.displayName = 'ReplyQuote';
-
-const SWIPE_THRESHOLD = 60;
-
-const MessageBubble = React.memo(({
-  message,
-  isMine,
-  showAvatar,
-  showName,
-  onReply,
-  onLongPress,
-}: MessageBubbleProps) => {
-  const theme = useTheme();
-  const translateX = useSharedValue(0);
-
-  const triggerReply = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    onReply(message);
-  }, [message, onReply]);
-
-  const panGesture = Gesture.Pan()
-    .activeOffsetX(20)
-    .failOffsetY([-10, 10])
-    .onUpdate((e) => {
-      const clamp = Math.min(Math.max(e.translationX, 0), SWIPE_THRESHOLD + 20);
-      translateX.value = clamp;
-    })
-    .onEnd(() => {
-      if (translateX.value >= SWIPE_THRESHOLD) {
-        runOnJS(triggerReply)();
+    useEffect(() => {
+      if (highlighted) {
+        flash.value = withSequence(
+          withTiming(1, { duration: 180 }),
+          withTiming(0, { duration: 900 }),
+        );
       }
-      translateX.value = withSpring(0, { damping: 20, stiffness: 200 });
+    }, [highlighted, flash]);
+
+    const armed = useSharedValue(false);
+
+    const triggerReply = useCallback(
+      () => onReply(message),
+      [message, onReply],
+    );
+
+    // El toque avisa al cruzar el umbral, no al soltar: se nota cuándo ya vale con levantar el dedo
+    const armHaptic = useCallback(() => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }, []);
+
+    const panGesture = Gesture.Pan()
+      .activeOffsetX(14)
+      .failOffsetX(-14)
+      .failOffsetY([-12, 12])
+      .onUpdate((e) => {
+        const x = Math.max(e.translationX, 0);
+        translateX.value =
+          x <= SWIPE_THRESHOLD
+            ? x
+            : SWIPE_THRESHOLD + (x - SWIPE_THRESHOLD) * SWIPE_RESISTANCE;
+
+        const reached = x >= SWIPE_THRESHOLD;
+        if (reached !== armed.value) {
+          armed.value = reached;
+          if (reached) runOnJS(armHaptic)();
+        }
+      })
+      .onEnd(() => {
+        if (armed.value) runOnJS(triggerReply)();
+      })
+      .onFinalize(() => {
+        armed.value = false;
+        translateX.value = withSpring(0, { damping: 22, stiffness: 260 });
+      });
+
+    const swipeStyle = useAnimatedStyle(() => ({
+      transform: [{ translateX: translateX.value }],
+    }));
+
+    // El icono sale de detrás de la burbuja y crece al llegar al umbral
+    const replyIconStyle = useAnimatedStyle(() => {
+      const progress = Math.min(translateX.value / SWIPE_THRESHOLD, 1);
+      return {
+        opacity: Math.max(0, (progress - 0.35) / 0.65),
+        transform: [
+          {
+            scale: withSpring(armed.value ? 1.15 : 0.6 + progress * 0.4, {
+              damping: 14,
+              stiffness: 300,
+            }),
+          },
+        ],
+      };
     });
 
-  const swipeStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: translateX.value }],
-  }));
+    const flashStyle = useAnimatedStyle(() => ({ opacity: flash.value }));
 
-  const replyIconStyle = useAnimatedStyle(() => ({
-    opacity: Math.min(translateX.value / SWIPE_THRESHOLD, 1),
-    transform: [{ scale: Math.min(translateX.value / SWIPE_THRESHOLD, 1) }],
-  }));
+    const handleLongPress = useCallback(() => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      onLongPress(message);
+    }, [message, onLongPress]);
 
-  const handleLongPress = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    onLongPress(message);
-  }, [message, onLongPress]);
+    const rowStyle = [
+      s.messageRow,
+      isMine ? s.myMessageRow : s.theirMessageRow,
+      isFirstInGroup && s.groupStart,
+    ];
 
-  if (message.is_deleted) {
-    return (
-      <Animated.View
-        entering={FadeIn.duration(200)}
-        style={[s.messageRow, isMine ? s.myMessageRow : s.theirMessageRow]}
+    const time = formatMessageTime(message.created_at);
+    const isSending = message.id.startsWith("optimistic-");
+
+    const footer = isLastInGroup && (
+      <Text
+        style={[
+          s.footer,
+          isMine ? s.footerMine : s.footerTheirs,
+          { color: theme.colors.onSurfaceVariant },
+        ]}
       >
-        {!isMine && <View style={s.avatarSlot} />}
-        <View style={[s.bubbleColumn, isMine ? s.myBubbleColumn : s.theirBubbleColumn]}>
-          <SquircleView
+        {isSending ? "Enviando…" : time}
+      </Text>
+    );
+
+    const avatarSeed = getAvatarSeed(message.sender_id, message.group_id);
+
+    const avatarSlot = !isMine && (
+      <View style={s.avatarSlot}>
+        {isLastInGroup && (
+          <UserAvatar
+            uri={message.sender_avatar}
+            name={message.sender_name}
+            seed={avatarSeed}
+            size={30}
+          />
+        )}
+      </View>
+    );
+
+    if (message.is_deleted) {
+      return (
+        <View style={rowStyle}>
+          {avatarSlot}
+          <View
             style={[
-              s.bubble,
-              s.deletedBubble,
-              { backgroundColor: theme.dark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)' },
+              s.bubbleColumn,
+              isMine ? s.myBubbleColumn : s.theirBubbleColumn,
             ]}
-            cornerSmoothing={1}
           >
-            <View style={s.deletedRow}>
-              <Ionicons name="ban-outline" size={14} color={theme.colors.outline} />
-              <Text style={[s.deletedText, { color: theme.colors.outline }]}>
-                Este mensaje ha sido eliminado
+            <View
+              style={[s.deletedBubble, { borderColor: theme.colors.outline }]}
+              accessible
+              accessibilityLabel={`${isMine ? "Tú" : message.sender_name}: mensaje eliminado`}
+            >
+              <Ionicons
+                name="ban-outline"
+                size={14}
+                color={theme.colors.onSurfaceVariant}
+              />
+              <Text
+                style={[
+                  s.deletedText,
+                  { color: theme.colors.onSurfaceVariant },
+                ]}
+              >
+                Mensaje eliminado
               </Text>
             </View>
-          </SquircleView>
+            {footer}
+          </View>
         </View>
-      </Animated.View>
-    );
-  }
+      );
+    }
 
-  const bubbleBg = isMine ? theme.colors.primary : theme.colors.surfaceVariant;
-  const textColor = isMine ? theme.colors.onPrimary : theme.colors.onSurface;
-  const metaColor = isMine ? 'rgba(255,255,255,0.55)' : theme.colors.outline;
+    const emojiOnly =
+      isEmojiOnly(message.content) &&
+      !message.reply_to_id &&
+      !message.reply_to_content;
 
-  return (
-    <View style={[s.messageRow, isMine ? s.myMessageRow : s.theirMessageRow]}>
-      <Animated.View style={[s.swipeReplyIcon, replyIconStyle]}>
-        <Ionicons name="arrow-undo" size={18} color={theme.colors.primary} />
-      </Animated.View>
+    const bubbleBg = isMine
+      ? theme.colors.primary
+      : theme.colors.surfaceVariant;
+    const textColor = isMine ? theme.colors.onPrimary : theme.colors.onSurface;
+    const metaColor = isMine
+      ? "rgba(255,255,255,0.7)"
+      : theme.colors.onSurfaceVariant;
 
-      {!isMine && (
-        <View style={s.avatarSlot}>
-          {showAvatar && (
-            <UserAvatar
-              uri={message.sender_avatar}
-              name={message.sender_name}
-              size="sm"
-            />
-          )}
-        </View>
-      )}
+    const nameColor = nameColorFromHue(getAvatarHue(avatarSeed), theme.dark);
 
+    // Las esquinas del lado del autor se cierran entre mensajes seguidos, para que se lean como un bloque
+    const tight = 7;
+    const corners = isMine
+      ? {
+          borderTopRightRadius: isFirstInGroup ? 20 : tight,
+          borderBottomRightRadius: isLastInGroup ? 20 : tight,
+        }
+      : {
+          borderTopLeftRadius: isFirstInGroup ? 20 : tight,
+          borderBottomLeftRadius: isLastInGroup ? 20 : tight,
+        };
+
+    const label = [
+      `${isMine ? "Tú" : message.sender_name}: ${message.content}`,
+      message.is_edited ? "editado" : null,
+      isSending ? "enviando" : time,
+    ]
+      .filter(Boolean)
+      .join(", ");
+
+    return (
+      // El gesto cubre toda la fila: se puede deslizar desde cualquier punto, no solo sobre la burbuja
       <GestureDetector gesture={panGesture}>
-        <Animated.View style={[
-          s.bubbleColumn,
-          isMine ? s.myBubbleColumn : s.theirBubbleColumn,
-          swipeStyle,
-        ]}>
-          {!isMine && showName && (
-            <Text style={[s.senderName, { color: theme.colors.primary }]}>
-              {message.sender_name}
-            </Text>
-          )}
+        <View style={rowStyle} collapsable={false}>
+          <Animated.View
+            style={[
+              s.flash,
+              { backgroundColor: `${theme.colors.primary}26` },
+              flashStyle,
+            ]}
+            pointerEvents="none"
+          />
 
-          <Pressable onLongPress={handleLongPress} delayLongPress={400}>
-            <SquircleView
-              style={[
-                s.bubble,
-                { backgroundColor: bubbleBg },
-                isMine ? s.myBubble : s.theirBubble,
-              ]}
-              cornerSmoothing={1}
-            >
-              <View style={s.bubbleInner}>
-                {(message.reply_to_id || message.reply_to_content) && (
-                  <ReplyQuote
-                    senderName={message.reply_to_sender_name}
-                    content={message.reply_to_content}
-                    isMine={isMine}
-                  />
-                )}
+          {avatarSlot}
 
-                <Text style={[s.messageText, { color: textColor }]}>
-                  {message.content}
-                </Text>
+          <Animated.View
+            style={[
+              s.bubbleColumn,
+              isMine ? s.myBubbleColumn : s.theirBubbleColumn,
+              swipeStyle,
+            ]}
+          >
+            {!isMine && isFirstInGroup && (
+              <Text
+                style={[s.senderName, { color: nameColor }]}
+                numberOfLines={1}
+              >
+                {message.sender_name}
+              </Text>
+            )}
 
-                <View style={[s.inlineMeta, isMine ? s.myInlineMeta : s.theirInlineMeta]}>
-                  {message.is_edited && (
-                    <Text style={[s.editedLabel, { color: metaColor }]}>
-                      editado
+            <View>
+              <Animated.View
+                style={[
+                  s.swipeReplyIcon,
+                  { backgroundColor: `${theme.colors.primary}26` },
+                  replyIconStyle,
+                ]}
+                pointerEvents="none"
+              >
+                <Ionicons
+                  name="arrow-undo"
+                  size={16}
+                  color={theme.colors.primary}
+                />
+              </Animated.View>
+
+              <Pressable
+                onLongPress={handleLongPress}
+                delayLongPress={350}
+                accessibilityLabel={label}
+                accessibilityHint="Mantén pulsado para ver las opciones"
+                accessibilityActions={[
+                  { name: "longpress", label: "Opciones" },
+                  { name: "reply", label: "Responder" },
+                ]}
+                onAccessibilityAction={(e) => {
+                  if (e.nativeEvent.actionName === "reply") onReply(message);
+                  else onLongPress(message);
+                }}
+                style={({ pressed }) => ({
+                  transform: [{ scale: pressed ? 0.97 : 1 }],
+                })}
+              >
+                {emojiOnly ? (
+                  <Text style={s.emojiText}>{message.content}</Text>
+                ) : (
+                  <SquircleView
+                    style={[s.bubble, { backgroundColor: bubbleBg }, corners]}
+                    cornerSmoothing={1}
+                  >
+                    {(message.reply_to_id || message.reply_to_content) && (
+                      <ReplyQuote
+                        senderName={message.reply_to_sender_name}
+                        content={message.reply_to_content}
+                        isMine={isMine}
+                        onPress={
+                          onPressQuote && message.reply_to_id
+                            ? () => onPressQuote(message)
+                            : undefined
+                        }
+                      />
+                    )}
+
+                    <Text style={[s.messageText, { color: textColor }]}>
+                      {message.content}
+                      {message.is_edited && (
+                        <Text style={[s.editedLabel, { color: metaColor }]}>
+                          {"  editado"}
+                        </Text>
+                      )}
                     </Text>
-                  )}
-                  <Text style={[s.timestamp, { color: metaColor }]}>
-                    {formatTime(message.created_at)}
-                  </Text>
-                </View>
-              </View>
-            </SquircleView>
-          </Pressable>
-        </Animated.View>
-      </GestureDetector>
-    </View>
-  );
-});
+                  </SquircleView>
+                )}
+              </Pressable>
+            </View>
 
-MessageBubble.displayName = 'MessageBubble';
+            {footer}
+          </Animated.View>
+        </View>
+      </GestureDetector>
+    );
+  },
+);
+
+MessageBubble.displayName = "MessageBubble";
 export { MessageBubble };
 
 const s = StyleSheet.create({
   messageRow: {
-    flexDirection: 'row',
-    marginVertical: 2,
+    flexDirection: "row",
+    marginVertical: 1.5,
     paddingHorizontal: 6,
-    position: 'relative',
   },
-  myMessageRow: { justifyContent: 'flex-end' },
-  theirMessageRow: { justifyContent: 'flex-start' },
+  myMessageRow: { justifyContent: "flex-end" },
+  theirMessageRow: { justifyContent: "flex-start" },
+  groupStart: { marginTop: 10 },
 
+  flash: {
+    position: "absolute",
+    top: -2,
+    bottom: -2,
+    left: -12,
+    right: -12,
+  },
+
+  // Va pegado a la izquierda de la burbuja y se mueve con ella
   swipeReplyIcon: {
-    position: 'absolute',
-    left: 8,
-    top: '50%',
-    marginTop: -12,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: -1,
+    position: "absolute",
+    left: -40,
+    top: "50%",
+    marginTop: -15,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    justifyContent: "center",
+    alignItems: "center",
   },
 
-  avatarSlot: { width: 30, marginRight: 6, alignSelf: 'flex-end', marginBottom: 4 },
+  // Reserva el hueco del avatar aunque no se pinte, para alinear las burbujas del grupo
+  avatarSlot: {
+    width: 30,
+    marginRight: 8,
+    justifyContent: "flex-end",
+    // Deja el avatar a la altura de la burbuja, por encima de la hora
+    paddingBottom: 20,
+  },
 
-  bubbleColumn: { maxWidth: '78%' },
-  myBubbleColumn: { alignItems: 'flex-end' },
-  theirBubbleColumn: { alignItems: 'flex-start' },
+  bubbleColumn: { maxWidth: "78%" },
+  myBubbleColumn: { alignItems: "flex-end" },
+  theirBubbleColumn: { alignItems: "flex-start" },
 
   senderName: {
-    fontFamily: 'Archivo-Bold',
-    fontSize: 12,
-    marginBottom: 3,
-    marginLeft: 6,
+    fontFamily: "Archivo-SemiBold",
+    fontSize: 12.5,
+    marginBottom: 4,
+    marginLeft: 12,
   },
 
   bubble: {
     borderRadius: 20,
-    minHeight: 36,
-    overflow: 'hidden',
+    paddingHorizontal: 13,
+    paddingVertical: 9,
+    overflow: "hidden",
   },
-  bubbleInner: {
-    paddingHorizontal: 12,
-    paddingTop: 8,
-    paddingBottom: 6,
-    alignSelf: 'stretch',
-    width: '100%',
-  },
-  myBubble: { borderBottomRightRadius: 6 },
-  theirBubble: { borderBottomLeftRadius: 6 },
-
-  deletedBubble: {
-    borderRadius: 16,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderStyle: 'dashed',
-    borderWidth: 1,
-    borderColor: 'rgba(128,128,128,0.3)',
-  },
-  deletedRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  deletedText: {
-    fontFamily: 'Archivo-Medium',
-    fontSize: 13,
-    fontStyle: 'italic',
-  },
-
   messageText: {
-    fontFamily: 'Archivo-Medium',
-    fontSize: 15,
-    lineHeight: 21,
+    fontFamily: "Archivo-Regular",
+    fontSize: 16,
+    lineHeight: 22,
   },
-
-  inlineMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 3,
-  },
-  myInlineMeta: { justifyContent: 'flex-end' },
-  theirInlineMeta: { justifyContent: 'flex-start' },
-
-  timestamp: {
-    fontFamily: 'Archivo-Medium',
-    fontSize: 10,
-    letterSpacing: 0.2,
+  emojiText: {
+    fontSize: 46,
+    lineHeight: 56,
   },
   editedLabel: {
-    fontFamily: 'Archivo-Medium',
-    fontSize: 10,
-    fontStyle: 'italic',
+    fontFamily: "Archivo-Regular",
+    fontSize: 11.5,
+  },
+
+  footer: {
+    fontFamily: "Archivo-Regular",
+    fontSize: 11.5,
+    lineHeight: 16,
+    marginTop: 4,
+    height: 16,
+  },
+  footerMine: { marginRight: 6 },
+  footerTheirs: { marginLeft: 12 },
+
+  deletedBubble: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderRadius: 20,
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingVertical: 8,
+    paddingHorizontal: 13,
+  },
+  deletedText: {
+    fontFamily: "Archivo-Regular",
+    fontSize: 14,
+    fontStyle: "italic",
   },
 
   replyQuote: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
     borderRadius: 10,
     paddingVertical: 6,
     paddingHorizontal: 8,
-    marginBottom: 6,
+    marginBottom: 7,
+    minWidth: 120,
   },
   replyBar: {
     width: 3,
     borderRadius: 2,
     marginRight: 8,
-    marginTop: 2,
-    alignSelf: 'stretch',
-    minHeight: 28,
+    alignSelf: "stretch",
   },
   replyTextBlock: {
     flexShrink: 1,
-    maxWidth: 240,
   },
-  replyName: { fontFamily: 'Archivo-Bold', fontSize: 12, marginBottom: 2 },
+  replyName: {
+    fontFamily: "Archivo-SemiBold",
+    fontSize: 12.5,
+    marginBottom: 1,
+  },
   replyContent: {
-    fontFamily: 'Archivo-Medium',
-    fontSize: 13,
+    fontFamily: "Archivo-Regular",
+    fontSize: 13.5,
     lineHeight: 18,
   },
 });
