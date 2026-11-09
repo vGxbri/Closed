@@ -13,7 +13,6 @@ import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -34,6 +33,7 @@ import { CTAButton } from "@/components/ui/CTAButton";
 import { FloatingTopBar, TOP_BAR_HEIGHT } from "@/components/ui/FloatingTopBar";
 import { GroupCover } from "@/components/ui/GroupCover";
 import { MenuOption, OptionsMenu } from "@/components/ui/OptionsMenu";
+import { SaveButton } from "@/components/ui/SaveButton";
 import { useSnackbar } from "@/components/ui/SnackbarContext";
 import { StatusView } from "@/components/ui/StatusView";
 import { StepTitle } from "@/components/ui/StepTitle";
@@ -158,58 +158,6 @@ const ToggleRow = React.memo<ToggleRowProps>(
 );
 
 ToggleRow.displayName = "ToggleRow";
-
-interface SaveButtonProps {
-  onPress: () => void;
-  saving: boolean;
-}
-
-// Solo aparece cuando hay cambios que guardar
-function SaveButton({ onPress, saving }: SaveButtonProps) {
-  const theme = useTheme();
-
-  const content = (
-    <Pressable
-      onPress={onPress}
-      disabled={saving}
-      accessibilityRole="button"
-      accessibilityLabel="Guardar cambios"
-      accessibilityState={{ busy: saving }}
-      hitSlop={6}
-      style={styles.saveButtonContent}
-    >
-      {saving ? (
-        <ActivityIndicator size="small" color={theme.colors.onPrimary} />
-      ) : (
-        <Text
-          style={[styles.saveButtonText, { color: theme.colors.onPrimary }]}
-        >
-          Guardar
-        </Text>
-      )}
-    </Pressable>
-  );
-
-  if (glassAvailable) {
-    return (
-      <GlassView
-        style={styles.saveButton}
-        tintColor={theme.colors.primary}
-        isInteractive
-      >
-        {content}
-      </GlassView>
-    );
-  }
-
-  return (
-    <View
-      style={[styles.saveButton, { backgroundColor: theme.colors.primary }]}
-    >
-      {content}
-    </View>
-  );
-}
 
 export default function GroupSettingsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -1042,22 +990,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 17,
     marginTop: 2,
-  },
-
-  saveButton: {
-    height: 44,
-    minWidth: 104,
-    borderRadius: 22,
-  },
-  saveButtonContent: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 18,
-  },
-  saveButtonText: {
-    fontFamily: "Archivo-SemiBold",
-    fontSize: 15,
   },
 
   skeletonTitle: {
