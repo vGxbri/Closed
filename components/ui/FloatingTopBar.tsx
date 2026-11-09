@@ -16,11 +16,13 @@ export const TOP_BAR_HEIGHT = 8 + 44 + 16;
 
 interface FloatingTopBarProps {
   onBack: () => void;
+  /** Ocupa el hueco entre el botón de atrás y la acción de la derecha. */
+  center?: React.ReactNode;
   right?: React.ReactNode;
 }
 
 // Barra superior flotante: el contenido pasa por debajo y se funde con el fondo al llegar arriba
-export function FloatingTopBar({ onBack, right }: FloatingTopBarProps) {
+export function FloatingTopBar({ onBack, center, right }: FloatingTopBarProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
 
@@ -59,7 +61,13 @@ export function FloatingTopBar({ onBack, right }: FloatingTopBarProps) {
         pointerEvents="box-none"
       >
         <CircleButton icon="chevron-back" label="Atrás" onPress={onBack} />
-        {right}
+        {center && (
+          <View style={styles.center} pointerEvents="box-none">
+            {center}
+          </View>
+        )}
+        {/* Con contenido central, el hueco de la derecha se conserva para que quede centrado */}
+        {right || (center ? <View style={styles.spacer} /> : null)}
       </View>
     </View>
   );
@@ -78,5 +86,13 @@ const styles = StyleSheet.create({
     right: 16,
     flexDirection: "row",
     justifyContent: "space-between",
+    gap: 10,
+  },
+  center: {
+    flex: 1,
+    alignItems: "center",
+  },
+  spacer: {
+    width: 44,
   },
 });

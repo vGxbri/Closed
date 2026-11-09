@@ -19,6 +19,8 @@ export interface MenuOption {
 interface OptionsMenuProps {
   visible: boolean;
   title: string;
+  /** Contenido entre el título y las opciones, como una vista previa de aquello sobre lo que se actúa. */
+  header?: React.ReactNode;
   options: MenuOption[];
   onDismiss: () => void;
   blurTarget?: React.RefObject<any>;
@@ -27,6 +29,7 @@ interface OptionsMenuProps {
 export const OptionsMenu: React.FC<OptionsMenuProps> = ({
   visible,
   title,
+  header,
   options,
   onDismiss,
   blurTarget,
@@ -56,6 +59,8 @@ export const OptionsMenu: React.FC<OptionsMenuProps> = ({
       >
         {title}
       </Text>
+
+      {header}
 
       {/* Las opciones van agrupadas en un bloque con separadores, como las listas de iOS */}
       <View style={[styles.group, { backgroundColor: neutralFill }]}>
