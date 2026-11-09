@@ -70,6 +70,10 @@ const styles = StyleSheet.create({
     marginTop: -20,
     letterSpacing: 2,
     paddingVertical: 5,
+    // La cursiva sobresale por la izquierda en letras como la "g": se le da
+    // margen dentro de la caja de texto para que iOS no la recorte
+    paddingHorizontal: 8,
+    marginHorizontal: -8,
   },
   divider: {
     borderBottomWidth: 1,
