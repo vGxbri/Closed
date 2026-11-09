@@ -11,11 +11,11 @@ import SquircleView from "react-native-fast-squircle";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { Text, useTheme } from "react-native-paper";
 import Animated, {
+  Easing,
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withSequence,
-  withSpring,
   withTiming,
 } from "react-native-reanimated";
 
@@ -179,16 +179,20 @@ const MessageBubble = React.memo(
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }, []);
 
+    // Los mensajes propios, pegados a la derecha, se deslizan hacia la izquierda; los demás, hacia la derecha
+    const direction = isMine ? -1 : 1;
+
     const panGesture = Gesture.Pan()
-      .activeOffsetX(14)
-      .failOffsetX(-14)
+      .activeOffsetX(14 * direction)
+      .failOffsetX(-14 * direction)
       .failOffsetY([-12, 12])
       .onUpdate((e) => {
-        const x = Math.max(e.translationX, 0);
+        const x = Math.max(e.translationX * direction, 0);
         translateX.value =
-          x <= SWIPE_THRESHOLD
+          direction *
+          (x <= SWIPE_THRESHOLD
             ? x
-            : SWIPE_THRESHOLD + (x - SWIPE_THRESHOLD) * SWIPE_RESISTANCE;
+            : SWIPE_THRESHOLD + (x - SWIPE_THRESHOLD) * SWIPE_RESISTANCE);
 
         const reached = x >= SWIPE_THRESHOLD;
         if (reached !== armed.value) {
@@ -201,7 +205,11 @@ const MessageBubble = React.memo(
       })
       .onFinalize(() => {
         armed.value = false;
-        translateX.value = withSpring(0, { damping: 22, stiffness: 260 });
+        // Vuelve a su sitio frenando, sin pasarse ni rebotar
+        translateX.value = withTiming(0, {
+          duration: 220,
+          easing: Easing.out(Easing.cubic),
+        });
       });
 
     const swipeStyle = useAnimatedStyle(() => ({
@@ -210,14 +218,17 @@ const MessageBubble = React.memo(
 
     // El icono sale de detrás de la burbuja y crece al llegar al umbral
     const replyIconStyle = useAnimatedStyle(() => {
-      const progress = Math.min(translateX.value / SWIPE_THRESHOLD, 1);
+      const progress = Math.min(
+        Math.abs(translateX.value) / SWIPE_THRESHOLD,
+        1,
+      );
       return {
         opacity: Math.max(0, (progress - 0.35) / 0.65),
         transform: [
           {
-            scale: withSpring(armed.value ? 1.15 : 0.6 + progress * 0.4, {
-              damping: 14,
-              stiffness: 300,
+            scale: withTiming(armed.value ? 1.1 : 0.6 + progress * 0.4, {
+              duration: 120,
+              easing: Easing.out(Easing.quad),
             }),
           },
         ],
@@ -338,40 +349,41 @@ const MessageBubble = React.memo(
       .join(", ");
 
     return (
-      // El gesto cubre toda la fila: se puede deslizar desde cualquier punto, no solo sobre la burbuja
-      <GestureDetector gesture={panGesture}>
-        <View style={rowStyle} collapsable={false}>
-          <Animated.View
-            style={[
-              s.flash,
-              { backgroundColor: `${theme.colors.primary}26` },
-              flashStyle,
-            ]}
-            pointerEvents="none"
-          />
+      <View style={rowStyle}>
+        <Animated.View
+          style={[
+            s.flash,
+            { backgroundColor: `${theme.colors.primary}26` },
+            flashStyle,
+          ]}
+          pointerEvents="none"
+        />
 
-          {avatarSlot}
+        {avatarSlot}
 
-          <Animated.View
-            style={[
-              s.bubbleColumn,
-              isMine ? s.myBubbleColumn : s.theirBubbleColumn,
-              swipeStyle,
-            ]}
-          >
-            {!isMine && isFirstInGroup && (
-              <Text
-                style={[s.senderName, { color: nameColor }]}
-                numberOfLines={1}
-              >
-                {message.sender_name}
-              </Text>
-            )}
+        <Animated.View
+          style={[
+            s.bubbleColumn,
+            isMine ? s.myBubbleColumn : s.theirBubbleColumn,
+            swipeStyle,
+          ]}
+        >
+          {!isMine && isFirstInGroup && (
+            <Text
+              style={[s.senderName, { color: nameColor }]}
+              numberOfLines={1}
+            >
+              {message.sender_name}
+            </Text>
+          )}
 
-            <View>
+          {/* El gesto empieza solo sobre la burbuja, no en el hueco de la fila */}
+          <GestureDetector gesture={panGesture}>
+            <View collapsable={false}>
               <Animated.View
                 style={[
                   s.swipeReplyIcon,
+                  isMine ? s.swipeReplyIconMine : s.swipeReplyIconTheirs,
                   { backgroundColor: `${theme.colors.primary}26` },
                   replyIconStyle,
                 ]}
@@ -433,11 +445,11 @@ const MessageBubble = React.memo(
                 )}
               </Pressable>
             </View>
+          </GestureDetector>
 
-            {footer}
-          </Animated.View>
-        </View>
-      </GestureDetector>
+          {footer}
+        </Animated.View>
+      </View>
     );
   },
 );
@@ -463,10 +475,9 @@ const s = StyleSheet.create({
     right: -12,
   },
 
-  // Va pegado a la izquierda de la burbuja y se mueve con ella
+  // Va pegado al lado de la burbuja que queda libre al deslizar y se mueve con ella
   swipeReplyIcon: {
     position: "absolute",
-    left: -40,
     top: "50%",
     marginTop: -15,
     width: 30,
@@ -475,6 +486,8 @@ const s = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  swipeReplyIconMine: { right: -40 },
+  swipeReplyIconTheirs: { left: -40 },
 
   // Reserva el hueco del avatar aunque no se pinte, para alinear las burbujas del grupo
   avatarSlot: {
